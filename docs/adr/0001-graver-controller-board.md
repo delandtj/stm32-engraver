@@ -1,8 +1,9 @@
 # 0001 - Graver Controller Board (STM32 + TFT, class batch)
 
-**Status**: Proposed
+**Status**: Accepted
 **Date**: 2026-09-13
-**Updated**: 2026-09-13 (coil measured at 141 ohm: power stage re-rated for a 24 V system)
+**Updated**: 2026-09-13 (coil measured at 141 ohm: power stage re-rated for a 24 V system;
+review asks 1-4 all answered yes, schematic capture started)
 
 ---
 
