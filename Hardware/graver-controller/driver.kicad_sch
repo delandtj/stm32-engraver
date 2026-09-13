@@ -2906,6 +2906,26 @@
 	)
 	(wire
 		(pts
+			(xy 252.73 219.71) (xy 260.35 219.71)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "23e19ca8-7695-4a8a-ab25-1a95d2b8ca18")
+	)
+	(wire
+		(pts
+			(xy 237.49 217.17) (xy 229.87 217.17)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "245d2e02-85da-4d43-947d-6df67552cd9a")
+	)
+	(wire
+		(pts
 			(xy 85.09 82.55) (xy 85.09 87.63)
 		)
 		(stroke
@@ -2913,6 +2933,26 @@
 			(type solid)
 		)
 		(uuid "2495634d-88ac-4a34-aeef-f12236d11c58")
+	)
+	(wire
+		(pts
+			(xy 113.03 219.71) (xy 120.65 219.71)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "266c05ed-d1c3-407b-a36d-08208ef047c6")
+	)
+	(wire
+		(pts
+			(xy 97.79 217.17) (xy 90.17 217.17)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "2c50f86e-6c4e-4d12-b98e-fd21fa3d847c")
 	)
 	(wire
 		(pts
@@ -3103,6 +3143,16 @@
 			(type solid)
 		)
 		(uuid "72ca2535-4676-4c68-8405-38d148667945")
+	)
+	(wire
+		(pts
+			(xy 237.49 222.25) (xy 229.87 222.25)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "72d1b240-e0bf-430f-8b29-5207543b6ffc")
 	)
 	(wire
 		(pts
@@ -3303,6 +3353,16 @@
 			(type solid)
 		)
 		(uuid "b09169a7-8efa-4505-889c-f119425e2ef5")
+	)
+	(wire
+		(pts
+			(xy 97.79 222.25) (xy 90.17 222.25)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "b21ab85f-901e-4a58-9f92-ce3924864c2f")
 	)
 	(wire
 		(pts
@@ -3657,6 +3717,26 @@
 		)
 		(uuid "2a27b7b8-6ba3-480b-a4ef-f35b56cdd0b2")
 	)
+	(label "AMP_OUT"
+		(at 120.65 219.71 0)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left)
+		)
+		(uuid "2c692433-514c-48ba-819f-7d5f9c7ba8d9")
+	)
+	(label "AMP_INP"
+		(at 90.17 217.17 180)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify right)
+		)
+		(uuid "31039fef-c33f-4e6a-9f31-39e7c453fd73")
+	)
 	(label "AMP_INP"
 		(at 71.12 241.3 0)
 		(effects
@@ -3693,6 +3773,16 @@
 			)
 		)
 		(uuid "463ba129-61c3-47db-80f9-08b8093875d3")
+	)
+	(label "OC_REF"
+		(at 229.87 222.25 180)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify right)
+		)
+		(uuid "4a0bbef3-6586-410b-bc85-af920cb2c538")
 	)
 	(label "CLAMP"
 		(at 346.71 100.33 270)
@@ -3814,6 +3904,16 @@
 		)
 		(uuid "8b801a1c-313f-4942-bd63-85cea5cecdd4")
 	)
+	(label "CMP_INP"
+		(at 229.87 217.17 180)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify right)
+		)
+		(uuid "9f982a59-750f-431e-a412-3ed57b8beec4")
+	)
 	(label "Q203_D"
 		(at 320.04 138.43 0)
 		(effects
@@ -3841,6 +3941,16 @@
 			(justify right)
 		)
 		(uuid "aad7e38c-b05f-4711-9aaa-a3ca28137d2d")
+	)
+	(label "AMP_INN"
+		(at 90.17 222.25 180)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify right)
+		)
+		(uuid "b301e91f-7312-4468-af29-405d3b07332f")
 	)
 	(label "AMP_INN"
 		(at 76.2 271.78 0)
@@ -3940,6 +4050,28 @@
 		(uuid "11364de8-79a8-4d94-bc22-154bc87d67e6")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 379.73 46.99 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+	)
+	(global_label "OC_TRIP"
+		(shape bidirectional)
+		(at 260.35 219.71 0)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left)
+		)
+		(uuid "231ccb4c-18f8-4713-bf4a-29d7edf0cb23")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 260.35 219.71 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4264,6 +4396,12 @@
 			(uuid "a7f93db2-d3cb-41ee-97c0-3bd5d326f173")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R208")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R208")
@@ -4340,6 +4478,12 @@
 			(uuid "9e711045-5bc2-44ee-9d3a-25f33d5bbfab")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR023")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR023")
@@ -4442,6 +4586,12 @@
 			(uuid "3d7ba674-22ee-4c8e-94d4-ee1438e4318f")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R209")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R209")
@@ -4544,6 +4694,12 @@
 			(uuid "1bbebc15-c8b5-441e-94f7-a336b6ba1501")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R217")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R217")
@@ -4646,6 +4802,12 @@
 			(uuid "dd06e16f-bd1d-4444-8991-1c57de31bb22")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R210")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R210")
@@ -4749,6 +4911,12 @@
 			(uuid "6801fd71-3083-4444-aba9-06421e95f419")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "Q203")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "Q203")
@@ -4825,6 +4993,12 @@
 			(uuid "237baca0-8397-4090-b843-63d342fde984")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR010")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR010")
@@ -4931,6 +5105,12 @@
 			(uuid "af5c5a0c-82c9-4223-815a-9a279ef305a1")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "J201")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "J201")
@@ -5007,6 +5187,12 @@
 			(uuid "dfd7298b-0509-4146-acc5-573d91400c84")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR020")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR020")
@@ -5083,6 +5269,12 @@
 			(uuid "1bef6fbb-041a-4747-b727-0e2e980ea302")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR008")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR008")
@@ -5159,6 +5351,12 @@
 			(uuid "8469f033-aa91-4f06-acd5-1b874914af44")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR025")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR025")
@@ -5235,6 +5433,12 @@
 			(uuid "a9f17120-8d87-455c-8d5f-22e2339fbe9d")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR017")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR017")
@@ -5335,6 +5539,12 @@
 			(uuid "1c33ff3f-1125-4cb0-af00-d69d0db50799")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "D201")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "D201")
@@ -5411,6 +5621,12 @@
 			(uuid "c9deab13-4cc1-4db3-bcf1-42f888dbabff")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR006")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR006")
@@ -5513,6 +5729,12 @@
 			(uuid "d2c90b30-43bc-4601-a055-ae85da19be48")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R206")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R206")
@@ -5613,6 +5835,12 @@
 			(uuid "779cf668-bcaa-42c7-98db-617637c42255")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "D203")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "D203")
@@ -5689,6 +5917,12 @@
 			(uuid "db72d8b4-10b3-488b-b633-ffe63bd7ac02")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR015")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR015")
@@ -5791,6 +6025,12 @@
 			(uuid "63f39bff-4b2f-4ffd-8018-9bedf293620b")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R202")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R202")
@@ -5867,6 +6107,12 @@
 			(uuid "d43f5df5-bec9-40f2-8099-3caf8cabe94d")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR021")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR021")
@@ -5943,6 +6189,12 @@
 			(uuid "fff00ebb-3ce2-4d45-9825-8afb3df4ce3a")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR003")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR003")
@@ -6019,6 +6271,12 @@
 			(uuid "7865ef2a-5747-454e-ae76-fb83b96f928f")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR016")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR016")
@@ -6121,6 +6379,12 @@
 			(uuid "229ceab5-3385-44a3-8488-a4701006635e")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "C201")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "C201")
@@ -6197,6 +6461,12 @@
 			(uuid "6e05beef-0ad1-4623-98a0-e6e53c768c9c")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR012")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR012")
@@ -6299,6 +6569,12 @@
 			(uuid "e5960d8f-c4c5-4a5c-aa7f-8818aa71ffe8")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R204")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R204")
@@ -6375,6 +6651,12 @@
 			(uuid "64bc29bb-fa62-4b1f-9275-a1ab2e726a0c")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR002")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR002")
@@ -6451,6 +6733,12 @@
 			(uuid "1347f493-f7a9-47d9-98ac-8ecfba0d7e25")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR001")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR001")
@@ -6553,6 +6841,12 @@
 			(uuid "cdb8dc52-82bd-4d76-acdf-0cdd95a0dbde")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R214")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R214")
@@ -6629,6 +6923,12 @@
 			(uuid "7ccf9733-7da3-4d2f-898e-35a190df7a9f")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR022")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR022")
@@ -6731,6 +7031,12 @@
 			(uuid "14e0803f-4835-45a3-9272-2be2a90f317c")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R215")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R215")
@@ -6833,6 +7139,12 @@
 			(uuid "e451a75a-f684-4864-8dae-22e0e396bd02")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R211")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R211")
@@ -6935,6 +7247,12 @@
 			(uuid "27cd1c86-c533-4126-819f-bd67663b11d7")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R216")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R216")
@@ -7044,6 +7362,12 @@
 			(uuid "b306f4a5-a156-49e9-aeef-7040bb6f1fc0")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "U201")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "U201")
@@ -7120,6 +7444,12 @@
 			(uuid "dc1cb948-feee-4ee3-9199-018400cf62f9")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR009")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR009")
@@ -7220,6 +7550,12 @@
 			(uuid "0d4a216d-f8e7-4c2b-979d-faada76058c6")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "D202")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "D202")
@@ -7296,6 +7632,12 @@
 			(uuid "426c61ca-7193-4b3c-81d0-f45a98234d2f")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR014")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR014")
@@ -7398,6 +7740,12 @@
 			(uuid "d81feacc-8dad-4749-8ebf-793e2aad25cf")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R207")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R207")
@@ -7500,6 +7848,12 @@
 			(uuid "b524d6ae-f5ee-4aa0-908d-29c92e3292fc")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R213")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R213")
@@ -7576,6 +7930,12 @@
 			(uuid "9118f2e4-610f-47df-8317-001a0fc06317")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR007")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR007")
@@ -7652,6 +8012,12 @@
 			(uuid "edef3708-a4f4-43c7-8081-75118111d280")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR011")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR011")
@@ -7728,6 +8094,12 @@
 			(uuid "b3f1af9a-4fbd-44da-b715-5dd3fe5c7ee6")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR013")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR013")
@@ -7846,6 +8218,12 @@
 			(uuid "289b60a0-f458-4655-b00b-8731807fa1e4")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "U202")
+					(unit 2)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "U202")
@@ -7948,6 +8326,12 @@
 			(uuid "55b7dc22-83e4-44ad-a539-b42475766de7")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R201")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R201")
@@ -8024,6 +8408,12 @@
 			(uuid "04f6557c-3166-4d0a-80cd-7c4afb2ef4d6")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR005")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR005")
@@ -8126,6 +8516,12 @@
 			(uuid "5f5e2d4e-edf2-4d75-9781-f3ae8edda813")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R212")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R212")
@@ -8202,6 +8598,12 @@
 			(uuid "dbb67864-5af1-456b-816e-8dafe580d99c")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR019")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR019")
@@ -8304,6 +8706,12 @@
 			(uuid "093bf53b-cba3-49a6-8906-d7291d52a565")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "C207")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "C207")
@@ -8406,6 +8814,12 @@
 			(uuid "61a8b3db-445e-460e-83c2-0f3be2b246e3")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "C203")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "C203")
@@ -8524,6 +8938,12 @@
 			(uuid "d739ea66-3c7b-4f15-96b8-4e6637359594")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "U202")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "U202")
@@ -8626,6 +9046,12 @@
 			(uuid "2796d847-10d2-4ff0-959f-475777ee3394")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R205")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R205")
@@ -8728,6 +9154,12 @@
 			(uuid "61316df2-fb11-4c95-8778-ab6039252a7b")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "R203")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "R203")
@@ -8830,6 +9262,12 @@
 			(uuid "3e11e5ce-b875-49d9-a6ec-7c4748e563d3")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "C205")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "C205")
@@ -8932,6 +9370,12 @@
 			(uuid "c3493d29-309e-48a8-bd23-3ea81b290b7f")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "C202")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "C202")
@@ -9034,6 +9478,12 @@
 			(uuid "8e27faff-70c0-4df5-a625-56b7ed63d8df")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "C206")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "C206")
@@ -9137,6 +9587,12 @@
 			(uuid "94ee7de7-e1d0-4c07-ad9f-8c38e3175a64")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "Q202")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "Q202")
@@ -9213,6 +9669,12 @@
 			(uuid "c63b4d9c-cefd-42ec-9add-ae168e079f67")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR018")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR018")
@@ -9316,6 +9778,12 @@
 			(uuid "d8da05c0-7fb7-4a69-a905-bdf32a540c0a")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "Q201")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "Q201")
@@ -9392,6 +9860,12 @@
 			(uuid "e0102b97-3b69-4363-8cff-68dbff884e7d")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR004")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR004")
@@ -9468,6 +9942,12 @@
 			(uuid "25949ef6-ee44-4a7f-b12f-9623942ffb71")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "#PWR024")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "#PWR024")
@@ -9570,6 +10050,12 @@
 			(uuid "0a69a273-ff2b-4c4a-a7b2-69acde8e2ab7")
 		)
 		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
+					(reference "C204")
+					(unit 1)
+				)
+			)
 			(project ""
 				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
 					(reference "C204")
@@ -9688,142 +10174,16 @@
 			(uuid "5f9be77b-2c13-4315-9892-6bb5be999fca")
 		)
 		(instances
-			(project ""
-				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/5a5c39c8-1b78-4397-9a1d-6791b96c5210"
 					(reference "U202")
 					(unit 3)
 				)
 			)
-		)
-	)
-	(wire
-		(pts
-			(xy 113.03 219.71) (xy 120.65 219.71)
-		)
-		(stroke
-			(width 0)
-			(type solid)
-		)
-		(uuid "266c05ed-d1c3-407b-a36d-08208ef047c6")
-	)
-	(label "AMP_OUT"
-		(at 120.65 219.71 0)
-		(effects
-			(font
-				(size 1.524 1.524)
-			)
-			(justify left)
-		)
-		(uuid "2c692433-514c-48ba-819f-7d5f9c7ba8d9")
-	)
-	(wire
-		(pts
-			(xy 97.79 222.25) (xy 90.17 222.25)
-		)
-		(stroke
-			(width 0)
-			(type solid)
-		)
-		(uuid "b21ab85f-901e-4a58-9f92-ce3924864c2f")
-	)
-	(label "AMP_INN"
-		(at 90.17 222.25 180)
-		(effects
-			(font
-				(size 1.524 1.524)
-			)
-			(justify right)
-		)
-		(uuid "b301e91f-7312-4468-af29-405d3b07332f")
-	)
-	(wire
-		(pts
-			(xy 97.79 217.17) (xy 90.17 217.17)
-		)
-		(stroke
-			(width 0)
-			(type solid)
-		)
-		(uuid "2c50f86e-6c4e-4d12-b98e-fd21fa3d847c")
-	)
-	(label "AMP_INP"
-		(at 90.17 217.17 180)
-		(effects
-			(font
-				(size 1.524 1.524)
-			)
-			(justify right)
-		)
-		(uuid "31039fef-c33f-4e6a-9f31-39e7c453fd73")
-	)
-	(wire
-		(pts
-			(xy 237.49 217.17) (xy 229.87 217.17)
-		)
-		(stroke
-			(width 0)
-			(type solid)
-		)
-		(uuid "245d2e02-85da-4d43-947d-6df67552cd9a")
-	)
-	(label "CMP_INP"
-		(at 229.87 217.17 180)
-		(effects
-			(font
-				(size 1.524 1.524)
-			)
-			(justify right)
-		)
-		(uuid "9f982a59-750f-431e-a412-3ed57b8beec4")
-	)
-	(wire
-		(pts
-			(xy 237.49 222.25) (xy 229.87 222.25)
-		)
-		(stroke
-			(width 0)
-			(type solid)
-		)
-		(uuid "72d1b240-e0bf-430f-8b29-5207543b6ffc")
-	)
-	(label "OC_REF"
-		(at 229.87 222.25 180)
-		(effects
-			(font
-				(size 1.524 1.524)
-			)
-			(justify right)
-		)
-		(uuid "4a0bbef3-6586-410b-bc85-af920cb2c538")
-	)
-	(wire
-		(pts
-			(xy 252.73 219.71) (xy 260.35 219.71)
-		)
-		(stroke
-			(width 0)
-			(type solid)
-		)
-		(uuid "23e19ca8-7695-4a8a-ab25-1a95d2b8ca18")
-	)
-	(global_label "OC_TRIP"
-		(shape bidirectional)
-		(at 260.35 219.71 0)
-		(effects
-			(font
-				(size 1.524 1.524)
-			)
-			(justify left)
-		)
-		(uuid "231ccb4c-18f8-4713-bf4a-29d7edf0cb23")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 260.35 219.71 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
+			(project ""
+				(path "/f43a90e0-7cc7-4fde-b0d6-19bc4d8fb43a"
+					(reference "U202")
+					(unit 3)
 				)
 			)
 		)

@@ -13,7 +13,7 @@
 	)
 	(lib_symbols)
 	(sheet
-		(at 30.48 39.37)
+		(at 180.34 39.37)
 		(size 30.48 20.32)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -25,11 +25,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
-		(uuid "eea3b213-e666-47c8-aad0-1a186ad95509")
-		(property "Sheetname" "Power"
-			(at 30.48 38.6584 0)
+		(uuid "2f15ba9a-6165-4167-85f8-f67e3d99cc62")
+		(property "Sheetname" "IO"
+			(at 180.34 38.6584 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -37,8 +39,10 @@
 				(justify left bottom)
 			)
 		)
-		(property "Sheetfile" "power.kicad_sch"
-			(at 30.48 60.2746 0)
+		(property "Sheetfile" "io.kicad_sch"
+			(at 180.34 60.2746 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -49,49 +53,7 @@
 		(instances
 			(project "graver-controller"
 				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e"
-					(page "2")
-				)
-			)
-		)
-	)
-	(sheet
-		(at 80.01 39.37)
-		(size 30.48 20.32)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(fill
-			(color 0 0 0 0.0000)
-		)
-		(uuid "5a5c39c8-1b78-4397-9a1d-6791b96c5210")
-		(property "Sheetname" "Driver"
-			(at 80.01 38.6584 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left bottom)
-			)
-		)
-		(property "Sheetfile" "driver.kicad_sch"
-			(at 80.01 60.2746 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(instances
-			(project "graver-controller"
-				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e"
-					(page "2")
+					(page "5")
 				)
 			)
 		)
@@ -109,11 +71,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "4845781e-7088-4051-9c5d-7734bf4421a6")
 		(property "Sheetname" "MCU"
 			(at 129.54 38.6584 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -123,6 +87,8 @@
 		)
 		(property "Sheetfile" "mcu.kicad_sch"
 			(at 129.54 60.2746 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -133,13 +99,13 @@
 		(instances
 			(project "graver-controller"
 				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e"
-					(page "2")
+					(page "4")
 				)
 			)
 		)
 	)
 	(sheet
-		(at 180.34 39.37)
+		(at 80.01 39.37)
 		(size 30.48 20.32)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -151,11 +117,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
-		(uuid "2f15ba9a-6165-4167-85f8-f67e3d99cc62")
-		(property "Sheetname" "IO"
-			(at 180.34 38.6584 0)
+		(uuid "5a5c39c8-1b78-4397-9a1d-6791b96c5210")
+		(property "Sheetname" "Driver"
+			(at 80.01 38.6584 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -163,8 +131,56 @@
 				(justify left bottom)
 			)
 		)
-		(property "Sheetfile" "io.kicad_sch"
-			(at 180.34 60.2746 0)
+		(property "Sheetfile" "driver.kicad_sch"
+			(at 80.01 60.2746 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 30.48 39.37)
+		(size 30.48 20.32)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "eea3b213-e666-47c8-aad0-1a186ad95509")
+		(property "Sheetname" "Power"
+			(at 30.48 38.6584 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "power.kicad_sch"
+			(at 30.48 60.2746 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -185,4 +201,5 @@
 			(page "1")
 		)
 	)
+	(embedded_fonts no)
 )

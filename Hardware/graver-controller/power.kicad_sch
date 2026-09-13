@@ -2843,87 +2843,828 @@
 			(embedded_fonts no)
 		)
 	)
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	(no_connect
+		(at 182.88 160.02)
+		(uuid "745ca73a-c24c-4193-b2e1-74445bfba490")
+	)
+	(no_connect
+		(at 38.1 49.53)
+		(uuid "a79be952-5bd4-4189-a32c-ea391c95c8da")
+	)
+	(no_connect
+		(at 120.65 250.19)
+		(uuid "d305d9a9-0a08-4b29-b984-96096cfd96a9")
+	)
+	(wire
+		(pts
+			(xy 320.04 146.05) (xy 326.39 146.05)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "01a12b14-4d15-42c3-ba9a-0422f232f349")
+	)
+	(wire
+		(pts
+			(xy 30.48 135.89) (xy 35.56 135.89)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "03c20610-6847-4fe3-aa5d-2788f065e421")
+	)
+	(wire
+		(pts
+			(xy 388.62 149.86) (xy 388.62 156.21)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "070937b8-ac69-4751-9590-e5614dc6a580")
+	)
+	(wire
+		(pts
+			(xy 115.57 257.81) (xy 115.57 262.89)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "11384ed3-762a-4bae-8248-a144aff0dc62")
+	)
+	(wire
+		(pts
+			(xy 350.52 146.05) (xy 356.87 146.05)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "13efd7ad-e414-4458-bae4-d4121ee77765")
+	)
+	(wire
+		(pts
+			(xy 256.54 250.19) (xy 256.54 255.27)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "19535318-16f0-47b0-991f-31e160c4425d")
+	)
+	(wire
+		(pts
+			(xy 204.47 53.34) (xy 209.55 53.34)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "1dd8a501-c809-4184-8c39-9f3d9140bbcb")
+	)
+	(wire
+		(pts
+			(xy 26.67 250.19) (xy 26.67 255.27)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "1e65fc98-ee5f-4e98-9fe9-b5e4b2c1cc84")
+	)
+	(wire
+		(pts
+			(xy 160.02 254) (xy 165.1 254)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "25d69f22-ae17-40e3-b986-0f3dda5d9a00")
+	)
+	(wire
+		(pts
+			(xy 105.41 86.36) (xy 110.49 86.36)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "28d17fd1-bf60-4cf0-9a31-14858e4a9bf1")
+	)
+	(wire
+		(pts
+			(xy 102.87 250.19) (xy 107.95 250.19)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "2a138243-bd13-4380-b9c9-55dc83c1137f")
+	)
+	(wire
+		(pts
+			(xy 69.85 45.72) (xy 76.2 45.72)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "2d374e45-0819-4255-985f-fb4479690ee4")
+	)
+	(wire
+		(pts
+			(xy 105.41 93.98) (xy 110.49 93.98)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "2ed2716a-818b-4d1e-9031-1c5a9ae2c71f")
+	)
+	(wire
+		(pts
+			(xy 340.36 86.36) (xy 346.71 86.36)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "34f2cac1-e43f-4d2b-9adc-8d37cf6747df")
+	)
+	(wire
+		(pts
+			(xy 284.48 195.58) (xy 292.1 195.58)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "393127c5-3377-4a3b-ba97-7224ec6e0450")
+	)
+	(wire
+		(pts
+			(xy 265.43 53.34) (xy 270.51 53.34)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "3c2cd4e3-6167-49a2-b407-661b953a8802")
+	)
+	(wire
+		(pts
+			(xy 123.19 247.65) (xy 128.27 247.65)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "3c780f09-56b7-4f94-a9b6-fb33a8eb8248")
+	)
+	(wire
+		(pts
+			(xy 124.46 153.67) (xy 129.54 153.67)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "3d6e7bd4-9d2a-49fd-b822-33b4e2a296f1")
+	)
+	(wire
+		(pts
+			(xy 102.87 247.65) (xy 107.95 247.65)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "3efc13a2-d6fc-458d-8fe0-34ca2927dbd6")
+	)
+	(wire
+		(pts
+			(xy 179.07 49.53) (xy 179.07 54.61)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "44c1fb10-c319-47e2-821b-0fd4e3bec72c")
+	)
+	(wire
+		(pts
+			(xy 95.25 49.53) (xy 100.33 49.53)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "4550eaf9-a05d-44dd-a4a8-54cfad355f63")
+	)
+	(wire
+		(pts
+			(xy 304.8 53.34) (xy 311.15 53.34)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "46676a11-d3f5-4b4c-a4d6-f9b5f493419f")
+	)
+	(wire
+		(pts
+			(xy 190.5 254) (xy 195.58 254)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "47ef804b-ce60-4f06-b11e-7b2539b3ab76")
+	)
+	(wire
+		(pts
+			(xy 107.95 44.45) (xy 113.03 44.45)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "489016b4-cd50-4203-966a-1566a69e6d5c")
+	)
+	(wire
+		(pts
+			(xy 320.04 153.67) (xy 325.12 153.67)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "4ecb2dc2-d2dc-44f0-98f3-97deb01db11d")
+	)
+	(wire
+		(pts
+			(xy 250.19 203.2) (xy 256.54 203.2)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "55768710-79e3-485a-855f-758e74cee0e8")
+	)
+	(wire
+		(pts
+			(xy 38.1 46.99) (xy 44.45 46.99)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "5619c0e1-b8ff-40fc-af3b-1f611e4491e4")
+	)
+	(wire
+		(pts
+			(xy 214.63 120.65) (xy 220.98 120.65)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "5a0ac696-0a75-4f7f-b511-c289656cb047")
+	)
+	(wire
+		(pts
+			(xy 250.19 158.75) (xy 256.54 158.75)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "5a22fae4-b645-4b5a-bed8-d2f42e259966")
+	)
+	(wire
+		(pts
+			(xy 152.4 147.32) (xy 157.48 147.32)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "5a91891e-528d-4f2d-ba49-1cbd85c1d1c2")
+	)
+	(wire
+		(pts
+			(xy 34.29 250.19) (xy 34.29 255.27)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "5dd4ed9d-789a-4221-aeca-1e16b087d4de")
+	)
+	(wire
+		(pts
+			(xy 340.36 93.98) (xy 345.44 93.98)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "68272605-e415-43d8-b113-dcf0ce82bd5b")
+	)
+	(wire
+		(pts
+			(xy 160.02 246.38) (xy 165.1 246.38)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "682af660-c1ce-4b74-ae3a-d63f65892d06")
+	)
+	(wire
+		(pts
+			(xy 214.63 195.58) (xy 220.98 195.58)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "683f3353-bcbb-410c-bbb5-6481d87124ae")
+	)
+	(wire
+		(pts
+			(xy 172.72 167.64) (xy 172.72 172.72)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "72ddc6df-c8b2-4345-8862-121c9eb3587f")
+	)
+	(wire
+		(pts
+			(xy 320.04 203.2) (xy 325.12 203.2)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "72e6a3f9-d5d8-4bfd-9c30-d3a0e46d3be5")
+	)
+	(wire
+		(pts
+			(xy 182.88 152.4) (xy 189.23 152.4)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "72edf80d-be32-40be-81e1-ee68fbbd208c")
+	)
+	(wire
+		(pts
+			(xy 143.51 90.17) (xy 143.51 95.25)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "738c0e2c-d3f4-4cdc-b252-bdc5e06f86de")
+	)
+	(wire
+		(pts
+			(xy 135.89 90.17) (xy 135.89 95.25)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "747d0dac-b150-4a0e-b914-19a3b9c34568")
+	)
+	(wire
+		(pts
+			(xy 171.45 49.53) (xy 171.45 54.61)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "7a228953-cc10-433b-b50c-79dfc8806e7e")
+	)
+	(wire
+		(pts
+			(xy 320.04 195.58) (xy 326.39 195.58)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "80138dbc-4080-4da3-b632-a40f81be8add")
+	)
+	(wire
+		(pts
+			(xy 224.79 246.38) (xy 229.87 246.38)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "8542ded4-384b-4c83-aa9f-10a2ceddeb88")
+	)
+	(wire
+		(pts
+			(xy 250.19 195.58) (xy 257.81 195.58)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "856c1a2c-af20-4f15-b87f-6e544f568e2c")
+	)
+	(wire
+		(pts
+			(xy 182.88 157.48) (xy 189.23 157.48)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "89be0c4a-766a-4800-8723-2f67d19f2ff8")
+	)
+	(wire
+		(pts
+			(xy 167.64 167.64) (xy 167.64 172.72)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "8aa2c98e-4b9d-4a3d-a8e8-df8e1d971da3")
+	)
+	(wire
+		(pts
+			(xy 265.43 45.72) (xy 270.51 45.72)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "8b6c0536-4369-40ba-a952-61912e6cabfc")
+	)
+	(wire
+		(pts
+			(xy 95.25 153.67) (xy 100.33 153.67)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "8c5c4c8d-53fd-4cfa-a9f7-e97e53f650b3")
+	)
+	(wire
+		(pts
+			(xy 30.48 184.15) (xy 35.56 184.15)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "8c81e81a-9b2c-418c-9205-3196f40636f5")
+	)
+	(wire
+		(pts
+			(xy 350.52 153.67) (xy 355.6 153.67)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "8cc73dbb-faed-4ff7-ba11-20697b2da787")
+	)
+	(wire
+		(pts
+			(xy 69.85 254) (xy 74.93 254)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "8ffefd5d-2594-4887-aeba-b21b64e16af3")
+	)
+	(wire
+		(pts
+			(xy 170.18 195.58) (xy 176.53 195.58)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "93f0e2b7-1d93-4fb5-ae05-bf751e0f044f")
+	)
+	(wire
+		(pts
+			(xy 190.5 246.38) (xy 195.58 246.38)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "9709e61f-407b-4b22-861a-89c8c4b5e16f")
+	)
+	(wire
+		(pts
+			(xy 381 149.86) (xy 381 154.94)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "97154c4b-81e4-41e9-9e08-65f02cb337b8")
+	)
+	(wire
+		(pts
+			(xy 151.13 160.02) (xy 157.48 160.02)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "98e07892-7bdc-4602-9873-fce27b5508f9")
+	)
+	(wire
+		(pts
+			(xy 284.48 153.67) (xy 290.83 153.67)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "9971dc18-dd87-4b8d-b397-aa46649fc774")
+	)
+	(wire
+		(pts
+			(xy 182.88 147.32) (xy 189.23 147.32)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "9aa9cacb-1693-4b37-b97a-d3aabe3f006c")
+	)
+	(wire
+		(pts
+			(xy 234.95 45.72) (xy 240.03 45.72)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "9b8f4fd9-03e7-4634-9b18-8534901271f5")
+	)
+	(wire
+		(pts
+			(xy 69.85 246.38) (xy 74.93 246.38)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "a37b25fe-0668-436d-8a11-5c5c04251877")
+	)
+	(wire
+		(pts
+			(xy 304.8 45.72) (xy 309.88 45.72)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "a7df1520-6b19-440f-ba0f-86d38b97ef0c")
+	)
+	(wire
+		(pts
+			(xy 30.48 176.53) (xy 36.83 176.53)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "a9c9fb30-4e0b-413b-9e83-08c68de50642")
+	)
+	(wire
+		(pts
+			(xy 170.18 203.2) (xy 175.26 203.2)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "ae52d062-3f3a-4f30-bc93-78626721f84a")
+	)
+	(wire
+		(pts
+			(xy 124.46 146.05) (xy 129.54 146.05)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "b471d623-6988-44d1-8420-02af53ad061a")
+	)
+	(wire
+		(pts
+			(xy 30.48 143.51) (xy 36.83 143.51)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "bb1bd986-b2b1-4846-a69f-a81e5e4ee44d")
+	)
+	(wire
+		(pts
+			(xy 69.85 53.34) (xy 74.93 53.34)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "beef3ec5-3522-4820-b3be-65f28e594669")
+	)
+	(wire
+		(pts
+			(xy 204.47 45.72) (xy 209.55 45.72)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "c038fd3e-4a3f-4ad8-be92-3c5d26464398")
+	)
+	(wire
+		(pts
+			(xy 284.48 203.2) (xy 290.83 203.2)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "c721544c-13d1-4bc0-90f1-cca0faddbe10")
+	)
+	(wire
+		(pts
+			(xy 304.8 86.36) (xy 311.15 86.36)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "c9e1899b-d5d6-4aa7-bb9f-1493b81e1812")
+	)
+	(wire
+		(pts
+			(xy 264.16 250.19) (xy 264.16 256.54)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "d06ed34a-d70d-4d1a-9c6d-a7b1ea4104aa")
+	)
+	(wire
+		(pts
+			(xy 214.63 128.27) (xy 220.98 128.27)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "d26b40cb-1cf8-4388-8cfc-e4ef05f80ab0")
+	)
+	(wire
+		(pts
+			(xy 214.63 203.2) (xy 222.25 203.2)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "d3c84cad-365e-4986-a046-f0430c194ed8")
+	)
+	(wire
+		(pts
+			(xy 234.95 53.34) (xy 240.03 53.34)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "d6a1e220-d067-4ef3-922e-29a3692bc831")
+	)
+	(wire
+		(pts
+			(xy 95.25 146.05) (xy 100.33 146.05)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "d8603b9e-f1a5-42c6-aa86-df8ed059f5f1")
+	)
+	(wire
+		(pts
+			(xy 38.1 52.07) (xy 43.18 52.07)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "db85811b-da28-4d01-8439-183d6ccc61dc")
+	)
+	(wire
+		(pts
+			(xy 64.77 146.05) (xy 69.85 146.05)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "dce76846-b879-4b73-b4fb-12a3751b710a")
+	)
+	(wire
+		(pts
+			(xy 224.79 254) (xy 231.14 254)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "dd5fd823-7a8b-493b-b4b0-52d7c7823d4d")
+	)
+	(wire
+		(pts
+			(xy 64.77 153.67) (xy 69.85 153.67)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "e0e71961-3820-41f4-838b-138b056e4722")
+	)
+	(wire
+		(pts
+			(xy 107.95 54.61) (xy 113.03 54.61)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "e4a62165-aeb1-45b7-a8ac-e0960eda4ddc")
+	)
+	(wire
+		(pts
+			(xy 151.13 152.4) (xy 157.48 152.4)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "ed02b82b-f346-43c4-b334-0ab2cd60b60a")
+	)
+	(wire
+		(pts
+			(xy 284.48 146.05) (xy 290.83 146.05)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "f0fb9761-8d85-413c-92d7-b133b5b684df")
+	)
+	(wire
+		(pts
+			(xy 304.8 93.98) (xy 309.88 93.98)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "fc0d6d9d-4e57-4f64-8894-193686c791d7")
+	)
+	(wire
+		(pts
+			(xy 250.19 151.13) (xy 256.54 151.13)
+		)
+		(stroke
+			(width 0)
+			(type solid)
+		)
+		(uuid "ffa32836-7c65-42b8-a01c-3834f270be2e")
+	)
 	(label "BUCK_SW"
 		(at 220.98 128.27 0)
 		(effects
@@ -3745,6 +4486,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C111")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -3843,6 +4590,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "C101")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "C101")
 					(unit 1)
 				)
@@ -3949,6 +4702,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "R102")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -4047,6 +4806,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "C110")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "C110")
 					(unit 1)
 				)
@@ -4153,6 +4918,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "R101")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -4249,6 +5020,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "D102")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "D102")
 					(unit 1)
 				)
@@ -4355,6 +5132,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "L101")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -4457,6 +5240,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C104")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -4553,6 +5342,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "D105")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "D105")
 					(unit 1)
 				)
@@ -4678,6 +5473,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "U101")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -4780,6 +5581,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "R104")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -4852,6 +5659,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR009")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR009")
 					(unit 1)
 				)
@@ -4958,6 +5771,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C108")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -5056,6 +5875,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "R108")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "R108")
 					(unit 1)
 				)
@@ -5169,6 +5994,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "U102")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -5267,6 +6098,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "R109")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "R109")
 					(unit 1)
 				)
@@ -5373,6 +6210,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "R107")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -5445,6 +6288,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR011")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR011")
 					(unit 1)
 				)
@@ -5525,6 +6374,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR001")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -5597,6 +6452,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR026")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR026")
 					(unit 1)
 				)
@@ -5703,6 +6564,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "R110")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -5775,6 +6642,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR022")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR022")
 					(unit 1)
 				)
@@ -5855,6 +6728,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR014")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -5931,6 +6810,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR006")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -6003,6 +6888,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR033")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR033")
 					(unit 1)
 				)
@@ -6103,6 +6994,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "D101")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "D101")
 					(unit 1)
 				)
@@ -6209,6 +7106,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C107")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -6309,6 +7212,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "D104")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -6381,6 +7290,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR021")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR021")
 					(unit 1)
 				)
@@ -6487,6 +7402,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C112")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -6589,6 +7510,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C103")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -6665,6 +7592,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR023")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -6737,6 +7670,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR029")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR029")
 					(unit 1)
 				)
@@ -6843,6 +7782,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C105")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -6919,6 +7864,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR020")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -6991,6 +7942,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR016")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR016")
 					(unit 1)
 				)
@@ -7095,6 +8052,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "D103")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -7167,6 +8130,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR024")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR024")
 					(unit 1)
 				)
@@ -7267,6 +8236,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "F101")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "F101")
 					(unit 1)
 				)
@@ -7373,6 +8348,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C113")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -7475,6 +8456,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C115")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -7547,6 +8534,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR002")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR002")
 					(unit 1)
 				)
@@ -7627,6 +8620,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR007")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -7699,6 +8698,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR035")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR035")
 					(unit 1)
 				)
@@ -7779,6 +8784,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR013")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -7855,6 +8866,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR025")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -7927,6 +8944,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR032")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR032")
 					(unit 1)
 				)
@@ -8034,6 +9057,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "Q101")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -8136,6 +9165,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "R106")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -8212,6 +9247,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR015")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -8284,6 +9325,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR003")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR003")
 					(unit 1)
 				)
@@ -8390,6 +9437,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "R105")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -8462,6 +9515,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR017")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR017")
 					(unit 1)
 				)
@@ -8542,6 +9601,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR018")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -8614,6 +9679,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR028")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR028")
 					(unit 1)
 				)
@@ -8720,6 +9791,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C102")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -8792,6 +9869,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR010")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR010")
 					(unit 1)
 				)
@@ -8872,6 +9955,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR004")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -8944,6 +10033,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR005")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR005")
 					(unit 1)
 				)
@@ -9050,6 +10145,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C106")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -9122,6 +10223,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR030")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR030")
 					(unit 1)
 				)
@@ -9229,6 +10336,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "J101")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -9301,6 +10414,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR034")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR034")
 					(unit 1)
 				)
@@ -9381,6 +10500,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR027")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -9457,6 +10582,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR031")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -9529,6 +10660,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR008")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR008")
 					(unit 1)
 				)
@@ -9635,6 +10772,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "R103")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -9737,6 +10880,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C114")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -9813,6 +10962,12 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "#PWR012")
+					(unit 1)
+				)
+			)
 		)
 	)
 	(symbol
@@ -9885,6 +11040,12 @@
 		(instances
 			(project ""
 				(path "/74fe0aa7-2109-41d8-8e7f-8dbc4694f66d"
+					(reference "#PWR019")
+					(unit 1)
+				)
+			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
 					(reference "#PWR019")
 					(unit 1)
 				)
@@ -9991,982 +11152,13 @@
 					(unit 1)
 				)
 			)
+			(project "graver-controller"
+				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/eea3b213-e666-47c8-aad0-1a186ad95509"
+					(reference "C109")
+					(unit 1)
+				)
+			)
 		)
-	)
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	(no_connect (at 38.1 49.53) (uuid "a79be952-5bd4-4189-a32c-ea391c95c8da"))
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	(no_connect (at 182.88 160.02) (uuid "745ca73a-c24c-4193-b2e1-74445bfba490"))
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	(no_connect (at 120.65 250.19) (uuid "d305d9a9-0a08-4b29-b984-96096cfd96a9"))
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	(wire
-		(pts (xy 107.95 44.45) (xy 113.03 44.45))
-		(stroke (width 0) (type solid))
-		(uuid "489016b4-cd50-4203-966a-1566a69e6d5c")
-	)
-	(wire
-		(pts (xy 69.85 45.72) (xy 76.2 45.72))
-		(stroke (width 0) (type solid))
-		(uuid "2d374e45-0819-4255-985f-fb4479690ee4")
-	)
-	(wire
-		(pts (xy 204.47 45.72) (xy 209.55 45.72))
-		(stroke (width 0) (type solid))
-		(uuid "c038fd3e-4a3f-4ad8-be92-3c5d26464398")
-	)
-	(wire
-		(pts (xy 234.95 45.72) (xy 240.03 45.72))
-		(stroke (width 0) (type solid))
-		(uuid "9b8f4fd9-03e7-4634-9b18-8534901271f5")
-	)
-	(wire
-		(pts (xy 265.43 45.72) (xy 270.51 45.72))
-		(stroke (width 0) (type solid))
-		(uuid "8b6c0536-4369-40ba-a952-61912e6cabfc")
-	)
-	(wire
-		(pts (xy 304.8 45.72) (xy 309.88 45.72))
-		(stroke (width 0) (type solid))
-		(uuid "a7df1520-6b19-440f-ba0f-86d38b97ef0c")
-	)
-	(wire
-		(pts (xy 38.1 46.99) (xy 44.45 46.99))
-		(stroke (width 0) (type solid))
-		(uuid "5619c0e1-b8ff-40fc-af3b-1f611e4491e4")
-	)
-	(wire
-		(pts (xy 95.25 49.53) (xy 100.33 49.53))
-		(stroke (width 0) (type solid))
-		(uuid "4550eaf9-a05d-44dd-a4a8-54cfad355f63")
-	)
-	(wire
-		(pts (xy 38.1 52.07) (xy 43.18 52.07))
-		(stroke (width 0) (type solid))
-		(uuid "db85811b-da28-4d01-8439-183d6ccc61dc")
-	)
-	(wire
-		(pts (xy 69.85 53.34) (xy 74.93 53.34))
-		(stroke (width 0) (type solid))
-		(uuid "beef3ec5-3522-4820-b3be-65f28e594669")
-	)
-	(wire
-		(pts (xy 204.47 53.34) (xy 209.55 53.34))
-		(stroke (width 0) (type solid))
-		(uuid "1dd8a501-c809-4184-8c39-9f3d9140bbcb")
-	)
-	(wire
-		(pts (xy 234.95 53.34) (xy 240.03 53.34))
-		(stroke (width 0) (type solid))
-		(uuid "d6a1e220-d067-4ef3-922e-29a3692bc831")
-	)
-	(wire
-		(pts (xy 265.43 53.34) (xy 270.51 53.34))
-		(stroke (width 0) (type solid))
-		(uuid "3c2cd4e3-6167-49a2-b407-661b953a8802")
-	)
-	(wire
-		(pts (xy 304.8 53.34) (xy 311.15 53.34))
-		(stroke (width 0) (type solid))
-		(uuid "46676a11-d3f5-4b4c-a4d6-f9b5f493419f")
-	)
-	(wire
-		(pts (xy 107.95 54.61) (xy 113.03 54.61))
-		(stroke (width 0) (type solid))
-		(uuid "e4a62165-aeb1-45b7-a8ac-e0960eda4ddc")
-	)
-	(wire
-		(pts (xy 105.41 86.36) (xy 110.49 86.36))
-		(stroke (width 0) (type solid))
-		(uuid "28d17fd1-bf60-4cf0-9a31-14858e4a9bf1")
-	)
-	(wire
-		(pts (xy 304.8 86.36) (xy 311.15 86.36))
-		(stroke (width 0) (type solid))
-		(uuid "c9e1899b-d5d6-4aa7-bb9f-1493b81e1812")
-	)
-	(wire
-		(pts (xy 340.36 86.36) (xy 346.71 86.36))
-		(stroke (width 0) (type solid))
-		(uuid "34f2cac1-e43f-4d2b-9adc-8d37cf6747df")
-	)
-	(wire
-		(pts (xy 105.41 93.98) (xy 110.49 93.98))
-		(stroke (width 0) (type solid))
-		(uuid "2ed2716a-818b-4d1e-9031-1c5a9ae2c71f")
-	)
-	(wire
-		(pts (xy 304.8 93.98) (xy 309.88 93.98))
-		(stroke (width 0) (type solid))
-		(uuid "fc0d6d9d-4e57-4f64-8894-193686c791d7")
-	)
-	(wire
-		(pts (xy 340.36 93.98) (xy 345.44 93.98))
-		(stroke (width 0) (type solid))
-		(uuid "68272605-e415-43d8-b113-dcf0ce82bd5b")
-	)
-	(wire
-		(pts (xy 214.63 120.65) (xy 220.98 120.65))
-		(stroke (width 0) (type solid))
-		(uuid "5a0ac696-0a75-4f7f-b511-c289656cb047")
-	)
-	(wire
-		(pts (xy 214.63 128.27) (xy 220.98 128.27))
-		(stroke (width 0) (type solid))
-		(uuid "d26b40cb-1cf8-4388-8cfc-e4ef05f80ab0")
-	)
-	(wire
-		(pts (xy 30.48 135.89) (xy 35.56 135.89))
-		(stroke (width 0) (type solid))
-		(uuid "03c20610-6847-4fe3-aa5d-2788f065e421")
-	)
-	(wire
-		(pts (xy 30.48 143.51) (xy 36.83 143.51))
-		(stroke (width 0) (type solid))
-		(uuid "bb1bd986-b2b1-4846-a69f-a81e5e4ee44d")
-	)
-	(wire
-		(pts (xy 64.77 146.05) (xy 69.85 146.05))
-		(stroke (width 0) (type solid))
-		(uuid "dce76846-b879-4b73-b4fb-12a3751b710a")
-	)
-	(wire
-		(pts (xy 95.25 146.05) (xy 100.33 146.05))
-		(stroke (width 0) (type solid))
-		(uuid "d8603b9e-f1a5-42c6-aa86-df8ed059f5f1")
-	)
-	(wire
-		(pts (xy 124.46 146.05) (xy 129.54 146.05))
-		(stroke (width 0) (type solid))
-		(uuid "b471d623-6988-44d1-8420-02af53ad061a")
-	)
-	(wire
-		(pts (xy 284.48 146.05) (xy 290.83 146.05))
-		(stroke (width 0) (type solid))
-		(uuid "f0fb9761-8d85-413c-92d7-b133b5b684df")
-	)
-	(wire
-		(pts (xy 320.04 146.05) (xy 326.39 146.05))
-		(stroke (width 0) (type solid))
-		(uuid "01a12b14-4d15-42c3-ba9a-0422f232f349")
-	)
-	(wire
-		(pts (xy 350.52 146.05) (xy 356.87 146.05))
-		(stroke (width 0) (type solid))
-		(uuid "13efd7ad-e414-4458-bae4-d4121ee77765")
-	)
-	(wire
-		(pts (xy 152.4 147.32) (xy 157.48 147.32))
-		(stroke (width 0) (type solid))
-		(uuid "5a91891e-528d-4f2d-ba49-1cbd85c1d1c2")
-	)
-	(wire
-		(pts (xy 182.88 147.32) (xy 189.23 147.32))
-		(stroke (width 0) (type solid))
-		(uuid "9aa9cacb-1693-4b37-b97a-d3aabe3f006c")
-	)
-	(wire
-		(pts (xy 250.19 151.13) (xy 256.54 151.13))
-		(stroke (width 0) (type solid))
-		(uuid "ffa32836-7c65-42b8-a01c-3834f270be2e")
-	)
-	(wire
-		(pts (xy 151.13 152.4) (xy 157.48 152.4))
-		(stroke (width 0) (type solid))
-		(uuid "ed02b82b-f346-43c4-b334-0ab2cd60b60a")
-	)
-	(wire
-		(pts (xy 182.88 152.4) (xy 189.23 152.4))
-		(stroke (width 0) (type solid))
-		(uuid "72edf80d-be32-40be-81e1-ee68fbbd208c")
-	)
-	(wire
-		(pts (xy 64.77 153.67) (xy 69.85 153.67))
-		(stroke (width 0) (type solid))
-		(uuid "e0e71961-3820-41f4-838b-138b056e4722")
-	)
-	(wire
-		(pts (xy 95.25 153.67) (xy 100.33 153.67))
-		(stroke (width 0) (type solid))
-		(uuid "8c5c4c8d-53fd-4cfa-a9f7-e97e53f650b3")
-	)
-	(wire
-		(pts (xy 124.46 153.67) (xy 129.54 153.67))
-		(stroke (width 0) (type solid))
-		(uuid "3d6e7bd4-9d2a-49fd-b822-33b4e2a296f1")
-	)
-	(wire
-		(pts (xy 284.48 153.67) (xy 290.83 153.67))
-		(stroke (width 0) (type solid))
-		(uuid "9971dc18-dd87-4b8d-b397-aa46649fc774")
-	)
-	(wire
-		(pts (xy 320.04 153.67) (xy 325.12 153.67))
-		(stroke (width 0) (type solid))
-		(uuid "4ecb2dc2-d2dc-44f0-98f3-97deb01db11d")
-	)
-	(wire
-		(pts (xy 350.52 153.67) (xy 355.6 153.67))
-		(stroke (width 0) (type solid))
-		(uuid "8cc73dbb-faed-4ff7-ba11-20697b2da787")
-	)
-	(wire
-		(pts (xy 182.88 157.48) (xy 189.23 157.48))
-		(stroke (width 0) (type solid))
-		(uuid "89be0c4a-766a-4800-8723-2f67d19f2ff8")
-	)
-	(wire
-		(pts (xy 250.19 158.75) (xy 256.54 158.75))
-		(stroke (width 0) (type solid))
-		(uuid "5a22fae4-b645-4b5a-bed8-d2f42e259966")
-	)
-	(wire
-		(pts (xy 151.13 160.02) (xy 157.48 160.02))
-		(stroke (width 0) (type solid))
-		(uuid "98e07892-7bdc-4602-9873-fce27b5508f9")
-	)
-	(wire
-		(pts (xy 30.48 176.53) (xy 36.83 176.53))
-		(stroke (width 0) (type solid))
-		(uuid "a9c9fb30-4e0b-413b-9e83-08c68de50642")
-	)
-	(wire
-		(pts (xy 30.48 184.15) (xy 35.56 184.15))
-		(stroke (width 0) (type solid))
-		(uuid "8c81e81a-9b2c-418c-9205-3196f40636f5")
-	)
-	(wire
-		(pts (xy 170.18 195.58) (xy 176.53 195.58))
-		(stroke (width 0) (type solid))
-		(uuid "93f0e2b7-1d93-4fb5-ae05-bf751e0f044f")
-	)
-	(wire
-		(pts (xy 214.63 195.58) (xy 220.98 195.58))
-		(stroke (width 0) (type solid))
-		(uuid "683f3353-bcbb-410c-bbb5-6481d87124ae")
-	)
-	(wire
-		(pts (xy 250.19 195.58) (xy 257.81 195.58))
-		(stroke (width 0) (type solid))
-		(uuid "856c1a2c-af20-4f15-b87f-6e544f568e2c")
-	)
-	(wire
-		(pts (xy 284.48 195.58) (xy 292.1 195.58))
-		(stroke (width 0) (type solid))
-		(uuid "393127c5-3377-4a3b-ba97-7224ec6e0450")
-	)
-	(wire
-		(pts (xy 320.04 195.58) (xy 326.39 195.58))
-		(stroke (width 0) (type solid))
-		(uuid "80138dbc-4080-4da3-b632-a40f81be8add")
-	)
-	(wire
-		(pts (xy 170.18 203.2) (xy 175.26 203.2))
-		(stroke (width 0) (type solid))
-		(uuid "ae52d062-3f3a-4f30-bc93-78626721f84a")
-	)
-	(wire
-		(pts (xy 214.63 203.2) (xy 222.25 203.2))
-		(stroke (width 0) (type solid))
-		(uuid "d3c84cad-365e-4986-a046-f0430c194ed8")
-	)
-	(wire
-		(pts (xy 250.19 203.2) (xy 256.54 203.2))
-		(stroke (width 0) (type solid))
-		(uuid "55768710-79e3-485a-855f-758e74cee0e8")
-	)
-	(wire
-		(pts (xy 284.48 203.2) (xy 290.83 203.2))
-		(stroke (width 0) (type solid))
-		(uuid "c721544c-13d1-4bc0-90f1-cca0faddbe10")
-	)
-	(wire
-		(pts (xy 320.04 203.2) (xy 325.12 203.2))
-		(stroke (width 0) (type solid))
-		(uuid "72e6a3f9-d5d8-4bfd-9c30-d3a0e46d3be5")
-	)
-	(wire
-		(pts (xy 69.85 246.38) (xy 74.93 246.38))
-		(stroke (width 0) (type solid))
-		(uuid "a37b25fe-0668-436d-8a11-5c5c04251877")
-	)
-	(wire
-		(pts (xy 160.02 246.38) (xy 165.1 246.38))
-		(stroke (width 0) (type solid))
-		(uuid "682af660-c1ce-4b74-ae3a-d63f65892d06")
-	)
-	(wire
-		(pts (xy 190.5 246.38) (xy 195.58 246.38))
-		(stroke (width 0) (type solid))
-		(uuid "9709e61f-407b-4b22-861a-89c8c4b5e16f")
-	)
-	(wire
-		(pts (xy 224.79 246.38) (xy 229.87 246.38))
-		(stroke (width 0) (type solid))
-		(uuid "8542ded4-384b-4c83-aa9f-10a2ceddeb88")
-	)
-	(wire
-		(pts (xy 102.87 247.65) (xy 107.95 247.65))
-		(stroke (width 0) (type solid))
-		(uuid "3efc13a2-d6fc-458d-8fe0-34ca2927dbd6")
-	)
-	(wire
-		(pts (xy 123.19 247.65) (xy 128.27 247.65))
-		(stroke (width 0) (type solid))
-		(uuid "3c780f09-56b7-4f94-a9b6-fb33a8eb8248")
-	)
-	(wire
-		(pts (xy 102.87 250.19) (xy 107.95 250.19))
-		(stroke (width 0) (type solid))
-		(uuid "2a138243-bd13-4380-b9c9-55dc83c1137f")
-	)
-	(wire
-		(pts (xy 69.85 254) (xy 74.93 254))
-		(stroke (width 0) (type solid))
-		(uuid "8ffefd5d-2594-4887-aeba-b21b64e16af3")
-	)
-	(wire
-		(pts (xy 160.02 254) (xy 165.1 254))
-		(stroke (width 0) (type solid))
-		(uuid "25d69f22-ae17-40e3-b986-0f3dda5d9a00")
-	)
-	(wire
-		(pts (xy 190.5 254) (xy 195.58 254))
-		(stroke (width 0) (type solid))
-		(uuid "47ef804b-ce60-4f06-b11e-7b2539b3ab76")
-	)
-	(wire
-		(pts (xy 224.79 254) (xy 231.14 254))
-		(stroke (width 0) (type solid))
-		(uuid "dd5fd823-7a8b-493b-b4b0-52d7c7823d4d")
-	)
-	(wire
-		(pts (xy 26.67 250.19) (xy 26.67 255.27))
-		(stroke (width 0) (type solid))
-		(uuid "1e65fc98-ee5f-4e98-9fe9-b5e4b2c1cc84")
-	)
-	(wire
-		(pts (xy 34.29 250.19) (xy 34.29 255.27))
-		(stroke (width 0) (type solid))
-		(uuid "5dd4ed9d-789a-4221-aeca-1e16b087d4de")
-	)
-	(wire
-		(pts (xy 115.57 257.81) (xy 115.57 262.89))
-		(stroke (width 0) (type solid))
-		(uuid "11384ed3-762a-4bae-8248-a144aff0dc62")
-	)
-	(wire
-		(pts (xy 135.89 90.17) (xy 135.89 95.25))
-		(stroke (width 0) (type solid))
-		(uuid "747d0dac-b150-4a0e-b914-19a3b9c34568")
-	)
-	(wire
-		(pts (xy 143.51 90.17) (xy 143.51 95.25))
-		(stroke (width 0) (type solid))
-		(uuid "738c0e2c-d3f4-4cdc-b252-bdc5e06f86de")
-	)
-	(wire
-		(pts (xy 167.64 167.64) (xy 167.64 172.72))
-		(stroke (width 0) (type solid))
-		(uuid "8aa2c98e-4b9d-4a3d-a8e8-df8e1d971da3")
-	)
-	(wire
-		(pts (xy 171.45 49.53) (xy 171.45 54.61))
-		(stroke (width 0) (type solid))
-		(uuid "7a228953-cc10-433b-b50c-79dfc8806e7e")
-	)
-	(wire
-		(pts (xy 172.72 167.64) (xy 172.72 172.72))
-		(stroke (width 0) (type solid))
-		(uuid "72ddc6df-c8b2-4345-8862-121c9eb3587f")
-	)
-	(wire
-		(pts (xy 179.07 49.53) (xy 179.07 54.61))
-		(stroke (width 0) (type solid))
-		(uuid "44c1fb10-c319-47e2-821b-0fd4e3bec72c")
-	)
-	(wire
-		(pts (xy 256.54 250.19) (xy 256.54 255.27))
-		(stroke (width 0) (type solid))
-		(uuid "19535318-16f0-47b0-991f-31e160c4425d")
-	)
-	(wire
-		(pts (xy 264.16 250.19) (xy 264.16 256.54))
-		(stroke (width 0) (type solid))
-		(uuid "d06ed34a-d70d-4d1a-9c6d-a7b1ea4104aa")
-	)
-	(wire
-		(pts (xy 381 149.86) (xy 381 154.94))
-		(stroke (width 0) (type solid))
-		(uuid "97154c4b-81e4-41e9-9e08-65f02cb337b8")
-	)
-	(wire
-		(pts (xy 388.62 149.86) (xy 388.62 156.21))
-		(stroke (width 0) (type solid))
-		(uuid "070937b8-ac69-4751-9590-e5614dc6a580")
 	)
 	(sheet_instances
 		(path "/"

@@ -4,3 +4,4 @@ fp-info-cache
 *.kicad_prl
 output/
 .kicad-mcp/
+.history/
