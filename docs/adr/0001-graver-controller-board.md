@@ -50,9 +50,9 @@ this one PCB; the box is only a shell with holes.
 
 Key elements:
 
-1. **Power**: standard **24 V** barrel-jack brick. The board operates **18-36 V**, so a
-   36 V brick can overdrive the coil for harder hits, and a 19-20 V laptop brick still works
-   (weaker). Fuse, reverse-polarity P-FET, input TVS, bulk capacitance, buck to 5 V, LDO to
+1. **Power**: standard **24 V** barrel-jack brick. The electronics are rated **18-36 V**;
+   the DC jack limits supported bricks to **18-30 V**. A 28-30 V brick can overdrive the
+   coil for harder hits, and a 19-20 V laptop brick still works (weaker). Fuse, reverse-polarity P-FET, input TVS, bulk capacitance, buck to 5 V, LDO to
    3.3 V.
 2. **Solenoid driver**: low-side 100 V logic-level N-MOSFET with a gate driver,
    hardware-timed pulses from TIM1 one-pulse mode, low-side current shunt with amplifier to
@@ -112,29 +112,33 @@ against JLC stock (basic parts preferred).
   ~0.2-0.3 A peak plus ~1-2 W of logic and display.
 - **Fuse**: SMD slow-blow 1 A (1206/1812 class).
 - **Reverse polarity**: P-channel MOSFET in the positive rail (-60 V, >= 2 A class), gate to
-  GND via resistor, 12-15 V zener gate-source clamp. The gate RC also gives a soft turn-on
-  that limits inrush into the bulk capacitors.
+  GND via resistor, 12-15 V zener gate-source clamp. (It does not limit inrush: the body
+  diode conducts before the gate turns on. With ~500 uF of bulk that is acceptable.)
 - **Input TVS**: SMBJ36A class (standoff 36 V, clamp ~58 V at rated pulse current).
 - **Bulk capacitance**: >= 470 uF, 63 V, low-ESR electrolytic, plus ceramics at the driver.
-- **Operating range**: 18-36 V. Below 18 V the firmware warns (weak hits); below 15 V it
-  refuses to fire.
+- **Operating range**: 18-36 V for the electronics, but the DC jack (DC-005 class) is rated
+  30 V, so supported bricks are 18-30 V. A 36 V brick needs a higher-rated input
+  connector. Below 18 V the firmware warns (weak hits); below 15 V it refuses to fire.
 - **VIN sense**: divider to ADC, used for display and strike-energy compensation.
 
 #### 2. Logic rails
 
-- **5 V buck**: >= 60 V input rating (must survive the input TVS clamp), >= 0.5 A,
-  synchronous (LMR36006 / TPS54360 class). Feeds the gate driver, the LDO and the display
-  module VCC if the chosen module wants 5 V.
-- **3.3 V LDO**: from 5 V, >= 300 mA (AMS1117-3.3 or lower-dropout equivalent). Feeds MCU,
-  VDDA, display, encoder pull-ups, pedal, op-amp.
-- **USB power path**: USB VBUS ORed into the 5 V rail through a Schottky, so the board
-  can be flashed and configured from a laptop without the brick. Firmware refuses to fire
-  when VIN is below 15 V, which includes "no brick".
+- **5 V buck**: LM5164 (100 V, 1 A synchronous, SO-8 PowerPAD), set to 5.28 V so the rail
+  is ~4.95 V after the ORing Schottky. EN divider starts it at ~14 V. Feeds the gate driver
+  and the LDO.
+- **3.3 V LDO**: AP2112K-3.3 (600 mA, ~0.25 V dropout). Dropout must stay <= 0.5 V so the
+  board still runs from USB alone (~4.6 V after the Schottky). Feeds MCU, VDDA, display,
+  encoder pull-ups, pedal, op-amp.
+- **USB power path**: two Schottkys ORing buck output and USB VBUS into +5V: no backfeed
+  into the buck, no brick voltage on VBUS. The board can be flashed and configured from a
+  laptop without the brick. The gate driver may sit in UVLO on USB power alone, which is
+  fine: firmware refuses to fire when VIN is below 15 V, which includes "no brick".
 
 #### 3. MCU
 
-- **STM32F411CEU6** (UFQFPN48), 25 MHz HSE crystal and 32.768 kHz LSE, same as the
-  Blackpill, so clock config is identical.
+- **STM32F411CEU6** (UFQFPN48), 25 MHz HSE crystal (10 pF load, 12 pF caps), same
+  frequency as the Blackpill, so clock config is identical. No LSE crystal: nothing uses
+  the RTC. PA10 gets a 10k pull-up so the ROM bootloader reliably picks USB DFU.
 - **Programming**:
   - USB-C (data) to OTG_FS on PA11/PA12, USBLC6-2 ESD. DFU via the ROM bootloader.
   - BOOT0 and NRST tactile buttons on the board, reachable through small holes in the box.
@@ -147,8 +151,8 @@ against JLC stock (basic parts preferred).
 
 #### 4. Solenoid driver
 
-Sized for a 141 ohm coil at up to 36 V (255 mA steady), with margin for a lower-resistance
-coil down to ~30 ohm (1.2 A at 36 V).
+Sized for a 141 ohm coil at up to 36 V (255 mA steady). Supported coil range: >= ~100 ohm
+(0.36 A at 36 V). Lower-resistance coils need a different shunt, fuse and trip threshold.
 
 - **MOSFET**: logic-level N-channel, **Vds >= 100 V** (the flyback clamp stacks on top of
   VIN), >= 2 A, Rds(on) <= 0.3 ohm at Vgs = 4.5 V, SOT-223 or DPAK.
@@ -173,9 +177,12 @@ coil down to ~30 ohm (1.2 A at 36 V).
 - **Slow decay (selectable)**: a P-FET (-60 V, SOT-23) across the TVS (source at the
   diode/TVS node, drain at VIN), gate pulled to source by a resistor, pulled down through a
   small N-FET level shifter with a zener Vgs clamp. MCU GPIO on = TVS shorted = classic
-  diode flyback.
+  diode flyback. The level shifter's drain sees VIN + clamp, so it is a 100 V part
+  (BSS123), not a 60 V 2N7002.
 - **Drain voltage budget**: VIN_max (36 V) + clamp (~30 V at working current) + diode
-  = ~67 V, under 80% of the 100 V MOSFET rating.
+  = ~67 V, under 80% of the 100 V MOSFET rating. During an input surge while the input TVS
+  is clamping (~58 V) the drain can briefly reach 86-97 V: still inside the 100 V rating,
+  accepted as a transient-only exception to the 80% derating.
 - **Energy budget**: at fast decay, the coil's stored energy (0.5 * L * I^2 per strike) is
   dumped in the TVS. With these currents it is small (e.g. L = 100 mH at 0.26 A = 3.4 mJ,
   0.2 W at 60 Hz), well inside an SMB package. Re-check once L is measured.
@@ -192,17 +199,19 @@ coil down to ~30 ohm (1.2 A at 36 V).
   header takes the rest.
 - **Sourcing**: one listing, **all units plus spares bought at once**, because pinout and
   outline vary between sellers.
-- **Backlight**: PWM (TIM4) through a small N-FET, for dimming.
+- **Backlight**: PWM (TIM4) on the module's BLK pin through a 100 ohm series resistor.
+  Common 1.3" modules switch the backlight with their own transistor on BLK, so no
+  external FET is needed.
 - **Bus**: SPI1 at up to 48 MHz with DMA, MOSI only (no MISO). SPI1 carries nothing else,
-  because the module has no CS. A CS net (PA4) is still routed to a pad for modules that
-  have one.
+  because the module has no CS. The header is 1x7: 8-pin variants put CS between DC and
+  BLK, so a 1x8 footprint would not line up anyway.
 
 #### 7. Front-panel control
 
-- **Encoder**: one EC11-type incremental rotary encoder with push switch, PCB-mount THT,
-  **20 detents / 20 pulses per revolution**, 6 mm shaft (D-shaft or knurled, 20 mm long),
-  e.g. Alps EC11E series or the generic EC11 parts JLC stocks. Detent count and pulse
-  count must match, otherwise the value moves by half a step per click.
+- **Encoder**: Alps EC11E15244G1, EC11-type with push switch, PCB-mount THT, **30 detents /
+  15 pulses per revolution**, 6 mm shaft, fits the stock KiCad EC11E footprint. Rule: the
+  detent count equals the pulse count or twice it, and the firmware divisor matches (here:
+  one step per half quadrature cycle). No 20/20 part is stocked at LCSC.
 - **Debounce**: 10k pull-ups plus 10 nF to GND on A and B, read by TIM3 in hardware
   encoder mode, so no counts are lost while the CPU is busy with the display. The push
   switch gets the same RC and a firmware debounce.
@@ -216,15 +225,18 @@ An "expression pedal" is a potentiometer in a rocking foot pedal, connected with
 6.35 mm stereo (TRS) guitar-style plug. Pinout conventions differ by brand; the M-Audio
 EX-P has a polarity switch and is the recommended pedal.
 
-- **Jack**: PCB-mount 6.35 mm stereo jack with tip switch contact, rear edge.
-- **Wiring**: ring = 3.3 V through a 330 ohm series resistor (a mono plug shorts ring to
+- **Jack**: Neutrik NMJ6HCD2, PCB-mount 6.35 mm stereo jack with tip, ring and sleeve
+  normalling contacts, rear edge.
+- **Wiring**: ring = 3.3 V through a 1k series resistor (a mono plug shorts ring to
   sleeve; the resistor makes that harmless), tip = wiper to ADC through RC filter,
-  sleeve = GND.
-- **Ring sense**: ADC on the ring node detects a mono/footswitch plug (ring near 0 V).
+  sleeve = GND. The ring-normal contact goes to GND.
+- **Ring sense = plug detect**: with no plug, the ring-normal contact grounds the ring
+  node; a mono plug does the same. An expression pedal lifts it to ~3 V (1k against the
+  pedal pot). So one ADC reading tells "expression pedal present" apart from "nothing or
+  mono plug". No separate detect GPIO.
 - **Tip pull-up** (100k to 3.3 V) so a simple on/off footswitch on a mono plug also works
   as a fallback (nice to have).
-- **ESD**: low-capacitance TVS array on tip and ring.
-- **Plug detect**: tip switch contact to a GPIO.
+- **ESD**: low-capacitance TVS array on tip and ring (PESD5V0S2BT).
 
 #### 9. Handpiece connector
 
@@ -268,7 +280,6 @@ free once the firmware configures SWD-only debug.
 | Coil current        | PA6  | ADC1_IN6         |
 | VIN sense           | PB0  | ADC1_IN8         |
 | NTC                 | PB1  | ADC1_IN9         |
-| LCD CS (if present) | PA4  | GPIO             |
 | LCD SCK             | PA5  | SPI1_SCK         |
 | LCD MOSI            | PA7  | SPI1_MOSI        |
 | LCD DC              | PB10 | GPIO             |
@@ -278,7 +289,7 @@ free once the firmware configures SWD-only debug.
 | Encoder B           | PB5  | TIM3_CH2 (enc)   |
 | Encoder push        | PB7  | GPIO pull-up     |
 | Decay mode select   | PB14 | GPIO             |
-| Pedal plug detect   | PB13 | GPIO pull-up     |
+| DFU strap           | PA10 | 10k pull-up only |
 | Status LED          | PC13 | GPIO, active low |
 | USB D-/D+           | PA11/PA12 | OTG_FS      |
 | SWD                 | PA13/PA14 | SWD         |
@@ -417,14 +428,16 @@ free once the firmware configures SWD-only debug.
   solder job per handpiece).
 
 ### Risks
-- **24 V not punchy enough**: the board accepts 36 V bricks. Beyond that, the boost-rail
+- **24 V not punchy enough**: the board accepts up to 30 V bricks (36 V with a higher-rated
+  input jack). Beyond that, the boost-rail
   alternative is the next step. The bench rig decides before the schematic is frozen.
 - **Future handpieces with a different coil**: both current coils measure 141 ohm, but the
   batch will need 8-10 more. The handpiece profile and coil check absorb normal variation;
   a 36 ohm (12 V) coil would still be within the driver ratings but needs a lower supply or
   strict duty limits. Buy all solenoids from one listing.
 - **STM32F411 stock at JLC**: fallback STM32F401CCU6 is pin compatible.
-- **Inrush sparking / brick OCP** on hot-plug: mitigated by P-FET soft turn-on.
+- **Inrush sparking / brick OCP** on hot-plug: small risk with ~500 uF of bulk; an NTC
+  inrush limiter or a proper soft-start is the fix if a brick trips.
 
 ---
 
@@ -442,7 +455,7 @@ because the result is a hot handpiece, not a fire, and the user notices immediat
 
 **Q: A student plugs a guitar cable, a mono jack or a sustain pedal into the pedal input.
 What happens?**
-A: The mono plug shorts ring to sleeve; the 330 ohm series resistor limits that to ~10 mA
+A: The mono plug shorts ring to sleeve; the 1k series resistor limits that to 3.3 mA
 and the ring-sense ADC detects it. Firmware then treats the input as an on/off footswitch
 (tip pull-up) or refuses with a message. Nothing gets damaged, and it can't fire unexpectedly
 because the pedal-at-rest rule still applies.
@@ -451,7 +464,8 @@ because the pedal-at-rest rule still applies.
 A: It is the coil's rated continuous operating point, so short pulses at 24 V give rated
 force, not more. The original project ran a 12 V 1335 from an 18.5 V brick, which is
 about 1.5x overdrive, and reported it engraves steel. The equivalent for this coil is
-~36 V, which the board supports. If that is still not enough, the boost-rail alternative
+~36 V. The electronics support that; the stock DC jack stops at 30 V, which is already
+1.25x overdrive. If that is still not enough, the boost-rail alternative
 is the answer. This is the question the bench rig must answer first.
 
 **Q: Why constant volt-seconds for supply compensation instead of constant energy?**
@@ -497,8 +511,8 @@ profile, the power-up coil check and, later, by current-based control.
 ### Known unknowns and how the plan absorbs them
 
 - **Punch at 24 V**
-  - Default: 24 V brick, 36 V supported.
-  - Pivot signal: bench hits too weak even at 36 V. Then add the boost rail before the
+  - Default: 24 V brick, up to 30 V supported.
+  - Pivot signal: bench hits too weak even at 30 V. Then add the boost rail before the
     schematic.
 - **Coil inductance**
   - Default: assume a time constant of order 1 ms; the TVS energy has a large margin.
