@@ -1,0 +1,125 @@
+# Handoff: graver controller board
+
+Last updated 2026-09-14. Read this first in a new session; it says what
+exists, what is decided, how to work on it and what comes next.
+
+## What this is
+
+A new controller for the ITS-LZ-1335 solenoid graver in this repo. Batch of
+8-10 boxes for a class (adults), each box = 24 V brick + this PCB + 1.3"
+ST7789 display + one handpiece + expression pedal. PCB fully assembled by
+JLCPCB, no soldering by the builders, under EUR 150 per box, enclosure to be
+3D printed (Creality K2 Max).
+
+Upstream project: Savage-Sabrina/DIY_SolenoidGraver (Arduino Nano board).
+Our work lives in Jan's private fork: git remote `origin` =
+github.com/delandtj/DIY_SolenoidGraver, `upstream` = Savage-Sabrina
+(read-only, never push there). Branch `master`, everything pushed as of
+commit fc9b202.
+
+## Where things are
+
+| What | Path |
+|---|---|
+| Spec / decisions (Accepted) | `docs/adr/0001-graver-controller-board.md` |
+| KiCad 10 project | `Hardware/graver-controller/` (root + power/driver/mcu/io sheets) |
+| Schematic generator | `Hardware/graver-controller/tools/` (see its README) |
+| Reference netlist sheets | `Hardware/graver-controller/tools/ref/` |
+| Part choices, LCSC numbers, datasheet gotchas | `Hardware/graver-controller/docs/parts-power.md`, `parts-mcu.md` |
+| Net-by-net capture list | `Hardware/graver-controller/docs/capture-netlist.md` |
+| Old Arduino design (context only) | `Schematic/`, `Arduino Code/`, `README.md` |
+
+## State of the design
+
+Schematic rev 0.1 is complete, drawn properly (wires, decoupling at pins,
+signal flow), ERC 0 violations, every part has value, footprint and LCSC
+number. No PCB layout yet (the .kicad_pcb is empty).
+
+Key facts (details in the ADR):
+
+- Coil: both 1335s measure 141 ohm = the 24 V / ~4 W variant. So: 24 V brick
+  standard, electronics rated 18-36 V, DC jack rated 30 V (bricks 18-30 V).
+  Coil current 0.17-0.26 A; driver scoped to coils >= ~100 ohm.
+- MCU: STM32F411CEU6 on board (same chip as the WeAct Blackpill, used for
+  firmware bring-up). USB-C for DFU updates, SWD header for development,
+  PA10 pull-up so the ROM bootloader picks USB. No LSE crystal.
+- Strike: TIM1 one-pulse on PA8 -> UCC27517 gate driver -> IRLR3410 low
+  side. 1 ohm shunt -> TLV9062: one half is a x11 amplifier to PA6, the
+  other a comparator (~0.77 A trip) into TIM1_BKIN (PB12).
+- Flyback: SS110 + SMBJ24A fast decay by default; SI2309 P-FET across the
+  TVS gives plain-diode slow decay when PB14 (DECAY_SLOW) is high.
+- Power: fuse, DMP6023LE reverse-polarity P-FET, SMBJ36A, 470 uF, LM5164
+  buck set to 5.28 V (EN starts ~14 V, BST cap 2.2 nF), two SS14 OR the buck
+  and USB VBUS into +5V, AP2112K-3.3 LDO. USB alone runs the logic.
+- UI: 1.3" ST7789 240x240 3.3 V module on a 1x7 header (no CS, SPI mode 3,
+  backlight PWM from PB6 through 100 R), one Alps EC11E15244G1 encoder
+  (30 detents / 15 pulses, TIM3 encoder mode, push on PB7).
+- Pedal: Neutrik NMJ6HCD2 6.35 mm TRS jack. Ring = 3V3 through 1k, tip =
+  wiper to PA1, ring sense on PA2; the jack's ring-normal contact grounds
+  the ring when nothing is plugged, so one ADC reading detects "no pedal"
+  and "mono plug". PESD5V0S2BT ESD on tip and ring.
+- Handpiece: 4-pin GX12 aviation socket on the box (pre-wired pigtail) into a
+  4-pin 5.08 mm pluggable terminal: 1 VIN, 2 coil, 3 NTC (optional), 4 GND.
+- Pin map: in the ADR, verified against the datasheet.
+
+## How to work on the schematic
+
+The four child sheets are GENERATED. Do not hand-edit the .kicad_sch files.
+
+    cd Hardware/graver-controller
+    python3 tools/build.py          # regenerate all sheets (or: build.py mcu)
+    tools/verify.sh                 # must print "NETLIST OK" and "Found 0 violations"
+
+- Drawing changes: edit `tools/sheets/<sheet>.py` (coordinates in mm,
+  wires attach to pins as 'R301.1'), build, verify, look at the PNGs in
+  `output/verify/`.
+- Circuit changes (new part, new net): the truth is `tools/ref/`. Either
+  edit the ref sheets in eeschema and then mirror the change in the layout
+  file, or retire the generator once layout starts and edit in eeschema
+  only. Decide that at the start of PCB work.
+- Rendering: the kicad MCP's sch_render_png is broken on this machine; use
+  `kicad-cli sch export svg` + `rsvg-convert` (verify.sh does this).
+- Commits are GPG-signed with a desktop pinentry; they fail when Jan is
+  away from the keyboard. Commit while he is present. Never `git add -A`.
+- Plain ASCII in files. No Claude attribution lines in commits.
+
+## Open items (carry into the next session)
+
+Hardware verification before layout is frozen:
+
+1. Bench test with a 24 V brick: is 24-30 V enough punch? If not, the
+   ADR's boost-rail alternative comes back. The OPEN-SMART module Jan has
+   tops out at 13.5 V, so use a D4184-class module or the real FET for this.
+2. Measure coil inductance (LCR meter or current-rise on a scope). Sizes the
+   TVS energy and confirms the 0.5-15 ms pulse range.
+3. Part number printed on the solenoids (confirms 24 V variant and duty).
+4. OT3499 display: check the real pinout (7-pin, GND VCC SCL SDA RES DC
+   BLK expected) and whether BLK idles high on the module.
+5. Footprints to check against real parts at layout: J101 DC-005-A200,
+   J201 WJ2EDGRC terminal (KiCad drill 1.2 mm, needs 1.5-1.7 mm),
+   NMJ6HCD2 normalling contacts (SN assumed a break contact), Bourns/Alps
+   encoder lug spacing.
+6. Known, accepted limits: I_SENSE saturates above ~0.3 A (trip uses the
+   raw shunt), VIN_SENSE saturates during a surge clamp, comparator
+   hysteresis is only ~3 mV, a shorted FET is not caught (coil just runs
+   warm at 0.2 A).
+
+Decisions still open (ADR "Open Questions"):
+
+- NTC fitted on all handpieces, or rely on the coil-resistance estimate?
+- Default strike ranges (1-60 Hz, 0.5-15 ms, 35 % duty cap) to be confirmed
+  on the bench.
+
+## Next steps, in order
+
+1. PCB layout: board is the top face of a desk console; display + encoder
+   on top, DC jack / pedal jack / handpiece terminal on the rear edge, USB-C
+   + BOOT0 + NRST reachable through holes, four M3 holes. 2-layer. Keep the
+   drain / flyback / bulk-cap loop tight and away from the ADC inputs;
+   Kelvin-route R204 to R209/R213.
+2. JLC BOM + CPL export, order 10 + spares of the display module and
+   encoder from single listings.
+3. Firmware ADR, then Rust (embassy-stm32) bring-up on the Blackpill with
+   the pin map from the ADR; same binary must run on the board.
+4. Enclosure in FreeCAD next to the existing CAD files, from a STEP export
+   of the board.
