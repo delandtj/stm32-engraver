@@ -253,6 +253,19 @@ and not confusable with the power plug.
 - **Coil check**: at power-up and plug-in, firmware fires a sub-threshold test pulse and
   reads the current slope and plateau. That detects an open handpiece and estimates coil R
   (a ~0.4%/degC copper tempco also gives a temperature estimate without an NTC).
+- **Handpiece cable** (decided 2026-09-16): 4-core on every handpiece, even without an
+  NTC, so any handpiece fits any box and the NTC can be added later. Fine-stranded
+  0.14-0.25 mm2 (26-24 AWG) per conductor, soft jacket (silicone 4-core preferred, LiYY
+  4x0.14 acceptable), outer diameter 3.5-5 mm so the GX12 cable clamp grips it, 1.2-1.5 m,
+  unshielded. Current is <= 0.26 A and the flyback clamp puts about 60 V peak on the coil
+  wires, so flexibility and bend life decide the cable, not current or voltage. A shielded
+  cable, if used anyway, has its shield on pin 4 at the plug end only. No coiled cord: its
+  retraction force tugs a light handpiece.
+- **Colour code** (same on all handpieces and pigtails): pin 1 COIL+ red, pin 2 COIL-
+  black, pin 3 NTC white, pin 4 NTC return green. The coil pair and the NTC pair are each
+  one adjacent pair in the cable.
+- **Handpiece-side attachment** (strain relief, how the cable enters the printed body) is
+  not decided; it is worked out by iteration on the first handpieces.
 
 #### 10. Mechanical / enclosure interface
 
