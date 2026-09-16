@@ -20,6 +20,7 @@ heapless = "0.8"
 libm = "0.2"
 mipidsi = { version = "0.10", features = ["defmt"] }
 panic-probe = { version = "1", features = ["print-defmt"] }
+profont = "0.7.0"
 static_cell = "2"
 
 [features]

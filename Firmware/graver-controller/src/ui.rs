@@ -18,7 +18,8 @@ use embassy_stm32::spi::mode::Master;
 use embassy_stm32::timer::simple_pwm::SimplePwm;
 use embassy_time::{Delay, Duration, Ticker};
 use embedded_graphics::mono_font::MonoTextStyle;
-use embedded_graphics::mono_font::ascii::{FONT_6X10, FONT_9X18_BOLD, FONT_10X20};
+use embedded_graphics::mono_font::ascii::FONT_9X18_BOLD;
+use profont::{PROFONT_18_POINT, PROFONT_24_POINT};
 use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{PrimitiveStyle, Rectangle};
@@ -106,26 +107,40 @@ const ALARM: Rgb565 = Rgb565::new(31, 0, 0);
 const OK: Rgb565 = Rgb565::new(0, 40, 0);
 
 /// Run-screen field geometry: label position, value position, cell width.
+///
+/// Sized for people who switch between a microscope and the screen, or
+/// wear reading glasses: the two steered values (rate, strength) are in a
+/// 16x30 font, everything else in 12x22, labels in 9x18.
 struct Cell {
     x: i32,
     y: i32,
     w: u32,
     label: &'static str,
+    big: bool,
 }
 
 const CELLS: [Cell; 6] = [
-    Cell { x: 8, y: 40, w: 108, label: "RATE" },
-    Cell { x: 128, y: 40, w: 104, label: "STRENGTH" },
-    Cell { x: 8, y: 100, w: 108, label: "ON TIME" },
-    Cell { x: 128, y: 100, w: 104, label: "SUPPLY" },
-    Cell { x: 8, y: 160, w: 108, label: "HANDPIECE" },
-    Cell { x: 128, y: 160, w: 104, label: "DECAY" },
+    Cell { x: 8, y: 32, w: 112, label: "RATE", big: true },
+    Cell { x: 124, y: 32, w: 112, label: "STRENGTH", big: true },
+    Cell { x: 8, y: 92, w: 112, label: "ON TIME", big: false },
+    Cell { x: 124, y: 92, w: 112, label: "SUPPLY", big: false },
+    Cell { x: 8, y: 140, w: 112, label: "HANDPIECE", big: false },
+    Cell { x: 124, y: 140, w: 112, label: "DECAY", big: false },
 ];
-/// Height of a value cell (FONT_10X20 plus a little air).
-const CELL_H: u32 = 22;
+/// Value sits this far below its label (label font is 18 px high).
+const VALUE_DY: i32 = 18;
+/// Height of a value cell: font height plus a little air.
+const CELL_H_BIG: u32 = 34;
+const CELL_H: u32 = 24;
+/// Header bar.
+const HEADER_H: u32 = 28;
 /// Status bar.
-const BAR_Y: i32 = 208;
-const BAR_H: u32 = 32;
+const BAR_Y: i32 = 190;
+const BAR_H: u32 = 50;
+/// Menu rows.
+const MENU_Y: i32 = 32;
+const MENU_PITCH: i32 = 25;
+const MENU_ROW_H: u32 = 23;
 
 type Text12 = String<12>;
 
@@ -257,19 +272,19 @@ impl Painter {
     /// Static parts of the run screen.
     fn draw_frame(&mut self, mode: Mode) {
         self.lcd.clear(BG).ok();
-        self.fill(0, 0, WIDTH as u32, 28, ACCENT);
-        self.text(8, 5, "GRAVER", MonoTextStyle::new(&FONT_9X18_BOLD, Rgb565::BLACK));
+        self.fill(0, 0, WIDTH as u32, HEADER_H, ACCENT);
+        self.text(8, 3, "GRAVER", MonoTextStyle::new(&PROFONT_18_POINT, Rgb565::BLACK));
         let label = match mode {
             Mode::Frequency => "MODE F",
             Mode::Strength => "MODE S",
         };
         self.text(
-            WIDTH as i32 - 8 - 6 * 9,
-            5,
+            WIDTH as i32 - 8 - 6 * 12,
+            3,
             label,
-            MonoTextStyle::new(&FONT_9X18_BOLD, Rgb565::BLACK),
+            MonoTextStyle::new(&PROFONT_18_POINT, Rgb565::BLACK),
         );
-        let label_style = MonoTextStyle::new(&FONT_6X10, LABEL);
+        let label_style = MonoTextStyle::new(&FONT_9X18_BOLD, LABEL);
         for cell in CELLS.iter() {
             Text::with_baseline(
                 cell.label,
@@ -284,42 +299,47 @@ impl Painter {
 
     fn draw_cell(&mut self, index: usize, text: &str) {
         let cell = &CELLS[index];
-        let y = cell.y + 14;
-        self.fill(cell.x, y, cell.w, CELL_H, BG);
-        self.text(cell.x, y, text, MonoTextStyle::new(&FONT_10X20, VALUE));
+        let y = cell.y + VALUE_DY;
+        if cell.big {
+            self.fill(cell.x, y, cell.w, CELL_H_BIG, BG);
+            self.text(cell.x, y, text, MonoTextStyle::new(&PROFONT_24_POINT, VALUE));
+        } else {
+            self.fill(cell.x, y, cell.w, CELL_H, BG);
+            self.text(cell.x, y, text, MonoTextStyle::new(&PROFONT_18_POINT, VALUE));
+        }
     }
 
     fn draw_status(&mut self, status: Status, vin_mv: u32) {
         let colour = status_colour(status, vin_mv);
         self.fill(0, BAR_Y, WIDTH as u32, BAR_H, colour);
         let text = status_text(status);
-        let x = (WIDTH as i32 - text.len() as i32 * 10) / 2;
+        let x = (WIDTH as i32 - text.len() as i32 * 16) / 2;
         self.text(
             x.max(0),
-            BAR_Y + 6,
+            BAR_Y + 10,
             text,
-            MonoTextStyle::new(&FONT_10X20, Rgb565::BLACK),
+            MonoTextStyle::new(&PROFONT_24_POINT, Rgb565::BLACK),
         );
     }
 
     fn draw_menu_frame(&mut self) {
         self.lcd.clear(BG).ok();
-        self.fill(0, 0, WIDTH as u32, 28, ACCENT);
-        self.text(8, 5, "SETTINGS", MonoTextStyle::new(&FONT_9X18_BOLD, Rgb565::BLACK));
+        self.fill(0, 0, WIDTH as u32, HEADER_H, ACCENT);
+        self.text(8, 3, "SETTINGS", MonoTextStyle::new(&PROFONT_18_POINT, Rgb565::BLACK));
     }
 
     fn draw_menu_row(&mut self, row: usize, m: &MenuState) {
-        let y = 34 + row as i32 * 24;
+        let y = MENU_Y + row as i32 * MENU_PITCH;
         let selected = m.selected == row;
         let bg = if selected { ACCENT } else { BG };
         let fg = if selected { Rgb565::BLACK } else { VALUE };
-        self.fill(0, y, WIDTH as u32, 22, bg);
-        self.text(6, y + 1, MENU_ITEMS[row], MonoTextStyle::new(&FONT_10X20, fg));
+        self.fill(0, y, WIDTH as u32, MENU_ROW_H, bg);
+        self.text(6, y, MENU_ITEMS[row], MonoTextStyle::new(&PROFONT_18_POINT, fg));
         let value = menu_value(row, &m.settings, m.pedal_raw);
         if !value.is_empty() {
             let colour = if selected && m.editing { WARN } else { fg };
-            let x = WIDTH as i32 - 6 - value.len() as i32 * 10;
-            self.text(x, y + 1, &value, MonoTextStyle::new(&FONT_10X20, colour));
+            let x = WIDTH as i32 - 6 - value.len() as i32 * 12;
+            self.text(x, y, &value, MonoTextStyle::new(&PROFONT_18_POINT, colour));
         }
     }
 }

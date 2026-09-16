@@ -70,8 +70,8 @@ pub const MENU_ITEMS: [&str; 8] = [
     "Duty cap",
     "Decay",
     "Supply comp",
-    "Pedal heel",
-    "Pedal toe",
+    "Heel cal",
+    "Toe cal",
     "Brightness",
     "Exit",
 ];
