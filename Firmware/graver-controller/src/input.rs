@@ -264,10 +264,23 @@ mod backend {
 
         defmt::info!("input backend: three buttons on PB4/PB5/PB7");
 
+        // Raw levels, logged on change at debug level: wiring check on the
+        // bench without a scope.
+        let mut raw = (up.is_low(), down.is_low(), push.is_low());
+        defmt::debug!("buttons raw low (up, down, push) = {}", raw);
+        let mut last_report = Instant::now();
+
         let mut ticker = Ticker::every(POLL);
         loop {
             ticker.next().await;
             let now = Instant::now();
+
+            let now_raw = (up.is_low(), down.is_low(), push.is_low());
+            if now_raw != raw || (now - last_report).as_millis() >= 2000 {
+                raw = now_raw;
+                last_report = now;
+                defmt::debug!("buttons raw low (up, down, push) = {}", raw);
+            }
 
             // While a direction button is held the repeat rate is fixed, so
             // acceleration is derived from how long it has been down.
