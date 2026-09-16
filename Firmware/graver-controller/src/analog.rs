@@ -45,6 +45,12 @@ const NTC_T0_K: f32 = 298.15;
 const KELVIN_OFFSET: f32 = 273.15;
 /// Above this the NTC pin is treated as open (no thermistor fitted).
 pub const NTC_OPEN_MV: u32 = 3150;
+/// A real NTC behind 10k and 100 nF is DC-steady; a floating pin (bench rig
+/// without the pull-up) wanders by hundreds of mV. Raw samples that spread
+/// more than this over `NTC_STABLE_SAMPLES` mean "no NTC".
+pub const NTC_STABLE_MV: u32 = 80;
+/// Window for the spread check: 40 samples at 200 Hz = 200 ms.
+pub const NTC_STABLE_SAMPLES: u32 = 40;
 /// Below this it is treated as shorted, which is also "do not trust it".
 pub const NTC_SHORT_MV: u32 = 60;
 
@@ -189,6 +195,12 @@ pub async fn analog_task(
     let mut f_ntc = adc.blocking_read(&mut ntc, st) as u32;
     let mut f_coil = 0u32;
 
+    // Peak-to-peak tracker for the NTC plausibility check.
+    let mut ntc_min = u32::MAX;
+    let mut ntc_max = 0u32;
+    let mut ntc_n = 0u32;
+    let mut ntc_stable = false;
+
     let mut ticker = Ticker::every(PERIOD);
     loop {
         ticker.next().await;
@@ -200,7 +212,17 @@ pub async fn analog_task(
         iir(&mut f_ring, adc.blocking_read(&mut ring, st) as u32, FILTER_N);
         iir(&mut f_coil, adc.blocking_read(&mut coil, st) as u32, FILTER_N);
         iir(&mut f_vin, adc.blocking_read(&mut vin, st) as u32, FILTER_N);
-        iir(&mut f_ntc, adc.blocking_read(&mut ntc, st) as u32, FILTER_N);
+        let ntc_raw = adc.blocking_read(&mut ntc, st) as u32;
+        iir(&mut f_ntc, ntc_raw, FILTER_N);
+        ntc_min = ntc_min.min(ntc_raw);
+        ntc_max = ntc_max.max(ntc_raw);
+        ntc_n += 1;
+        if ntc_n >= NTC_STABLE_SAMPLES {
+            ntc_stable = counts_to_mv(ntc_max - ntc_min) <= NTC_STABLE_MV;
+            ntc_min = u32::MAX;
+            ntc_max = 0;
+            ntc_n = 0;
+        }
 
         let pedal_raw = f_pedal as u16;
         let ring_mv = counts_to_mv(f_ring);
@@ -210,7 +232,11 @@ pub async fn analog_task(
             pedal_present: ring_mv >= PEDAL_RING_PRESENT_MV,
             vin_mv: vin_from_mv(counts_to_mv(f_vin)),
             coil_ma: coil_ma_from_mv(counts_to_mv(f_coil)),
-            temp_c: ntc_temp_c(counts_to_mv(f_ntc)),
+            temp_c: if ntc_stable {
+                ntc_temp_c(counts_to_mv(f_ntc))
+            } else {
+                None
+            },
         };
         tx.send(readings);
     }
