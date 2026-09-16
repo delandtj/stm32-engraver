@@ -1,0 +1,48 @@
+[package]
+name = "graver-controller"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cortex-m = { version = "0.7", features = ["inline-asm", "critical-section-single-core"] }
+cortex-m-rt = "0.7"
+defmt = "1"
+defmt-rtt = "1"
+embassy-executor = { version = "0.10", default-features = false, features = ["platform-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
+embassy-futures = "0.1"
+embassy-stm32 = { version = "0.6", default-features = false, features = ["rt", "stm32f411ce", "time-driver-tim5", "exti", "defmt", "unstable-pac", "time"] }
+embassy-sync = { version = "0.8", features = ["defmt"] }
+embassy-time = { version = "0.5", features = ["defmt", "defmt-timestamp-uptime", "tick-hz-1_000_000"] }
+embedded-graphics = "0.8"
+embedded-hal = "1"
+embedded-hal-bus = "0.3"
+heapless = "0.8"
+libm = "0.2"
+mipidsi = { version = "0.10", features = ["defmt"] }
+panic-probe = { version = "1", features = ["print-defmt"] }
+static_cell = "2"
+
+[features]
+default = []
+# Bench helper: fire a fixed burst of pulses at boot, without a pedal, so the
+# strike path can be scoped with only a Blackpill, a FET module and the coil.
+bench = []
+# Input backend: three tactile buttons to GND on the encoder pins instead of a
+# rotary encoder. Off by default; when it is on the encoder backend is not
+# compiled. See src/input.rs.
+buttons = []
+
+[profile.dev]
+opt-level = 1
+debug = 2
+lto = false
+incremental = false
+
+[profile.release]
+# debug info stays in the ELF (it is not flashed) so defmt and probe-rs can
+# resolve symbols and panic locations.
+debug = 2
+lto = "fat"
+opt-level = "s"
+codegen-units = 1
+overflow-checks = true

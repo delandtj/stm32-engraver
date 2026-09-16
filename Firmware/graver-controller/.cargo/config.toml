@@ -1,0 +1,29 @@
+# Build and flash configuration for the graver controller firmware.
+#
+# Target: STM32F411CEU6 (Cortex-M4F) on the WeAct Blackpill and on the
+# production board. Both use the same binary.
+
+[build]
+target = "thumbv7em-none-eabihf"
+
+[target.thumbv7em-none-eabihf]
+# probe-rs flashes over SWD and prints the defmt log stream.
+runner = "probe-rs run --chip STM32F411CEUx"
+
+rustflags = [
+  # cortex-m-rt linker script; memory.x in the crate root sizes the regions.
+  "-C", "link-arg=-Tlink.x",
+  # defmt log frames are emitted through a linker section.
+  "-C", "link-arg=-Tdefmt.x",
+  # Keep a frame pointer so probe-rs can unwind a panic.
+  "-C", "force-frame-pointers=yes",
+]
+
+[env]
+# Log level compiled into the binary. Strike details are at debug level.
+DEFMT_LOG = "info"
+
+[alias]
+# DFU path (no debug probe): build, convert to a raw binary, flash over USB.
+# Needs cargo-binutils + llvm-tools-preview, or use arm-none-eabi-objcopy.
+bin = "objcopy --release -- -O binary graver-controller.bin"

@@ -1,6 +1,6 @@
 # Handoff: graver controller board
 
-Last updated 2026-09-14. Read this first in a new session; it says what
+Last updated 2026-09-16. Read this first in a new session; it says what
 exists, what is decided, how to work on it and what comes next.
 
 ## What this is
@@ -27,6 +27,9 @@ commit fc9b202.
 | Reference netlist sheets | `Hardware/graver-controller/tools/ref/` |
 | Part choices, LCSC numbers, datasheet gotchas | `Hardware/graver-controller/docs/parts-power.md`, `parts-mcu.md` |
 | Net-by-net capture list | `Hardware/graver-controller/docs/capture-netlist.md` |
+| Firmware spec (Accepted) | `docs/adr/0002-firmware.md` |
+| Firmware (Rust, embassy-stm32) | `Firmware/graver-controller/` (see its README) |
+| Bench rig wiring | `docs/bench-rig.md` |
 | Old Arduino design (context only) | `Schematic/`, `Arduino Code/`, `README.md` |
 
 ## State of the design
@@ -61,6 +64,27 @@ Key facts (details in the ADR):
 - Handpiece: 4-pin GX12 aviation socket on the box (pre-wired pigtail) into a
   4-pin 5.08 mm pluggable terminal: 1 VIN, 2 coil, 3 NTC (optional), 4 GND.
 - Pin map: in the ADR, verified against the datasheet.
+
+## State of the firmware
+
+Written 2026-09-16, builds clean (release, clippy) for thumbv7em-none-eabihf,
+NOT yet run on hardware. Tasks: analog (ADC 200 Hz), input (TIM3 encoder or
+three buttons with `--features buttons`), control (modes, menu, safety),
+strike (TIM1 one-pulse on PA8, break on PB12 latches), ui (ST7789 via
+mipidsi, 10 Hz partial refresh), main (IWDG fed only while control
+heartbeats). Settings journal in flash sector 7. Hold the encoder push at
+power-up = ROM DFU bootloader. `--features bench` fires a fixed burst at
+boot for scoping the strike path.
+
+    cd Firmware/graver-controller
+    cargo build --release [--features buttons,bench]
+    cargo run --release            # probe-rs + defmt, needs an SWD probe
+    tools/dfu.sh                   # USB DFU, no probe
+
+Unverified on hardware: ST7789 offset / colour inversion for the OT3499
+module, encoder detent divisor (2 counts per detent for the Alps 30/15),
+flash journal, bootloader jump. Jan has no encoder yet (2026-09-16): use
+the buttons feature, PB4 up, PB5 down, PB7 push.
 
 ## How to work on the schematic
 
@@ -119,7 +143,8 @@ Decisions still open (ADR "Open Questions"):
    Kelvin-route R204 to R209/R213.
 2. JLC BOM + CPL export, order 10 + spares of the display module and
    encoder from single listings.
-3. Firmware ADR, then Rust (embassy-stm32) bring-up on the Blackpill with
-   the pin map from the ADR; same binary must run on the board.
+3. Firmware bring-up on the Blackpill bench rig (docs/bench-rig.md): flash,
+   display, buttons/encoder, VIN divider + pot, then the coil at 12 V and
+   24 V from the lab PSU. Fix what the hardware disagrees with.
 4. Enclosure in FreeCAD next to the existing CAD files, from a STEP export
    of the board.
