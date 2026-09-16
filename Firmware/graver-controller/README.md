@@ -97,6 +97,7 @@ with the frequency and the on-time.
 |-----------|---------|--------------|
 | `bench`   | off     | Fires a fixed burst at boot, without a pedal |
 | `buttons` | off     | Three tactile buttons instead of the encoder |
+| `vin-div-10k` | off | Bench VIN divider 100k / 10k instead of the board's 100k / 8.2k |
 
 ### `bench`
 

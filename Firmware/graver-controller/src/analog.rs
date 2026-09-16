@@ -19,9 +19,17 @@ pub const VREF_MV: u32 = 3300;
 /// 12-bit conversions.
 pub const ADC_MAX: u32 = 4095;
 
-/// VIN divider: 100k over 8.2k, so VIN = Vadc * 108.2 / 8.2.
+/// VIN divider on the board: 100k over 8.2k, so VIN = Vadc * 108.2 / 8.2.
+#[cfg(not(feature = "vin-div-10k"))]
 pub const VIN_DIV_NUM: u32 = 1082;
+#[cfg(not(feature = "vin-div-10k"))]
 pub const VIN_DIV_DEN: u32 = 82;
+/// Bench rig divider: 100k over 10k, VIN = Vadc * 110 / 10, saturates at
+/// 36 V. Selected with `--features vin-div-10k`.
+#[cfg(feature = "vin-div-10k")]
+pub const VIN_DIV_NUM: u32 = 110;
+#[cfg(feature = "vin-div-10k")]
+pub const VIN_DIV_DEN: u32 = 10;
 
 /// Coil current sense: 1 ohm shunt into a gain-of-11 amplifier.
 /// 1 A would be 11 V, so the usable range stops at about 0.3 A.

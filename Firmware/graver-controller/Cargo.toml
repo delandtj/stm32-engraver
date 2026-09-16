@@ -31,6 +31,8 @@ bench = []
 # rotary encoder. Off by default; when it is on the encoder backend is not
 # compiled. See src/input.rs.
 buttons = []
+# Bench rig VIN divider is 100k / 10k instead of the board's 100k / 8.2k.
+vin-div-10k = []
 
 [profile.dev]
 opt-level = 1

@@ -60,6 +60,10 @@ divider on the breadboard:
 
 24 V reads 1.82 V at PB0; the 3.3 V ADC saturates at 43.5 V.
 
+No 8.2k at hand: use 10k and build with `--features vin-div-10k` (24 V reads
+2.18 V, saturates at 36 V). The firmware's default constants are the board's
+100k / 8.2k.
+
 ## Display (OT3499, 1.3" ST7789 240x240, 3.3 V, 7 pins, no CS)
 
 | Module pin | Blackpill | Function |
