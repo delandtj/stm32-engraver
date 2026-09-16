@@ -89,6 +89,15 @@ the module (backlight on with the pin floating), PB6 still works.
 Internal pull-ups are enabled in firmware. Optional: 100 nF from A and from
 B to GND for cleaner counting.
 
+No encoder yet: build with `--features buttons` and wire three tactile
+buttons to GND on the same pins, nothing gets rewired later.
+
+| Button | Blackpill | Function |
+|---|---|---|
+| up | PB4 | one detent up, auto-repeats when held |
+| down | PB5 | one detent down, auto-repeats when held |
+| push | PB7 | short press = mode, long press = menu |
+
 ## Pedal
 
 Real expression pedal (6.35 mm TRS, e.g. M-Audio EX-P) through a TRS jack or
