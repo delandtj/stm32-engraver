@@ -28,7 +28,12 @@ pub const DUTY_CAP_LIMIT_PCT: u32 = 35;
 /// Supply compensation keeps t_on * VIN constant at this reference.
 pub const V_NOMINAL_MV: u32 = 24_000;
 /// Below this the firmware refuses to fire ("no brick").
+#[cfg(not(feature = "low-vin"))]
 pub const VIN_MIN_FIRE_MV: u32 = 15_000;
+/// Bench rig with a 12 V test supply and a 30 V-class FET module: fire from
+/// 10 V. Never for the production board. Selected with `--features low-vin`.
+#[cfg(feature = "low-vin")]
+pub const VIN_MIN_FIRE_MV: u32 = 10_000;
 /// Below this the hits are weak and the screen says so.
 pub const VIN_WARN_MV: u32 = 18_000;
 /// Handpiece over-temperature cut-out.

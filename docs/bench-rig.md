@@ -41,6 +41,31 @@ Module choice:
 | D4184 dual-MOSFET trigger module | 5-36 V | the real 24 V punch test |
 | Bare logic-level N-FET (IRLZ44N, IRL540, IRLB8721) | any | best: gate <- PA8 through 100 R, 100k gate to GND, source to GND, drain to coil |
 
+EG27324 + M3004D module (the one on the bench, 2026-09-16): the M3004D is a
+30 V FET, so 12-13.5 V only, never 24 V. It has its own flyback diode
+(RS3M), no 1N4007 needed.
+
+| Module terminal | Goes to |
+|---|---|
+| J1 SIG | Blackpill A8 |
+| J1 VCC | Blackpill 5V pin (the driver runs on 5 V, NOT 12 V, NOT 3V3) |
+| J1 GND | Blackpill G |
+| J2 POWER + / - | lab PSU 12 V / PSU negative (also to Blackpill G) |
+| J3 LOAD | coil, either way round |
+
+## Bring-up sequence (learned the hard way: one wrong wire on the module
+## killed a Blackpill and an ST-Link on 2026-09-16)
+
+1. Wire everything with the PSU off and the Blackpill unpowered.
+2. Meter, continuity: PSU + must reach only the module POWER +, the coil
+   side of the module, and the 100k of the VIN divider. Not 5V, not 3V3,
+   not any signal pin. PSU - must beep to Blackpill G.
+3. Never connect the ST-Link's 3V3 wire. SWDIO, SWCLK, GND only: a rail
+   fault then cannot reach the probe.
+4. PSU current limit at 50 mA, voltage up slowly. If it drops into
+   current limit before the set voltage, stop and find the short.
+5. Only then raise the limit to 0.3 A and plug the Blackpill's USB in.
+
 With a bare FET, add a 1 ohm 1 W resistor between source and GND and scope
 across it: the current rise gives the coil inductance (tau = L / R_total,
 R_total = 141 + 1 ohm). That closes handoff open item 2. Tie PA6 to the
@@ -63,6 +88,11 @@ divider on the breadboard:
 No 8.2k at hand: use 10k and build with `--features vin-div-10k` (24 V reads
 2.18 V, saturates at 36 V). The firmware's default constants are the board's
 100k / 8.2k.
+
+Testing at 12 V (the 30 V-rated M3004D module): build with
+`--features low-vin`, which lowers the lockout to 10 V. Supply compensation
+then doubles the on-time to keep the volt-seconds of a 24 V brick; switch
+it off in the menu when you want the raw pulse length on the scope.
 
 ## Display (OT3499, 1.3" ST7789 240x240, 3.3 V, 7 pins, no CS)
 
