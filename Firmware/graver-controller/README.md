@@ -137,6 +137,8 @@ x4 decoding). A 24-pulse/24-detent or 20/20 encoder needs 4.
 * The pedal jack's ring sense is what detects "pedal plugged in". A bench jack
   without a normalling contact leaves the ring floating; tie it to ground
   through 10k or the firmware may believe a pedal is present.
+* The settings menu (long press) has a Language row that cycles the screen
+  language EN -> NL -> FR; every user-visible string lives in `src/text.rs`.
 * Settings are written to flash three seconds after the last change and only
   while the coil is idle.
 * On the bench the Blackpill runs from USB, so VIN sense only sees whatever is

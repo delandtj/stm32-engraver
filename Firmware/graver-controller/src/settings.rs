@@ -51,6 +51,25 @@ impl Mode {
     }
 }
 
+/// Interface language. The strings themselves are in `src/text.rs`.
+#[derive(Clone, Copy, PartialEq, Eq, defmt::Format)]
+pub enum Lang {
+    En,
+    Nl,
+    Fr,
+}
+
+impl Lang {
+    /// Cycle En -> Nl -> Fr -> En.
+    pub fn next(self) -> Self {
+        match self {
+            Lang::En => Lang::Nl,
+            Lang::Nl => Lang::Fr,
+            Lang::Fr => Lang::En,
+        }
+    }
+}
+
 /// Everything that survives a power cycle.
 #[derive(Clone, Copy, PartialEq, Eq, defmt::Format)]
 pub struct Settings {
@@ -73,6 +92,8 @@ pub struct Settings {
     pub pedal_min: u16,
     /// Pedal toe (full) position, raw ADC counts.
     pub pedal_max: u16,
+    /// Interface language.
+    pub lang: Lang,
 }
 
 impl Default for Settings {
@@ -88,6 +109,7 @@ impl Default for Settings {
             brightness_pct: 80,
             pedal_min: 200,
             pedal_max: 3900,
+            lang: Lang::En,
         }
     }
 }
@@ -110,7 +132,15 @@ impl Settings {
         r[13] = self.brightness_pct;
         r[14..16].copy_from_slice(&self.pedal_min.to_le_bytes());
         r[16..18].copy_from_slice(&self.pedal_max.to_le_bytes());
-        // 18..30 reserved, left at 0xFF so new fields can be added without a
+        // Byte 18 was reserved (0xFF) before the language was added, and 0xFF
+        // decodes as English, so records from older firmware still load and
+        // VERSION stays at 1.
+        r[18] = match self.lang {
+            Lang::En => 0,
+            Lang::Nl => 1,
+            Lang::Fr => 2,
+        };
+        // 19..30 reserved, left at 0xFF so new fields can be added without a
         // version bump as long as 0xFF is a valid "unset".
         let crc = crc16(&r[0..RECORD_SIZE as usize - 2]);
         r[RECORD_SIZE as usize - 2..].copy_from_slice(&crc.to_le_bytes());
@@ -136,6 +166,12 @@ impl Settings {
             brightness_pct: r[13],
             pedal_min: u16::from_le_bytes([r[14], r[15]]),
             pedal_max: u16::from_le_bytes([r[16], r[17]]),
+            // 0xFF (an older record) and anything unknown mean English.
+            lang: match r[18] {
+                1 => Lang::Nl,
+                2 => Lang::Fr,
+                _ => Lang::En,
+            },
         };
         Some(s.sanitised())
     }

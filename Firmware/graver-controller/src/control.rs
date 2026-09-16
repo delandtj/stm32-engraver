@@ -12,7 +12,7 @@ use embassy_time::{Duration, Instant, Timer};
 
 use crate::analog::{self, PedalCal, Readings};
 use crate::input::{EVENTS, InputEvent};
-use crate::settings::{Mode, Settings, Store};
+use crate::settings::{Lang, Mode, Settings, Store};
 use crate::strike::{CLEAR_FAULT, COMMAND, OVERCURRENT, StrikeParams};
 
 /// Strike rate limits, ADR 0001 "Ranges".
@@ -64,17 +64,8 @@ pub enum Status {
     Ready,
 }
 
-/// Menu entries, in display order.
-pub const MENU_ITEMS: [&str; 8] = [
-    "Max frequency",
-    "Duty cap",
-    "Decay",
-    "Supply comp",
-    "Heel cal",
-    "Toe cal",
-    "Brightness",
-    "Exit",
-];
+/// Number of menu rows. The labels are in `text::menu_label`, in this order.
+pub const MENU_ROWS: usize = 9;
 const MENU_MAX_FREQ: usize = 0;
 const MENU_DUTY: usize = 1;
 const MENU_DECAY: usize = 2;
@@ -82,7 +73,8 @@ const MENU_COMP: usize = 3;
 const MENU_HEEL: usize = 4;
 const MENU_TOE: usize = 5;
 const MENU_BRIGHT: usize = 6;
-const MENU_EXIT: usize = 7;
+const MENU_LANG: usize = 7;
+const MENU_EXIT: usize = 8;
 
 /// Menu overlay state, or None for the run screen.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -107,6 +99,8 @@ pub struct UiState {
     pub decay_slow: bool,
     pub status: Status,
     pub brightness_pct: u8,
+    /// Language every label on the screen is rendered in.
+    pub lang: Lang,
     pub menu: Option<MenuState>,
 }
 
@@ -122,6 +116,7 @@ impl Default for UiState {
             decay_slow: false,
             status: Status::Booting,
             brightness_pct: 80,
+            lang: Lang::En,
             menu: None,
         }
     }
@@ -303,6 +298,7 @@ pub async fn control_task(
             decay_slow: settings.decay_slow,
             status,
             brightness_pct: settings.brightness_pct,
+            lang: settings.lang,
             menu,
         };
         if ui != last_ui {
@@ -365,7 +361,7 @@ fn handle_event(
         (InputEvent::Turn(steps), true) => {
             let m = menu.as_mut().unwrap();
             if !m.editing {
-                let n = MENU_ITEMS.len() as i32;
+                let n = MENU_ROWS as i32;
                 let sel = (m.selected as i32 + steps).clamp(0, n - 1);
                 m.selected = sel as usize;
                 return false;
@@ -409,6 +405,11 @@ fn handle_event(
                 MENU_TOE => {
                     settings.pedal_max = pedal_raw;
                     defmt::info!("pedal toe = {}", pedal_raw);
+                    true
+                }
+                MENU_LANG => {
+                    settings.lang = settings.lang.next();
+                    defmt::info!("language: {}", settings.lang);
                     true
                 }
                 MENU_EXIT => {

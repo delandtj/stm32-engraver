@@ -23,6 +23,7 @@ mod control;
 mod input;
 mod settings;
 mod strike;
+mod text;
 mod ui;
 
 use core::sync::atomic::{AtomicU32, Ordering};

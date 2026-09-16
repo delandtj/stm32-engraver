@@ -32,8 +32,9 @@ use mipidsi::models::ST7789;
 use mipidsi::options::ColorInversion;
 use mipidsi::{Builder, Display};
 
-use crate::control::{MENU_ITEMS, MenuState, Status, UiState};
-use crate::settings::{Mode, Settings};
+use crate::control::{MENU_ROWS, MenuState, Status, UiState};
+use crate::settings::{Lang, Mode, Settings};
+use crate::text;
 
 /// Panel size.
 pub const WIDTH: u16 = 240;
@@ -110,22 +111,22 @@ const OK: Rgb565 = Rgb565::new(0, 40, 0);
 ///
 /// Sized for people who switch between a microscope and the screen, or
 /// wear reading glasses: the two steered values (rate, strength) are in a
-/// 16x30 font, everything else in 12x22, labels in 9x18.
+/// 16x30 font, everything else in 12x22, labels in 9x18. The label text is
+/// per-language and comes from `text::cell_label`, indexed by cell.
 struct Cell {
     x: i32,
     y: i32,
     w: u32,
-    label: &'static str,
     big: bool,
 }
 
 const CELLS: [Cell; 6] = [
-    Cell { x: 8, y: 32, w: 112, label: "RATE", big: true },
-    Cell { x: 124, y: 32, w: 112, label: "STRENGTH", big: true },
-    Cell { x: 8, y: 92, w: 112, label: "ON TIME", big: false },
-    Cell { x: 124, y: 92, w: 112, label: "SUPPLY", big: false },
-    Cell { x: 8, y: 140, w: 112, label: "HANDPIECE", big: false },
-    Cell { x: 124, y: 140, w: 112, label: "DECAY", big: false },
+    Cell { x: 8, y: 32, w: 112, big: true },
+    Cell { x: 124, y: 32, w: 112, big: true },
+    Cell { x: 8, y: 92, w: 112, big: false },
+    Cell { x: 124, y: 92, w: 112, big: false },
+    Cell { x: 8, y: 140, w: 112, big: false },
+    Cell { x: 124, y: 140, w: 112, big: false },
 ];
 /// Value sits this far below its label (label font is 18 px high).
 const VALUE_DY: i32 = 18;
@@ -137,10 +138,11 @@ const HEADER_H: u32 = 28;
 /// Status bar.
 const BAR_Y: i32 = 190;
 const BAR_H: u32 = 50;
-/// Menu rows.
+/// Menu rows. Nine rows have to fit under the header:
+/// MENU_Y + MENU_ROWS * MENU_PITCH = 32 + 9 * 23 = 239 <= HEIGHT.
 const MENU_Y: i32 = 32;
-const MENU_PITCH: i32 = 25;
-const MENU_ROW_H: u32 = 23;
+const MENU_PITCH: i32 = 23;
+const MENU_ROW_H: u32 = 22;
 
 type Text12 = String<12>;
 
@@ -183,7 +185,7 @@ fn fmt_temp(s: &UiState) -> Text12 {
 
 fn fmt_decay(s: &UiState) -> Text12 {
     let mut t = Text12::new();
-    let _ = write!(t, "{}", if s.decay_slow { "SLOW" } else { "FAST" });
+    let _ = write!(t, "{}", text::decay(s.decay_slow, s.lang));
     t
 }
 
@@ -195,19 +197,6 @@ fn cell_text(index: usize, s: &UiState) -> Text12 {
         3 => fmt_vin(s),
         4 => fmt_temp(s),
         _ => fmt_decay(s),
-    }
-}
-
-fn status_text(status: Status) -> &'static str {
-    match status {
-        Status::Booting => "STARTING",
-        Status::Overcurrent => "OVERCURRENT",
-        Status::NoPedal => "PEDAL?",
-        Status::LowVin => "LOW VIN",
-        Status::Hot => "HOT",
-        Status::PedalNotAtRest => "RELEASE PEDAL",
-        Status::Firing => "FIRING",
-        Status::Ready => "READY",
     }
 }
 
@@ -232,19 +221,22 @@ fn menu_value(item: usize, s: &Settings, pedal_raw: u16) -> Text12 {
             let _ = write!(t, "{} %", s.duty_cap_pct);
         }
         2 => {
-            let _ = write!(t, "{}", if s.decay_slow { "SLOW" } else { "FAST" });
+            let _ = write!(t, "{}", text::decay(s.decay_slow, s.lang));
         }
         3 => {
-            let _ = write!(t, "{}", if s.compensate { "ON" } else { "OFF" });
+            let _ = write!(t, "{}", text::on_off(s.compensate, s.lang));
         }
         4 => {
-            let _ = write!(t, "{} <{}", s.pedal_min, pedal_raw);
+            let _ = write!(t, "{}<{}", s.pedal_min, pedal_raw);
         }
         5 => {
-            let _ = write!(t, "{} <{}", s.pedal_max, pedal_raw);
+            let _ = write!(t, "{}<{}", s.pedal_max, pedal_raw);
         }
         6 => {
             let _ = write!(t, "{} %", s.brightness_pct);
+        }
+        7 => {
+            let _ = write!(t, "{}", text::lang_name(s.lang));
         }
         _ => {}
     }
@@ -269,8 +261,9 @@ impl Painter {
             .ok();
     }
 
-    /// Static parts of the run screen.
-    fn draw_frame(&mut self, mode: Mode) {
+    /// Static parts of the run screen. Static per language: a language change
+    /// repaints the whole screen, like a mode change.
+    fn draw_frame(&mut self, mode: Mode, lang: Lang) {
         self.lcd.clear(BG).ok();
         self.fill(0, 0, WIDTH as u32, HEADER_H, ACCENT);
         self.text(8, 3, "GRAVER", MonoTextStyle::new(&PROFONT_18_POINT, Rgb565::BLACK));
@@ -285,9 +278,9 @@ impl Painter {
             MonoTextStyle::new(&PROFONT_18_POINT, Rgb565::BLACK),
         );
         let label_style = MonoTextStyle::new(&FONT_9X18_BOLD, LABEL);
-        for cell in CELLS.iter() {
+        for (index, cell) in CELLS.iter().enumerate() {
             Text::with_baseline(
-                cell.label,
+                text::cell_label(index, lang),
                 Point::new(cell.x, cell.y),
                 label_style,
                 Baseline::Top,
@@ -309,10 +302,10 @@ impl Painter {
         }
     }
 
-    fn draw_status(&mut self, status: Status, vin_mv: u32) {
+    fn draw_status(&mut self, status: Status, vin_mv: u32, lang: Lang) {
         let colour = status_colour(status, vin_mv);
         self.fill(0, BAR_Y, WIDTH as u32, BAR_H, colour);
-        let text = status_text(status);
+        let text = text::status(status, lang);
         let x = (WIDTH as i32 - text.len() as i32 * 16) / 2;
         self.text(
             x.max(0),
@@ -322,10 +315,10 @@ impl Painter {
         );
     }
 
-    fn draw_menu_frame(&mut self) {
+    fn draw_menu_frame(&mut self, lang: Lang) {
         self.lcd.clear(BG).ok();
         self.fill(0, 0, WIDTH as u32, HEADER_H, ACCENT);
-        self.text(8, 3, "SETTINGS", MonoTextStyle::new(&PROFONT_18_POINT, Rgb565::BLACK));
+        self.text(8, 3, text::menu_title(lang), MonoTextStyle::new(&PROFONT_18_POINT, Rgb565::BLACK));
     }
 
     fn draw_menu_row(&mut self, row: usize, m: &MenuState) {
@@ -334,7 +327,12 @@ impl Painter {
         let bg = if selected { ACCENT } else { BG };
         let fg = if selected { Rgb565::BLACK } else { VALUE };
         self.fill(0, y, WIDTH as u32, MENU_ROW_H, bg);
-        self.text(6, y, MENU_ITEMS[row], MonoTextStyle::new(&PROFONT_18_POINT, fg));
+        self.text(
+            6,
+            y,
+            text::menu_label(row, m.settings.lang),
+            MonoTextStyle::new(&PROFONT_18_POINT, fg),
+        );
         let value = menu_value(row, &m.settings, m.pedal_raw);
         if !value.is_empty() {
             let colour = if selected && m.editing { WARN } else { fg };
@@ -370,16 +368,22 @@ pub async fn ui_task(lcd: Lcd, mut backlight: SimplePwm<'static, TIM4>) {
         match (&state.menu, shown.as_ref().and_then(|s| s.menu)) {
             // menu just opened, or the screen kind changed
             (Some(menu), None) => {
-                painter.draw_menu_frame();
-                for row in 0..MENU_ITEMS.len() {
+                painter.draw_menu_frame(state.lang);
+                for row in 0..MENU_ROWS {
                     painter.draw_menu_row(row, menu);
                 }
             }
             (Some(menu), Some(prev)) => {
-                for row in 0..MENU_ITEMS.len() {
+                // A new language changes every label, so nothing is reusable.
+                let lang_changed = prev.settings.lang != menu.settings.lang;
+                if lang_changed {
+                    painter.draw_menu_frame(menu.settings.lang);
+                }
+                for row in 0..MENU_ROWS {
                     let was_sel = prev.selected == row;
                     let is_sel = menu.selected == row;
-                    let changed = was_sel != is_sel
+                    let changed = lang_changed
+                        || was_sel != is_sel
                         || (is_sel && prev.editing != menu.editing)
                         || menu_value(row, &prev.settings, prev.pedal_raw)
                             != menu_value(row, &menu.settings, menu.pedal_raw);
@@ -389,19 +393,21 @@ pub async fn ui_task(lcd: Lcd, mut backlight: SimplePwm<'static, TIM4>) {
                 }
             }
             (None, Some(_)) => {
-                painter.draw_frame(state.mode);
+                painter.draw_frame(state.mode, state.lang);
                 for index in 0..CELLS.len() {
                     painter.draw_cell(index, &cell_text(index, &state));
                 }
-                painter.draw_status(state.status, state.vin_mv);
+                painter.draw_status(state.status, state.vin_mv, state.lang);
             }
             (None, None) => {
+                // The labels are part of the frame, so a language change needs
+                // the same full repaint a mode change does.
                 let full = match shown.as_ref() {
                     None => true,
-                    Some(prev) => prev.mode != state.mode,
+                    Some(prev) => prev.mode != state.mode || prev.lang != state.lang,
                 };
                 if full {
-                    painter.draw_frame(state.mode);
+                    painter.draw_frame(state.mode, state.lang);
                 }
                 for index in 0..CELLS.len() {
                     let text = cell_text(index, &state);
@@ -420,7 +426,7 @@ pub async fn ui_task(lcd: Lcd, mut backlight: SimplePwm<'static, TIM4>) {
                         .map(|prev| prev.status != state.status)
                         .unwrap_or(true);
                 if redraw_status {
-                    painter.draw_status(state.status, state.vin_mv);
+                    painter.draw_status(state.status, state.vin_mv, state.lang);
                 }
             }
         }
