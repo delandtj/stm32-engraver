@@ -27,7 +27,7 @@ with full history. Branch `master`.
 | Part choices, LCSC numbers, datasheet gotchas | `Hardware/graver-controller/docs/parts-power.md`, `parts-mcu.md` |
 | Net-by-net capture list | `Hardware/graver-controller/docs/capture-netlist.md` |
 | Firmware spec (Accepted) | `docs/adr/0002-firmware.md` |
-| PCB layout + production spec (Proposed) | `docs/adr/0003-pcb-layout-and-production.md` |
+| PCB layout + production spec (Accepted) | `docs/adr/0003-pcb-layout-and-production.md` |
 | Firmware (Rust, embassy-stm32) | `Firmware/graver-controller/` (see its README) |
 | Bench rig wiring | `docs/bench-rig.md` |
 | Old Arduino design (context only) | `Schematic/`, `Arduino Code/`, `README.md` |
@@ -54,8 +54,10 @@ Key facts (details in the ADR):
 - Power: fuse, DMP6023LE reverse-polarity P-FET, SMBJ36A, 470 uF, LM5164
   buck set to 5.28 V (EN starts ~14 V, BST cap 2.2 nF), two SS14 OR the buck
   and USB VBUS into +5V, AP2112K-3.3 LDO. USB alone runs the logic.
-- UI: 1.3" ST7789 240x240 3.3 V module on a 1x7 header (no CS, SPI mode 3,
-  backlight PWM from PB6 through 100 R), one Alps EC11E15244G1 encoder
+- UI: 1.3" ST7789 240x240 3.3 V module (no CS, SPI mode 3, backlight PWM
+  from PB6 through 100 R). On the production board it sits in the cover
+  plate on a 7-way ribbon to a keyed 7-pin header J3 (ADR 0003); the
+  schematic still shows the 1x7 socket. One Alps EC11E15244G1 encoder
   (30 detents / 15 pulses, TIM3 encoder mode, push on PB7).
 - Pedal: Neutrik NMJ6HCD2 6.35 mm TRS jack. Ring = 3V3 through 1k, tip =
   wiper to PA1, ring sense on PA2; the jack's ring-normal contact grounds
@@ -138,8 +140,13 @@ Decisions still open (ADR "Open Questions"):
 
 1. PCB layout and the JLC order: ADR 0003 is the spec (board size, block
    placement, layer use, design rules, export set, first-article checks).
-   It starts with retiring the schematic generator and ordering the loose
-   THT connectors for measurement. Answer its four review asks first.
+   Its review asks were answered 2026-09-17: cover plate over a hidden
+   PCB, board 110 x 70 mm with the pedal jack at the far right of the rear
+   edge, bulk cap upright under a dome in the cover, display in the cover
+   on a 7-way ribbon, loose THT connectors ordered before layout. It
+   starts with ordering those loose parts (J101 DC jack, J201 terminal,
+   NMJ6HCD2, encoder, a keyed 7-pin header + ribbon) and retiring the
+   schematic generator; J3's footprint swap is the first eeschema edit.
 2. JLC BOM + CPL export, order 10 + spares of the display module and
    encoder from single listings.
 3. Firmware bring-up on the Blackpill bench rig (docs/bench-rig.md): flash,

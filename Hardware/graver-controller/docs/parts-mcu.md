@@ -156,6 +156,10 @@ no KiCad std-lib footprint (import from EasyEDA/LCSC).
 
 ## 8. Display socket
 
+- **Superseded for the production board (ADR 0003, 2026-09-17):** the module is mounted
+  in the cover plate and connects with a 7-way ribbon; J3 becomes a keyed 7-pin 2.54 mm
+  wire-to-board header (JST XH B7B-XH-A class), same nets and pin order. LCSC number and
+  stock still to be looked up. The notes below on pin order and BLK stay valid.
 - PM254V-11-07-H85 (C2832270): 1x7 female, 8.5 mm body. With the module's male header the
   glass sits ~11 mm above the PCB - feed that to the bezel design.
 - **Do not use a 1x8 with an extra pad.** The 8-pin variants of these modules insert CS
