@@ -3021,7 +3021,7 @@
 				)
 			)
 		)
-		(property "Value" "LCD 1x7"
+		(property "Value" "LCD XH 1x7"
 			(at 71.12 74.93 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3031,7 +3031,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical"
+		(property "Footprint" "Connector_JST:JST_XH_B7B-XH-A_1x07_P2.50mm_Vertical"
 			(at 73.66 63.5 0)
 			(hide yes)
 			(show_name no)
@@ -3064,7 +3064,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C2832270"
+		(property "LCSC" "C144398"
 			(at 73.66 63.5 0)
 			(hide yes)
 			(show_name no)
@@ -3075,7 +3075,7 @@
 				)
 			)
 		)
-		(property "MPN" "PM254V-11-07-H85"
+		(property "MPN" "B7B-XH-A(LF)(SN)"
 			(at 73.66 63.5 0)
 			(hide yes)
 			(show_name no)

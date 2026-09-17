@@ -59,10 +59,10 @@ first-article bring-up alone with an ST-LINK, the class never sees a probe.
    to right seen from the front: DC jack, USB-C, handpiece terminal, pedal jack. The
    pedal jack sits at the far right so the pedal cable leaves the console at its edge;
    the extra 10 mm of width keeps the Neutrik body clear of the corner M3 hole. Front
-   half carries the display ribbon connector (left) and the encoder (right). Power block behind the DC jack, driver
-   block behind the handpiece terminal, MCU in the middle, analog front end between
-   driver and MCU. The 12.5 x 20 mm bulk capacitor stands upright as JLC inserts it; the
-   cover plate has a dome over it.
+   half carries the display ribbon connector (left) and the encoder (right). Power block
+   behind the DC jack, driver block behind the handpiece terminal, MCU in the middle,
+   analog front end between driver and MCU. The 12.5 x 20 mm bulk capacitor stands
+   upright as JLC inserts it; the cover plate has a dome over it.
 4. **Layer use**: top = parts and signal, bottom = ground pour with the few crossing
    traces. One ground net, but the shunt's power-ground tap is a single point: the
    sense side of R204 (the 1 ohm shunt) joins the pour only at the shunt, and the
@@ -119,22 +119,25 @@ Blocks as they appear on the board, each with what it must satisfy in layout.
    ground, Kelvin traces from the shunt pads to the TLV9062 (R209/R213), op-amp within 10
    mm of the shunt, its output filtered (R212/C205) at the MCU pin PA6. The comparator
    output to PB12 is a short track. Handpiece terminal J201 right of centre on the rear
-   edge, between USB-C and the pedal jack: pin 1 VIN, 2 COIL_NEG, 3 NTC, 4 GND; NTC pull-up and cap near the MCU.
-5. **UI** (`io.kicad_sch`): display connector J3 in the front-left, a keyed 7-pin JST XH
-   header (B7B-XH-A, LCSC C144398, 2.50 mm pitch; same nets and pin order as the
-   drawn 1x7 socket: GND VCC SCL SDA RES DC BLK) with pin names on the silkscreen. The
-   module sits in a pocket of the cover plate and connects with a 7-way ribbon, XH-7
-   housing on the board end and a 1x7 2.54 mm female housing on the module's pin header,
-   100 mm or shorter; Jan fits the module end and marks pin 1 before the class, the
-   builders only plug the keyed end. J3 within 40 mm of the MCU's SPI pins, SCL routed
-   next to a ground return; backlight FET and 100 R nearby. If the ribbon rings, the SPI
-   clock comes down in firmware before any part is added. Encoder SW401 front-right,
-   shaft centre at least 20 mm from the display pocket edge for a knob, its 10k/10 nF debounce
-   at the MCU; status LED with a light pipe hole in the cover; pedal jack J5 (Neutrik)
-   at the far right of the rear edge with the nut on the rear wall (wall thickness under 4.7 mm at the
-   jack), PESD5V0S2BT at the jack, ring 1k/10n filter as drawn.
+   edge, between USB-C and the pedal jack: pin 1 VIN, 2 COIL_NEG, 3 NTC, 4 GND; NTC
+   pull-up and cap near the MCU.
+5. **UI** (`io.kicad_sch`): display connector J3 (J401 in the schematic) in the
+   front-left, a keyed 7-pin JST XH header (B7B-XH-A, LCSC C144398, 2.50 mm pitch; same
+   nets and pin order as the drawn 1x7 socket: GND VCC SCL SDA RES DC BLK) with pin
+   names on the silkscreen. The module sits in a pocket of the cover plate and connects
+   with a 7-way ribbon, XH-7 housing on the board end and a 1x7 2.54 mm female housing
+   on the module's pin header, 100 mm or shorter; Jan fits the module end and marks pin
+   1 before the class, the builders only plug the keyed end. J3 within 40 mm of the
+   MCU's SPI pins, SCL routed next to a ground return; backlight FET and 100 R nearby.
+   If the ribbon rings, the SPI clock comes down in firmware before any part is added.
+   Encoder SW401 front-right, shaft centre at least 20 mm from the display pocket edge
+   for a knob, its 10k/10 nF debounce at the MCU; status LED with a light pipe hole in
+   the cover; pedal jack J5 (Neutrik) at the far right of the rear edge with the nut on
+   the rear wall (wall thickness under 4.7 mm at the jack), PESD5V0S2BT at the jack,
+   ring 1k/10n filter as drawn.
 6. **Mechanical**: four M3 holes; outline; cover plate reference points (J3 position
-   for the ribbon run, encoder shaft, LED, rear connector faces) exported as a STEP so FreeCAD builds
+   for the ribbon run, encoder shaft, LED, rear connector faces) exported as a STEP so
+   FreeCAD builds
    the console around the real geometry. Tallest parts: bulk cap 20 mm upright (22 mm dome
    in the cover), encoder shaft 20 mm, pedal jack nose through the wall.
 
@@ -318,8 +321,8 @@ Component specs, in the order that lets unknowns land late:
    schematic as symbols, run ERC, update the PCB from the schematic.
 2. **Outline and fixed parts**: 110 x 70 mm, M3 holes, rear-edge connectors placed on
    the edge line with their 3D models checked for clashes, display ribbon connector and
-   encoder placed from the front, cover-plate cutouts derived from these positions and exported
-   as a DXF reference.
+   encoder placed from the front, cover-plate cutouts derived from these positions and
+   exported as a DXF reference.
 3. **MCU block**: QFN, decoupling, crystal, VDDA filter, SWD, BOOT0/NRST, USB-C with
    ESD and the differential pair, status LED. Route this block first, it has the most
    pins.
@@ -334,7 +337,8 @@ Component specs, in the order that lets unknowns land late:
    rotation review, STEP, PDF assembly drawing with connector pinouts, a per-board test
    sheet listing: VIN and 5 V / 3V3 rails, gate low at reset, DFU enumeration, display,
    encoder, pedal jack presence detect, one strike into a 141 ohm coil at 24 V.
-9. **Order**: 12 assembled, 5 bare, loose parts (display modules, 7-way display ribbons, GX12 pigtails and
+9. **Order**: 12 assembled, 5 bare, loose parts (display modules, 7-way display ribbons,
+   GX12 pigtails and
    plugs, 4-pin terminal plugs, encoder knobs), all in one week.
 
 Review asks, answered by Jan on 2026-09-17:

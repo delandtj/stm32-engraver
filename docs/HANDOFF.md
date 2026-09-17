@@ -22,8 +22,8 @@ with full history. Branch `master`.
 |---|---|
 | Spec / decisions (Accepted) | `docs/adr/0001-graver-controller-board.md` |
 | KiCad 10 project | `Hardware/graver-controller/` (root + power/driver/mcu/io sheets) |
-| Schematic generator | `Hardware/graver-controller/tools/` (see its README) |
-| Reference netlist sheets | `Hardware/graver-controller/tools/ref/` |
+| Schematic checks; retired generator | `Hardware/graver-controller/tools/` (see its README) |
+| Rev 0.1 reference sheets (history) | `Hardware/graver-controller/tools/ref/` |
 | Part choices, LCSC numbers, datasheet gotchas | `Hardware/graver-controller/docs/parts-power.md`, `parts-mcu.md` |
 | Net-by-net capture list | `Hardware/graver-controller/docs/capture-netlist.md` |
 | Firmware spec (Accepted) | `docs/adr/0002-firmware.md` |
@@ -36,7 +36,9 @@ with full history. Branch `master`.
 
 Schematic rev 0.1 is complete, drawn properly (wires, decoupling at pins,
 signal flow), ERC 0 violations, every part has value, footprint and LCSC
-number. No PCB layout yet (the .kicad_pcb is empty).
+number. Since 2026-09-17 it is edited in eeschema (generator retired); the
+first edit made J401, the display connector, a JST XH B7B-XH-A header. No
+PCB layout yet (the .kicad_pcb is empty).
 
 Key facts (details in the ADR):
 
@@ -56,8 +58,8 @@ Key facts (details in the ADR):
   and USB VBUS into +5V, AP2112K-3.3 LDO. USB alone runs the logic.
 - UI: 1.3" ST7789 240x240 3.3 V module (no CS, SPI mode 3, backlight PWM
   from PB6 through 100 R). On the production board it sits in the cover
-  plate on a 7-way ribbon to a keyed 7-pin header J3 (ADR 0003); the
-  schematic still shows the 1x7 socket. One Alps EC11E15244G1 encoder
+  plate on a 7-way ribbon to the keyed JST XH header J401 (called J3 in
+  ADR 0003 and parts-mcu.md). One Alps EC11E15244G1 encoder
   (30 detents / 15 pulses, TIM3 encoder mode, push on PB7).
 - Pedal: Neutrik NMJ6HCD2 6.35 mm TRS jack. Ring = 3V3 through 1k, tip =
   wiper to PA1, ring sense on PA2; the jack's ring-normal contact grounds
@@ -90,19 +92,18 @@ the buttons feature, PB4 up, PB5 down, PB7 push.
 
 ## How to work on the schematic
 
-The four child sheets are GENERATED. Do not hand-edit the .kicad_sch files.
+The generator is RETIRED (ADR 0003, 2026-09-17). Edit the .kicad_sch sheets
+in eeschema; `tools/build.py` refuses to run because it would overwrite them.
 
     cd Hardware/graver-controller
-    python3 tools/build.py          # regenerate all sheets (or: build.py mcu)
-    tools/verify.sh                 # must print "NETLIST OK" and "Found 0 violations"
+    tools/verify.sh                 # must print "Found 0 violations"; PNGs in output/verify/
 
-- Drawing changes: edit `tools/sheets/<sheet>.py` (coordinates in mm,
-  wires attach to pins as 'R301.1'), build, verify, look at the PNGs in
-  `output/verify/`.
-- Circuit changes (new part, new net): the truth is `tools/ref/`. Either
-  edit the ref sheets in eeschema and then mirror the change in the layout
-  file, or retire the generator once layout starts and edit in eeschema
-  only. Decide that at the start of PCB work.
+- Keep the rev 0.1 drawing discipline by hand: wires not labels within a
+  block, decoupling at the pins, signal flow left to right.
+- Every part keeps value, footprint, LCSC and MPN fields; the JLC BOM is
+  exported from them.
+- Small field edits (footprint, LCSC) can be made in the file while
+  eeschema is closed; verify afterwards.
 - Rendering: the kicad MCP's sch_render_png is broken on this machine; use
   `kicad-cli sch export svg` + `rsvg-convert` (verify.sh does this).
 - Commits are GPG-signed with a desktop pinentry; they fail when Jan is
@@ -144,9 +145,12 @@ Decisions still open (ADR "Open Questions"):
    PCB, board 110 x 70 mm with the pedal jack at the far right of the rear
    edge, bulk cap upright under a dome in the cover, display in the cover
    on a 7-way ribbon, loose THT connectors ordered before layout. It
-   starts with ordering those loose parts (J101 DC jack, J201 terminal,
-   NMJ6HCD2, encoder, a keyed 7-pin header + ribbon) and retiring the
-   schematic generator; J3's footprint swap is the first eeschema edit.
+   starts with ordering those loose parts (list with LCSC numbers in
+   parts-mcu.md section 14a). Done 2026-09-17: generator retired, J401
+   footprint swapped. Still to do in project prep: project footprints for
+   the encoder (12.0 mm lugs), the terminal (1.6 mm drills) and the
+   Neutrik (SN pin), mounting holes as symbols, then update the PCB from
+   the schematic.
 2. JLC BOM + CPL export, order 10 + spares of the display module and
    encoder from single listings.
 3. Firmware bring-up on the Blackpill bench rig (docs/bench-rig.md): flash,

@@ -1,4 +1,9 @@
-"""Regenerate the four child sheets from the layouts in sheets/.
+"""RETIRED 2026-09-17 (ADR 0003): eeschema is the source of truth now and the
+sheets in the project root have diverged from tools/ref/. Running this would
+overwrite them, so it refuses unless --force-overwrite is given. --pins still
+works. Kept as history of how rev 0.1 was drawn.
+
+Regenerate the four child sheets from the layouts in sheets/.
 
     python3 tools/build.py            # write power/driver/mcu/io .kicad_sch
     python3 tools/build.py --pins     # print symbol pin geometry (layout aid)
@@ -72,6 +77,9 @@ def main():
     if '--pins' in sys.argv:
         print_pins(lib)
         return
+    if '--force-overwrite' not in sys.argv:
+        sys.exit('build.py is retired (ADR 0003): the .kicad_sch sheets are edited in '
+                 'eeschema and this would overwrite them. See tools/README.md.')
     import sheets  # noqa: E402
     problems = 0
     only = [a for a in sys.argv[1:] if not a.startswith('-')]

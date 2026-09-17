@@ -157,7 +157,8 @@ no KiCad std-lib footprint (import from EasyEDA/LCSC).
 
 ## 8. Display socket
 
-- **Superseded for the production board (ADR 0003, 2026-09-17):** the module is mounted
+- **Superseded for the production board (ADR 0003, 2026-09-17; J401 in the schematic,
+  swapped the same day):** the module is mounted
   in the cover plate and connects with a 7-way ribbon; J3 becomes a keyed 7-pin JST XH
   header, B7B-XH-A(LF)(SN) (C144398, 11k stock, 0.12 USD), same nets and pin order.
   **XH pitch is 2.50 mm, not 2.54**: use Connector_JST:JST_XH_B7B-XH-A_1x07_P2.50mm_Vertical,
