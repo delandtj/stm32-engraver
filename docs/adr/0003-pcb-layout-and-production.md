@@ -120,8 +120,8 @@ Blocks as they appear on the board, each with what it must satisfy in layout.
    mm of the shunt, its output filtered (R212/C205) at the MCU pin PA6. The comparator
    output to PB12 is a short track. Handpiece terminal J201 right of centre on the rear
    edge, between USB-C and the pedal jack: pin 1 VIN, 2 COIL_NEG, 3 NTC, 4 GND; NTC pull-up and cap near the MCU.
-5. **UI** (`io.kicad_sch`): display connector J3 in the front-left, a keyed 7-pin
-   2.54 mm wire-to-board header (JST XH B7B-XH-A class, same nets and pin order as the
+5. **UI** (`io.kicad_sch`): display connector J3 in the front-left, a keyed 7-pin JST XH
+   header (B7B-XH-A, LCSC C144398, 2.50 mm pitch; same nets and pin order as the
    drawn 1x7 socket: GND VCC SCL SDA RES DC BLK) with pin names on the silkscreen. The
    module sits in a pocket of the cover plate and connects with a 7-way ribbon, XH-7
    housing on the board end and a 1x7 2.54 mm female housing on the module's pin header,
@@ -357,7 +357,9 @@ Review asks, answered by Jan on 2026-09-17:
 - [ ] Terminal drill and Neutrik normalling contacts measured on loose parts.
 - [ ] How the cover holds the display module (pocket plus clips, or two M2 screws) and
       whether the glass needs a gasket.
-- [ ] J3 part number and LCSC stock for the keyed 7-pin header; ribbon source and length.
+- [x] J3 part number: B7B-XH-A(LF)(SN), C144398; cable side XHP-7 (C144406) with
+      SXH-001T-P0.6 (C140573). See parts-mcu.md section 14a.
+- [ ] Ribbon source (crimped by Jan or ready-made XH-7 to 1x7 female leads) and length.
 - [ ] BOOT0 and NRST through the rear wall or the bottom.
 
 **Polish**

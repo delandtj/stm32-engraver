@@ -25,7 +25,8 @@ feeder fee per unique part per order). Stock is LCSC/JLC stock at time of query.
 | SW1,SW2 | BOOT0, NRST tact | TS-1187A-B-A-B (XKB) | C318884 | Basic | 1.68M | 0.020 | SMD 5.1x5.1, top-actuated | Switch:SW_Push | Button_Switch_SMD:SW_Push_1P1T_XKB_TS-1187A |
 | SW3 | Encoder 24/24 + push (preferred) | PEC11R-4220F-S0024 (Bourns) | C143797 | Ext | 889 | 2.68 | THT vertical, 20 mm flatted shaft | Device:RotaryEncoder_Switch_MP | NOT in std lib - see notes (copy of Rotary_Encoder:RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm with MP moved) |
 | SW3 alt | Encoder 30 det / 15 pulse + push | EC11E15244G1 (Alps) | C370970 | Ext | 5,515 | 2.26 | THT vertical, 20 mm flat shaft | Device:RotaryEncoder_Switch_MP | Rotary_Encoder:RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm |
-| J3 | Display socket 1x7 2.54 | PM254V-11-07-H85 | C2832270 | Ext | 46,203 | 0.098 | THT, 8.5 mm | Connector_Generic:Conn_01x07 | Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical |
+| J3 | Display ribbon header 1x7, keyed, 2.5 mm | B7B-XH-A(LF)(SN) (JST) | C144398 | Ext | 11,035 | 0.117 | THT vertical | Connector_Generic:Conn_01x07 | Connector_JST:JST_XH_B7B-XH-A_1x07_P2.50mm_Vertical |
+| J3 old | Display socket 1x7 2.54 | PM254V-11-07-H85 | C2832270 | Ext | 46,203 | 0.098 | THT, 8.5 mm | Connector_Generic:Conn_01x07 | Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical |
 | J4 | DC jack 5.5x2.1 RA 3 A | DC-005-A200 (XUNPU) | C720557 | Ext | 76,247 | 0.144 | THT right angle | Connector:Barrel_Jack_Switch | Connector_BarrelJack:BarrelJack_Horizontal (compatible, see notes) |
 | J5 | 6.35 mm TRS jack, switched | NMJ6HCD2 (Neutrik) | C368502 | Ext | 2,090 | 3.34 | THT horizontal, nut | custom (AudioJack3_SwitchTR + SN pin) | Connector_Audio:Jack_6.35mm_Neutrik_NMJ6HCD2_Horizontal |
 | J6 | 4P 5.08 pluggable header, RA, closed | WJ2EDGRC-5.08-04P-14-00A (Kangnex) | C8446 | Ext | 14,588 | 0.096 | THT right angle | Connector_Generic:Conn_01x04 | Connector_Phoenix_MC_HighVoltage:PhoenixContact_MC_1,5_4-G-5.08_1x04_P5.08mm_Horizontal with drill enlarged (see notes) |
@@ -157,9 +158,14 @@ no KiCad std-lib footprint (import from EasyEDA/LCSC).
 ## 8. Display socket
 
 - **Superseded for the production board (ADR 0003, 2026-09-17):** the module is mounted
-  in the cover plate and connects with a 7-way ribbon; J3 becomes a keyed 7-pin 2.54 mm
-  wire-to-board header (JST XH B7B-XH-A class), same nets and pin order. LCSC number and
-  stock still to be looked up. The notes below on pin order and BLK stay valid.
+  in the cover plate and connects with a 7-way ribbon; J3 becomes a keyed 7-pin JST XH
+  header, B7B-XH-A(LF)(SN) (C144398, 11k stock, 0.12 USD), same nets and pin order.
+  **XH pitch is 2.50 mm, not 2.54**: use Connector_JST:JST_XH_B7B-XH-A_1x07_P2.50mm_Vertical,
+  not a pin-header footprint. Cable side: housing XHP-7 (C144406), crimp contact
+  SXH-001T-P0.6 (C140573, AWG 22-28). The module end is a 1x7 2.54 mm female ("Dupont")
+  housing on the module's pin header; no LCSC part verified for it, a pre-crimped
+  XH-7 to Dupont lead from a cable seller is the easier source. The notes below on pin
+  order and BLK stay valid.
 - PM254V-11-07-H85 (C2832270): 1x7 female, 8.5 mm body. With the module's male header the
   glass sits ~11 mm above the PCB - feed that to the bezel design.
 - **Do not use a 1x8 with an extra pad.** The 8-pin variants of these modules insert CS
@@ -250,6 +256,25 @@ no KiCad std-lib footprint (import from EasyEDA/LCSC).
 | PC13 | LED | RTC_AF1 | OK (3 mA sink limit) |
 
 **No mismatches.** All listed peripheral signals exist on the stated pins.
+
+## 14a. Loose parts order before layout (ADR 0003 ask 4)
+
+Checked on jlcsearch 2026-09-17. Two of each, for calipers and a paper-print fit check:
+
+| Ref | Part | LCSC | Stock | USD | What to measure |
+|---|---|---|---|---|---|
+| J4/J101 | DC-005-A200 (XUNPU) | C720557 | 76,247 | 0.144 | pin slots vs BarrelJack_Horizontal, body overhang past the board edge |
+| J6/J201 | WJ2EDGRC-5.08-04P-14-00A (Kangnex) | C8446 | 14,588 | 0.096 | pin diameter -> drill 1.5-1.7 mm, body overhang |
+| (plug) | WJ2EDGK-5.08-04P-14-00A (Kangnex) | C71372 | 38,790 | 0.382 | mates with the header; order the class quantity here too (12) |
+| J5 | NMJ6HCD2 (Neutrik) | C368502 | 2,090 | 3.34 | SN/RN/TN normalling contacts with a meter, nose length vs 3 mm wall |
+| SW3 | PEC11R-4220F-S0024 (Bourns) | C143797 | 889 | 2.68 | lug spacing 12.0 mm, detent feel vs the Alps |
+| SW3 alt | EC11E15244G1 (Alps) | C370970 | 5,515 | 2.26 | same, 30/15 part |
+| J3 | B7B-XH-A(LF)(SN) (JST) | C144398 | 11,035 | 0.117 | height under the cover, keying direction vs pin 1 |
+| (cable) | XHP-7 housing (JST) | C144406 | 12,111 | 0.042 | 15 pcs |
+| (cable) | SXH-001T-P0.6 crimp (JST) | C140573 | 1.4M | 0.013 | 150 pcs, needs an XH-size crimp tool |
+
+Not on LCSC: GX12 4-pin socket with pigtail and plug, display modules, encoder knobs,
+XH-7 to 1x7 2.54 mm female ribbon leads (if bought ready made instead of crimped).
 
 ## 14. Recommended spec (ADR) changes
 
