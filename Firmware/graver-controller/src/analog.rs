@@ -67,6 +67,11 @@ pub const PEDAL_RING_PRESENT_MV: u32 = 1000;
 pub const PEDAL_FULL: u16 = 1000;
 /// Counts below this fraction of travel are "at rest".
 pub const PEDAL_DEADBAND: u16 = 40;
+/// The published travel only moves when the new value differs from the
+/// last published one by at least this much (of PEDAL_FULL), so ADC noise
+/// does not twitch the strike rate or the screen. 0 and PEDAL_FULL always
+/// pass, so rest and full travel are exact.
+pub const PEDAL_STICKY: u16 = 8;
 
 /// IIR smoothing: new = (old * (N-1) + sample) / N.
 const FILTER_N: u32 = 8;
@@ -201,6 +206,8 @@ pub async fn analog_task(
     let mut ntc_n = 0u32;
     let mut ntc_stable = false;
 
+    let mut shown_travel: u16 = 0;
+
     let mut ticker = Ticker::every(PERIOD);
     loop {
         ticker.next().await;
@@ -228,7 +235,13 @@ pub async fn analog_task(
         let ring_mv = counts_to_mv(f_ring);
         let readings = Readings {
             pedal_raw,
-            pedal: pedal_travel(pedal_raw, cal),
+            pedal: {
+                let t = pedal_travel(pedal_raw, cal);
+                if t == 0 || t == PEDAL_FULL || t.abs_diff(shown_travel) >= PEDAL_STICKY {
+                    shown_travel = t;
+                }
+                shown_travel
+            },
             pedal_present: ring_mv >= PEDAL_RING_PRESENT_MV,
             vin_mv: vin_from_mv(counts_to_mv(f_vin)),
             coil_ma: coil_ma_from_mv(counts_to_mv(f_coil)),

@@ -17,7 +17,7 @@ use embassy_stm32::spi::Spi;
 use embassy_stm32::spi::mode::Master;
 use embassy_stm32::timer::simple_pwm::SimplePwm;
 use embassy_time::{Delay, Duration, Ticker};
-use embedded_graphics::mono_font::MonoTextStyle;
+use embedded_graphics::mono_font::{MonoTextStyle, MonoTextStyleBuilder};
 use embedded_graphics::mono_font::ascii::FONT_9X18_BOLD;
 use profont::{PROFONT_18_POINT, PROFONT_24_POINT};
 use embedded_graphics::pixelcolor::Rgb565;
@@ -50,6 +50,10 @@ pub const LCD_BUFFER_LEN: usize = 512;
 
 /// Refresh rate.
 const REFRESH: Duration = Duration::from_hz(10);
+/// Shown supply voltage only moves in steps larger than this.
+const VIN_HYST_MV: u32 = 200;
+/// Shown on-time only moves in steps larger than this.
+const T_ON_HYST_US: u32 = 50;
 
 /// A chip select that does nothing: the module has no CS pin and is
 /// permanently selected.
@@ -293,13 +297,21 @@ impl Painter {
     fn draw_cell(&mut self, index: usize, text: &str) {
         let cell = &CELLS[index];
         let y = cell.y + VALUE_DY;
-        if cell.big {
-            self.fill(cell.x, y, cell.w, CELL_H_BIG, BG);
-            self.text(cell.x, y, text, MonoTextStyle::new(&PROFONT_24_POINT, VALUE));
+        // Text is drawn with its own background in one pass, and only the
+        // part of the cell to the right of it is wiped: no black flash.
+        let (font, h, cw) = if cell.big {
+            (&PROFONT_24_POINT, CELL_H_BIG, 16)
         } else {
-            self.fill(cell.x, y, cell.w, CELL_H, BG);
-            self.text(cell.x, y, text, MonoTextStyle::new(&PROFONT_18_POINT, VALUE));
-        }
+            (&PROFONT_18_POINT, CELL_H, 12)
+        };
+        let style = MonoTextStyleBuilder::new()
+            .font(font)
+            .text_color(VALUE)
+            .background_color(BG)
+            .build();
+        self.text(cell.x, y, text, style);
+        let used = (text.len() as u32 * cw).min(cell.w);
+        self.fill(cell.x + used as i32, y, cell.w - used, h, BG);
     }
 
     fn draw_status(&mut self, status: Status, vin_mv: u32, lang: Lang) {
@@ -355,7 +367,23 @@ pub async fn ui_task(lcd: Lcd, mut backlight: SimplePwm<'static, TIM4>) {
     let mut ticker = Ticker::every(REFRESH);
     loop {
         ticker.next().await;
-        let Some(state) = rx.try_get() else { continue };
+        let Some(mut state) = rx.try_get() else { continue };
+
+        // Display hysteresis: the slow readings keep their shown value until
+        // they move by more than the noise, so the cells stay still.
+        if let Some(prev) = shown.as_ref() {
+            if state.vin_mv.abs_diff(prev.vin_mv) < VIN_HYST_MV {
+                state.vin_mv = prev.vin_mv;
+            }
+            if state.t_on_us.abs_diff(prev.t_on_us) < T_ON_HYST_US {
+                state.t_on_us = prev.t_on_us;
+            }
+            if let (Some(t), Some(p)) = (state.temp_c, prev.temp_c)
+                && t.abs_diff(p) < 2
+            {
+                state.temp_c = Some(p);
+            }
+        }
 
         if state.brightness_pct != brightness {
             brightness = state.brightness_pct;
