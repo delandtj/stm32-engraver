@@ -1,6 +1,6 @@
 # Handoff: graver controller board
 
-Last updated 2026-09-16. Read this first in a new session; it says what
+Last updated 2026-09-17. Read this first in a new session; it says what
 exists, what is decided, how to work on it and what comes next.
 
 ## What this is
@@ -11,11 +11,10 @@ ST7789 display + one handpiece + expression pedal. PCB fully assembled by
 JLCPCB, no soldering by the builders, under EUR 150 per box, enclosure to be
 3D printed (Creality K2 Max).
 
-Upstream project: Savage-Sabrina/DIY_SolenoidGraver (Arduino Nano board).
-Our work lives in Jan's private fork: git remote `origin` =
-github.com/delandtj/DIY_SolenoidGraver, `upstream` = Savage-Sabrina
-(read-only, never push there). Branch `master`, everything pushed as of
-commit fc9b202.
+Upstream project: Savage-Sabrina/DIY_SolenoidGraver (Arduino Nano board);
+Jan's fork of it is a separate repo. Since 2026-09-17 this controller lives in
+its own repository, github.com/delandtj/stm32-engraver (`origin`), split out
+with full history. Branch `master`.
 
 ## Where things are
 
@@ -28,6 +27,7 @@ commit fc9b202.
 | Part choices, LCSC numbers, datasheet gotchas | `Hardware/graver-controller/docs/parts-power.md`, `parts-mcu.md` |
 | Net-by-net capture list | `Hardware/graver-controller/docs/capture-netlist.md` |
 | Firmware spec (Accepted) | `docs/adr/0002-firmware.md` |
+| PCB layout + production spec (Proposed) | `docs/adr/0003-pcb-layout-and-production.md` |
 | Firmware (Rust, embassy-stm32) | `Firmware/graver-controller/` (see its README) |
 | Bench rig wiring | `docs/bench-rig.md` |
 | Old Arduino design (context only) | `Schematic/`, `Arduino Code/`, `README.md` |
@@ -136,11 +136,10 @@ Decisions still open (ADR "Open Questions"):
 
 ## Next steps, in order
 
-1. PCB layout: board is the top face of a desk console; display + encoder
-   on top, DC jack / pedal jack / handpiece terminal on the rear edge, USB-C
-   + BOOT0 + NRST reachable through holes, four M3 holes. 2-layer. Keep the
-   drain / flyback / bulk-cap loop tight and away from the ADC inputs;
-   Kelvin-route R204 to R209/R213.
+1. PCB layout and the JLC order: ADR 0003 is the spec (board size, block
+   placement, layer use, design rules, export set, first-article checks).
+   It starts with retiring the schematic generator and ordering the loose
+   THT connectors for measurement. Answer its four review asks first.
 2. JLC BOM + CPL export, order 10 + spares of the display module and
    encoder from single listings.
 3. Firmware bring-up on the Blackpill bench rig (docs/bench-rig.md): flash,
