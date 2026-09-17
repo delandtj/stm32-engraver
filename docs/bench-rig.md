@@ -41,7 +41,8 @@ Module choice:
 | D4184 dual-MOSFET trigger module | 5-36 V | the real 24 V punch test |
 | Bare logic-level N-FET (IRLZ44N, IRL540, IRLB8721) | any | best: gate <- PA8 through 100 R, 100k gate to GND, source to GND, drain to coil |
 
-EG27324 + M3004D module (the one on the bench, 2026-09-16): the M3004D is a
+EG27324 + M3004D module (the one on the bench, 2026-09-16, photo:
+mosfet-module-eg27324-m3004d.jpg in this directory): the M3004D is a
 30 V FET, so 12-13.5 V only, never 24 V. It has its own flyback diode
 (RS3M), no 1N4007 needed.
 
