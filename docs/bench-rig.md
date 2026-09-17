@@ -53,6 +53,36 @@ EG27324 + M3004D module (the one on the bench, 2026-09-16): the M3004D is a
 | J2 POWER + / - | lab PSU 12 V / PSU negative (also to Blackpill G) |
 | J3 LOAD | coil, either way round |
 
+Wiring picture (photo orientation of the module: terminals at the top,
+J1 header at the bottom reading GND VCC SIG from left to right):
+
+                  lab PSU  12.0 V, limit 50 mA, later 0.3 A
+                  (output FLOATING: no link between - and earth)
+                      +                          -
+                      |                          |
+                      |      +---------------+   |
+                      +------| POWER +       |   |
+                      |      |        MODULE |   |
+        100k          |      | POWER - ------+---+------------+
+    B0 --/\/\/--------+      |               |                |
+    |                        | LOAD  --------+--- coil ---+   |
+   10k                       |               |            |   |
+    |                        | LOAD  --------+------------+   |
+    G                        |               |                |
+                             | J1  GND VCC SIG               |
+                             +------+---+---+-+               |
+                                    |   |   |                 |
+                                    |   |   +---- A8  strike  |
+                                    |   +-------- 5V  driver  |
+                                    +------------ G           |
+                                                  |           |
+                                     BLACKPILL    G  <--------+
+                                              one common ground
+
+Only two things ever touch the supply's +: the module's POWER + screw and
+the 100k of the VIN divider. The supply's - goes to POWER - and from there
+to Blackpill G. Nothing from the supply goes to 3V3 or 5V.
+
 ## Bring-up sequence (learned the hard way: one wrong wire on the module
 ## killed a Blackpill and an ST-Link on 2026-09-16)
 
