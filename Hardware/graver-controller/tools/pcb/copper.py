@@ -90,15 +90,26 @@ XTAL_PARTS = ("Y301", "C310", "C311")
 XTAL_MARGIN = 0.3             # keepout margin around the island's pads
 GUARD_MARGIN = 0.75           # ground guard, outside the keepout so its
                               # stitching vias are legal
-# The oscillator's own lanes inside the island, all on F.Cu:
-#   - a 0.81 mm channel between the QFN pin row and the load caps
-#   - a 1.98 mm gap between the two load caps
-#   - a 0.80 mm gap between the crystal's own pads
-XTAL_CHANNEL_Y = 44.28        # the channel, absolute board y
-XTAL_GAP_X = 48.75            # up the cap gap, west of the VDDA exit
-XTAL_IN_X = 47.15             # the OSC_IN leg runs north on this x
-XTAL_OVER_Y = 45.70           # across, between the caps and the crystal
-GUARD_Y0 = 45.0               # the guard bracket is open towards the MCU
+# THIRD PASS. place.py now puts the island in the CORNER at the low pin
+# numbers, so the geometry here is derived from the real pads instead of the
+# hand-measured constants the second-pass island needed:
+#
+#   - the channel between the QFN's pin-row copper and the island's keepout is
+#     about 1.0 mm, which is two 0.20 mm lanes at 0.15 mm instead of the old
+#     one. The inner lane carries the pad that the island shadows (LED_STAT on
+#     pad 2), the outer one carries OSC_IN across to the crystal's XIN pad.
+#   - OSC_OUT does not use the channel at all: the crystal at rotation 270 has
+#     XOUT on its south-east pad, so OSC_OUT leaves pad 6 straight out and
+#     turns once, 0.20 mm clear of the crystal's north-east GND pad.
+#   - VDDA no longer needs the channel either (step 5): pad 9 is now east of
+#     the island and its 1 uF sits right at it.
+# 0.21 mm, not the Default class's 0.15: pads 1 and 9 on this row are +3V3 and
+# VDDA, both 0.20 mm classes, so a lane that clears the row by 0.15 clears
+# nothing. 0.21 still leaves 0.25 mm of slack to the keepout.
+LANE_GAP = 0.21               # air between the two channel lanes and to the
+                              # pin-row copper
+GUARD_BACK = 1.0              # how far the guard bracket's open ends reach
+                              # back towards the MCU past the island's pads
 
 # ---------------------------------------------------------- QFN fanout -----
 QFN = "U301"
@@ -109,8 +120,10 @@ QFN_EP_VIAS = ((-1.4, -1.4), (1.4, -1.4), (-1.4, 1.4), (1.4, 1.4))
 # own: at 0.5 mm pitch no 0.6 mm via fits in the first ring, and the EP is
 # 0.2 mm away from the pin row.
 QFN_GND_PINS = ("8", "23", "35", "47")
-# Pads 11 and 12 (PEDAL_TIP / PEDAL_RING) get no stub: see step 2's note.
-QFN_NO_STUB = ("11", "12")
+# Which pads get no radial stub is no longer a constant: step 2b works out
+# which pin-row pads the crystal island stands in front of and draws their
+# escapes, and step 2 skips exactly those. In the second pass this was the
+# hand-written list ("11", "12") plus pad 7 failing silently.
 # Pads that also get a VIA at the end of a longer stub, so the net can leave
 # on B.Cu. At 0.5 mm pitch a 0.6 mm via needs to sit at least 1.43 mm out of
 # the pad centre to keep 0.15 mm from a neighbouring 1.15 mm stub's end cap,
@@ -124,7 +137,9 @@ QFN_VIA_RADII = (1.55, 1.75, 1.95, 2.20, 2.50)
 # Pads whose destination is a first-ring part ON TOP: no via, a real trace.
 # (mcu pad, target pad, width) - the router never sees these nets near the QFN.
 FIRST_RING = [
-    ("1", "C301.1", W_SIG),          # VDD  + 100 nF
+    # Pad 1 is VBAT and its 100 nF sits round the corner with pad 48's, so
+    # there is no first-ring trace for it: step 2's shadow escape jumpers pad
+    # 1 to pad 48 instead, and +3V3 carries on from there.
     ("24", "C302.1", W_SIG),
     ("36", "C303.1", W_SIG),
     ("48", "C304.1", W_SIG),
@@ -753,8 +768,7 @@ def step2_fanout(cop):
     done |= {"5", "6"}          # crystal, drawn in step 4
     done |= {"9"}               # VDDA, drawn in step 5
     done |= {"32", "33"}        # USB pair, drawn in step 6
-    done |= set(QFN_NO_STUB)
-    stubbed, vias = [], []
+    stubbed, vias, shadow = [], [], []
     for pad in fp.Pads():
         num = pad.GetNumber()
         if not num or num in done:
@@ -790,7 +804,14 @@ def step2_fanout(cop):
                 placed = s
                 break
         if placed is None:
-            cop.fails.append("no room for the fanout stub on %s (%s)" % (spec, net))
+            # No radial escape at all. That happens only on the island's side
+            # of the part, so try the channel lane / same-net jumper there.
+            what = shadow_escape(cop, num, net, cop.xtal_rect)
+            if what:
+                shadow.append(what)
+            else:
+                cop.fails.append("no room for the fanout stub on %s (%s)"
+                                 % (spec, net))
         else:
             stubbed.append((num, net, placed))
     print("  radial stubs %.2f mm wide on %d pads (%.2f-%.2f mm out of the pad "
@@ -812,12 +833,11 @@ def step2_fanout(cop):
                  ", ".join("%s=%s" % (n, t.rsplit("/", 1)[-1])
                            for n, t, _r in vias),
                  min(r for _n, _t, r in vias), max(r for _n, _t, r in vias)))
-    if QFN_NO_STUB:
-        print("  NO stub on pads %s: the crystal island's %.2f mm channel "
-              "between the pin row and the load caps takes one 0.20 mm trace "
-              "and VDDA has it (see step 5). These pads have no escape at "
-              "all and their nets stay open - a placement finding, not a "
-              "copper one." % (", ".join(QFN_NO_STUB), 0.81))
+    if shadow:
+        print("  pads the crystal island shadows, given real copper instead "
+              "of a radial stub:")
+        for line in shadow:
+            print("    " + line)
     # First-ring traces (no via, destination is a part on top).
     ring_ok = 0
     for num, tgt, w in FIRST_RING:
@@ -931,35 +951,76 @@ def step3b_stitch(cop):
 
 
 # ============================================================ crystal =====
+def _uv(d, t, p):
+    """Board mm -> (out of the part, along its pin row)."""
+    return (p[0] * d[0] + p[1] * d[1], p[0] * t[0] + p[1] * t[1])
+
+
+def _xy(d, t, u, v):
+    return (u * d[0] + v * t[0], u * d[1] + v * t[1])
+
+
+def _far_edge(d, t, box):
+    """How far the copper of `box` reaches out along d."""
+    return max(_uv(d, t, p)[0] for p in
+               ((box[0], box[1]), (box[2], box[1]),
+                (box[2], box[3]), (box[0], box[3])))
+
+
+def _near_edge(d, t, box):
+    return min(_uv(d, t, p)[0] for p in
+               ((box[0], box[1]), (box[2], box[1]),
+                (box[2], box[3]), (box[0], box[3])))
+
+
+def osc_channel(cop, xr):
+    """The two lanes between the QFN's pin row and the crystal island.
+
+    Returns (d, t, inner lane, outer lane, keepout near edge, channel width).
+    Everything downstream of this - the OSC_IN leg, the lane that carries the
+    pad the island shadows, and the ground guard's open ends - is placed off
+    these numbers rather than off constants measured by hand.
+    """
+    d = cop.outward("%s.5" % QFN)
+    t = (-d[1], d[0])
+    row = max(_far_edge(d, t, cop.padbox("%s.%s" % (QFN, n)))
+              for n in ("1", "6", "12"))
+    near = _near_edge(d, t, xr)
+    lane_in = row + LANE_GAP + W_FINE / 2.0
+    lane_out = lane_in + W_FINE + LANE_GAP
+    return d, t, lane_in, lane_out, near, near - row
+
+
 def step4_crystal(cop, xr):
     print("\n--- 4. crystal")
     res = {}
+    d, t, lane_in, lane_out, near, chan = osc_channel(cop, xr)
+    cop.channel = (d, t, lane_in, lane_out, near)
+    print("  channel between the pin-row copper and the island keepout: "
+          "%.2f mm, two %.2f mm lanes at %.2f mm (second pass: %.2f mm, one)"
+          % (chan, W_FINE, LANE_GAP, 0.51))
+    if lane_out + W_FINE / 2.0 > near:
+        cop.fails.append("crystal channel too narrow for two lanes: %.2f mm"
+                         % chan)
     p5, p6 = cop.pad("%s.5" % QFN), cop.pad("%s.6" % QFN)
-    c310, c311 = cop.pad("C310.1"), cop.pad("C311.1")
     y1, y3 = cop.pad("Y301.1"), cop.pad("Y301.3")
     ign = ("%s.5" % QFN, "%s.6" % QFN, "C310.1", "C311.1", "Y301.1", "Y301.3")
 
-    # OSC_IN: pad 5 is the westmost of the two, and its load cap and the
-    # crystal's own OSC_IN pad are both on that side (place.py's XTAL_ISLAND
-    # order plus XTAL_FORCE_FLIP), so this leg stays west of OSC_OUT all the
-    # way and the two never have to cross. Before that change they did, which
-    # on one layer is not routable at all.
-    # It runs straight north through its own load cap's pad at x=XTAL_IN_X
-    # (0.10 mm west of the pin, a 45 deg jog) and turns east only past the
-    # crystal's own GND pad 4, which sits between pad 1 and the MCU at the
-    # same x. Going north rather than along the channel also leaves the
-    # channel free where pads 1-4 have to cross it.
-    osc_in = [p5, (XTAL_IN_X, p5[1] + abs(p5[0] - XTAL_IN_X)),
-              (XTAL_IN_X, y1[1]), (y1[0], y1[1])]
-    # OSC_OUT: east along the channel, north up the 1.98 mm gap between the
-    # two load caps, then across the 0.74 mm slot between the caps and the
-    # crystal into pad 3, with the load cap tapped off it.
-    osc_out = [p6, (p6[0], XTAL_CHANNEL_Y), (XTAL_GAP_X, XTAL_CHANNEL_Y),
-               (XTAL_GAP_X, XTAL_OVER_Y), (y3[0], XTAL_OVER_Y), (y3[0], y3[1])]
-    tap = [(c311[0], XTAL_OVER_Y), (c311[0], c311[1])]
+    # OSC_IN: pad 5 goes out to the OUTER channel lane, runs along the pin row
+    # to the crystal's XIN pad - which rotation 270 puts on the island's
+    # near-west corner - and drops straight into it. The inner lane is left
+    # for the one connected pad the island shadows (see step 2b).
+    u5, v5 = _uv(d, t, p5)
+    u1, v1 = _uv(d, t, y1)
+    osc_in = [p5, _xy(d, t, lane_out, v5), _xy(d, t, lane_out, v1), y1]
+    # OSC_OUT does not touch the channel: XOUT is the island's FAR pad on pad
+    # 6's own side of the crystal, so the leg leaves pad 6 straight out, clears
+    # the crystal's near GND pad by 0.20 mm, and turns once into XOUT.
+    u6, v6 = _uv(d, t, p6)
+    u3, v3 = _uv(d, t, y3)
+    osc_out = [p6, _xy(d, t, u3, v6), y3]
     for name, net, pts in (("OSC_IN", "/MCU/OSC_IN", osc_in),
-                           ("OSC_OUT", "/MCU/OSC_OUT", osc_out),
-                           ("OSC_OUT load cap tap", "/MCU/OSC_OUT", tap)):
+                           ("OSC_OUT", "/MCU/OSC_OUT", osc_out)):
         out = [pts[0]]
         for q in pts[1:]:
             if dist(q, out[-1]) > 1e-9:
@@ -970,53 +1031,148 @@ def step4_crystal(cop, xr):
             continue
         cop.add_path(out, W_FINE, "F.Cu", net)
         res[net] = res.get(net, 0.0) + path_len(out)
-    # the OSC_IN load cap sits ON the leg (its pad 1 spans XTAL_IN_X)
+    # each load cap hangs off its own crystal pad, one turn away
+    for a, b in (("Y301.1", "C310.1"), ("Y301.3", "C311.1")):
+        pts = cop.trace("crystal load cap %s->%s" % (a, b), a, b, W_FINE,
+                        stubs=(0.0, 0.4, 0.6, 0.9, 1.2))
+        if pts:
+            net = cop.padnet(a)
+            res[net] = res.get(net, 0.0) + path_len(pts)
     for net in ("/MCU/OSC_IN", "/MCU/OSC_OUT"):
         print("  %-8s %.2f mm of F.Cu, 0 vias"
               % (net.rsplit("/", 1)[-1], res.get(net, 0.0)))
 
     # Ground guard: a bracket on F.Cu just outside the keepout, open towards
-    # the MCU (the oscillator legs and the VDDA lane come in there), stitched
-    # into the pour with vias at its corners.
+    # the MCU, stitched into the pour with vias at its corners. Its open ends
+    # now stop at the keepout's near edge rather than reaching back into the
+    # channel: the second pass's west leg cut across the channel and was
+    # always skipped, and with two lanes in there it would cut both.
     gb = parts_bbox(cop, XTAL_PARTS, GUARD_MARGIN)
-    x0, x1, ytop = gb[0], gb[2], gb[3]
-    ring = [(x0, GUARD_Y0), (x0, ytop), (x1, ytop), (x1, GUARD_Y0)]
+    u_open = near + W_GUARD / 2.0
+    u_far = _far_edge(d, t, gb)
+    v_lo = min(_uv(d, t, p)[1] for p in
+               ((gb[0], gb[1]), (gb[2], gb[1]), (gb[2], gb[3]), (gb[0], gb[3])))
+    v_hi = max(_uv(d, t, p)[1] for p in
+               ((gb[0], gb[1]), (gb[2], gb[1]), (gb[2], gb[3]), (gb[0], gb[3])))
+    # Each leg's open end is pulled back until it clears: whatever sits in the
+    # first ring on the island's flank - here VBAT's cap, which the island
+    # pushed out along the pin row - ends up right at the open end, and the
+    # second pass simply dropped the leg it fouled.
+    def leg(u0, u1, v):
+        return [_xy(d, t, u0, v), _xy(d, t, u1, v)]
+    corners = [_xy(d, t, u_open, v_lo), _xy(d, t, u_far, v_lo),
+               _xy(d, t, u_far, v_hi), _xy(d, t, u_open, v_hi)]
+    legs = [(u_open, u_far, v_lo), (u_far, u_far, None), (u_far, u_open, v_hi)]
     drawn = 0
-    for i in range(len(ring) - 1):
-        why = cop.path_clear([ring[i], ring[i + 1]], W_GUARD, "F.Cu", "GND")
-        if why is None:
-            cop.add_path([ring[i], ring[i + 1]], W_GUARD, "F.Cu", "GND")
-            drawn += 1
+    for i, (ua, ub, v) in enumerate(legs):
+        if v is None:
+            pts = [_xy(d, t, u_far, v_lo), _xy(d, t, u_far, v_hi)]
+            cands = [pts]
         else:
+            cands = [leg(ua + k * (0.2 if ua < ub else -0.2), ub, v)
+                     if ua < ub else
+                     leg(ua, ub + k * 0.2, v) for k in range(7)]
+        why = None
+        for pts in cands:
+            why = cop.path_clear(pts, W_GUARD, "F.Cu", "GND")
+            if why is None:
+                cop.add_path(pts, W_GUARD, "F.Cu", "GND")
+                drawn += 1
+                break
+        if why is not None:
             cop.notes.append("crystal guard leg %d skipped (%s)" % (i, why))
     nv = 0
-    for p in ((x0, ytop), (x1, ytop), ((x0 + x1) / 2.0, ytop),
-              (x0, GUARD_Y0), (x1, GUARD_Y0)):
+    for p in corners + [_xy(d, t, u_far, (v_lo + v_hi) / 2.0)]:
         if cop.via_clear(p, "GND") is None:
             cop.add_via(p, "GND")
             nv += 1
-    print("  F.Cu ground guard x[%.2f, %.2f] up to y=%.2f, open towards the "
-          "MCU: %d of 3 legs, %d stitching vias into the pour"
-          % (x0, x1, ytop, drawn, nv))
-    y2, y4 = cop.pad("Y301.2"), cop.pad("Y301.4")
-    mid = (y2[0] + y4[0]) / 2.0
-    xpts = [y4, (mid, y4[1]), (mid, y2[1]), y2]
-    why = cop.path_clear(xpts, W_FINE, "F.Cu", "GND", ("Y301.2", "Y301.4"))
-    if why:
-        cop.fails.append("crystal GND pad 4 -> pad 2 blocked: %s" % why)
-    else:
-        cop.add_path(xpts, W_FINE, "F.Cu", "GND")
-    tie = [("Y301.4", "C310.2"), ("Y301.2", "C311.2"),
-           ("C310.2", (x0, cop.pad("C310.2")[1])),
-           ("C311.2", (x1, cop.pad("C311.2")[1]))]
+    x0 = min(c[0] for c in corners)
+    x1 = max(c[0] for c in corners)
+    print("  F.Cu ground guard x[%.2f, %.2f], open towards the MCU at the "
+          "keepout's near edge: %d of 3 legs, %d stitching vias into the pour"
+          % (x0, x1, drawn, nv))
+    # Each island GND pad onto the nearest guard leg, and the crystal's own
+    # two GND pads to each other.
+    tie = [("Y301.4", "Y301.2"), ("C310.2", None), ("C311.2", None)]
     nt = 0
     for a, b in tie:
+        if b is None:
+            p = cop.pad(a)
+            u, v = _uv(d, t, p)
+            b = _xy(d, t, u, v_lo if abs(v - v_lo) < abs(v - v_hi) else v_hi)
         if cop.trace("crystal ground tie %s" % (a,), a, b, W_FINE,
-                     stubs=(0.0, 0.4, 0.6, 0.9)):
+                     stubs=(0.0, 0.4, 0.6, 0.9, 1.2)):
             nt += 1
     print("  %d of %d island ground ties onto the guard" % (nt, len(tie)))
     return dict(OSC_IN=res.get("/MCU/OSC_IN", 0.0),
                 OSC_OUT=res.get("/MCU/OSC_OUT", 0.0))
+
+
+# ================================================= pads under the island ==
+def shadow_escape(cop, num, net, xr):
+    """Last-resort escape for a pin-row pad the crystal island shadows.
+
+    Wherever the island goes it takes some pads' radial escape with it - that
+    is what "in the corner" buys: the corner at the low pin numbers holds
+    VBAT, PC13 (LED_STAT) and two pins this design does not use, instead of
+    NRST and the two pedal inputs. What is left gets real copper rather than
+    a stub that dies against the island:
+
+      - a pad with another pad of its OWN net on the part gets a jumper to it
+        (VBAT's pad 1 to the VDD pad round the corner, 0.97 mm), which costs
+        nothing at all;
+      - anything else gets the INNER channel lane out past the island's flank
+        and a via into the pour at the end of it, which is a genuine escape
+        on B.Cu clear of the keepout - not a dangling stub.
+
+    Returns a one-line description, or None when neither works.
+    """
+    d, t, lane_in, lane_out, near = cop.channel
+    fp = cop.fps[QFN]
+    spec = "%s.%s" % (QFN, num)
+    a = cop.pad(spec)
+    short = net.rsplit("/", 1)[-1]
+    bynet = collections.defaultdict(list)
+    for pad in fp.Pads():
+        if pad.GetNumber() and pad.GetNetname():
+            bynet[pad.GetNetname()].append(pad.GetNumber())
+    mate = sorted((dist(a, cop.pad("%s.%s" % (QFN, m))), m)
+                  for m in bynet[net] if m != num and m != QFN_EP)
+    if mate and mate[0][0] <= 1.6:
+        tgt = "%s.%s" % (QFN, mate[0][1])
+        pts = [a, cop.pad(tgt)]
+        why = cop.path_clear(pts, W_FINE, "F.Cu", net, (spec, tgt))
+        if why is None:
+            cop.add_path(pts, W_FINE, "F.Cu", net)
+            return ("pad %s (%s): %.2f mm jumper to pad %s on the same net, "
+                    "no channel lane and no via needed"
+                    % (num, short, mate[0][0], mate[0][1]))
+        cop.notes.append("pad %s jumper to %s blocked: %s" % (num, tgt, why))
+    u0, v0 = _uv(d, t, a)
+    vs = [_uv(d, t, p)[1] for p in
+          ((xr[0], xr[1]), (xr[2], xr[1]), (xr[2], xr[3]), (xr[0], xr[3]))]
+    why = None
+    for sign in (1.0, -1.0):
+        edge = (max(vs) if sign > 0 else min(vs)) + sign * 0.35
+        for extra in (0.0, 0.3, 0.6, 1.0, 1.5, 2.0, 2.6):
+            v1 = edge + sign * extra
+            pts = [a, _xy(d, t, lane_in, v0), _xy(d, t, lane_in, v1)]
+            bad = cop.path_clear(pts, W_FINE, "F.Cu", net, (spec,))
+            if bad:
+                why = why or "lane: " + bad
+                continue
+            bad = cop.via_clear(pts[-1], net, (spec,))
+            if bad:
+                why = why or ("via at (%.2f, %.2f): %s"
+                              % (pts[-1][0], pts[-1][1], bad))
+                continue
+            cop.add_path(pts, W_FINE, "F.Cu", net)
+            cop.add_via(pts[-1], net)
+            return ("pad %s (%s): %.2f mm along the inner channel lane to "
+                    "(%.2f, %.2f) and a via into the pour"
+                    % (num, short, path_len(pts), pts[-1][0], pts[-1][1]))
+    cop.notes.append("pad %s (%s) channel escape: %s" % (num, short, why))
+    return None
 
 
 # ============================================================== VDDA ======
@@ -1025,28 +1181,22 @@ def step5_vdda(cop, xr):
     for a, b in (("FB301.2", "C307.1"), ("FB301.2", "C306.1")):
         cop.trace("VDDA %s->%s" % (a, b), a, b, W_VDDA,
                   stubs=(0.0, 0.5, 0.8, 1.2))
-    # Pin 9's only exit is +y, straight into the crystal island. The 0.81 mm
-    # channel between the QFN pin row and the two load caps takes exactly one
-    # 0.20 mm trace and VDDA gets it; it runs east under the island and
-    # widens to 0.40 mm past its edge. Pads 11 and 12 are what pays (step 2).
-    p9 = cop.pad("%s.9" % QFN)
-    exit_x = xr[2] + 0.45
-    pts = [p9, (p9[0], XTAL_CHANNEL_Y), (exit_x, XTAL_CHANNEL_Y)]
-    why = cop.path_clear(pts, W_FINE, "F.Cu", "/MCU/VDDA", ("%s.9" % QFN,))
-    if why:
-        cop.fails.append("VDDA channel out of pin 9 blocked: %s" % why)
+    # THIRD PASS: pin 9 is now EAST of the island, not behind it, so VDDA is
+    # an ordinary short radial escape into its own 1 uF - no channel, no
+    # 0.20 mm squeeze, and the channel it used to occupy is free for the pad
+    # the island shadows. C306 is 2.50 mm from pin 9 instead of 8.21 mm.
+    # 0.20 mm, not W_VDDA: pin 9's neighbours are 0.25 mm away and a 0.40 mm
+    # track cannot leave the pad at all. It widens to W_VDDA past C306.
+    # Short stubs first: the NRST cap ends up 1.0 mm west of pin 9's own
+    # first-ring slot (the island's courtyard pushes it there), so a full
+    # 1.15 mm radial stub runs into its pad and the leg has to turn early.
+    run = cop.trace("VDDA pin 9 to C306", "%s.9" % QFN, "C306.1", W_FINE,
+                    stubs=(0.55, 0.7, 0.9, QFN_STUB, QFN_STUB + 0.3, 0.0))
+    if run is None:
         return 0.0
-    cop.add_path(pts, W_FINE, "F.Cu", "/MCU/VDDA")
-    run = cop.trace("VDDA channel to C306", (exit_x, XTAL_CHANNEL_Y),
-                    "C306.1", W_VDDA, stubs=(0.0,))
-    total = path_len(pts) + (path_len(run) if run else 0.0)
-    print("  pin 9 -> C306 %.2f mm on F.Cu, 0 vias; %.2f mm of it at %.2f mm "
-          "wide along the y=%.2f channel" % (total, path_len(pts), W_FINE,
-                                             XTAL_CHANNEL_Y))
-    print("  the VDDA parts stay where placement put them: pads 1 and 5-12 "
-          "are one 6 mm stretch of QFN edge with eleven candidates, and the "
-          "crystal's hard 5 mm and the four VDD caps' 2 mm win. place.py "
-          "prints the advisory.")
+    total = path_len(run)
+    print("  pin 9 -> C306 %.2f mm on F.Cu, 0 vias, %.2f mm wide - a plain "
+          "radial escape now that the island is off this side" % (total, W_FINE))
     return total
 
 
@@ -1123,14 +1273,28 @@ def step6_usb(cop):
         # is why each leg turns north at its own pad's x.
         a, b = cop.pad(u302_out), cop.pad(mcu)
         lane = USB_MCU_LANE[name]
-        p2 = [(a[0], a[1]), (a[0], lane), (b[0], lane), (b[0], b[1])]
-        why = cop.path_clear(p2, USB_W, "F.Cu", net, (u302_out, mcu))
-        l2 = 0.0
-        if why:
+        # Octilinear, not Manhattan. Both legs leave the lane on a 45 degree
+        # diagonal and come into the pad vertically, so the pair keeps its
+        # spacing while the corner is cut: on this placement that is 4.7 mm
+        # off each leg, which is what keeps the 40 mm budget of ADR 0003
+        # component breakdown 3 after the MCU had to move 4 mm back from the
+        # receptacle to make room for the Kelvin taps. The L shape is kept as
+        # a fallback for a pose where the diagonal does not fit.
+        dx = abs(b[0] - a[0])
+        forms = []
+        if lane + dx <= b[1] - 0.05:
+            forms.append([(a[0], a[1]), (a[0], lane),
+                          (b[0], lane + dx), (b[0], b[1])])
+        forms.append([(a[0], a[1]), (a[0], lane), (b[0], lane), (b[0], b[1])])
+        l2, why = 0.0, None
+        for p2 in forms:
+            why = cop.path_clear(p2, USB_W, "F.Cu", net, (u302_out, mcu))
+            if why is None:
+                cop.add_path(p2, USB_W, "F.Cu", net)
+                l2 = path_len(p2)
+                break
+        if l2 == 0.0:
             cop.fails.append("USB %s MCU leg blocked: %s" % (name, why))
-        else:
-            cop.add_path(p2, USB_W, "F.Cu", net)
-            l2 = path_len(p2)
         legs.append((name, l1, l2, l1 + l2))
     for name, l1, l2, tot in legs:
         print("  %-3s connector->U302 %6.2f mm   U302->MCU %6.2f mm   "
@@ -1213,7 +1377,18 @@ POWER = [
 # The sense side joins the pour ONLY at the shunt's ground pad. These pads
 # are therefore left OUT of the GND stitching and wired to U202 pin 4, which
 # runs to R204 pad 2.
-SENSE_GND = ("C203.2", "C204.2", "R211.2", "R216.2", "C206.2")
+# The SENSE REFERENCE pads: the ground ends of the shunt sense network and the
+# op-amp's own ground pin. These reach the pour through R204's ground pad and
+# nowhere else, so they are kept out of the ground stitching and wired here.
+#
+# C203.2 is deliberately NOT one of them, and neither is C205.2. C203 is the
+# op-amp's +3V3 bypass: its ground carries the supply's return current, not a
+# measurement, and tying it to the single point instead of to the plane under
+# it turns 15 mm of 0.20 mm trace around the op-amp into the bypass's return
+# path, which is worse for the op-amp than the thing the rule is protecting
+# against. C205 is the I_SENSE RC cap at the MCU pin, 20 mm away at the other
+# end of the board. Both take an ordinary stitching via.
+SENSE_GND = ("C204.2", "R211.2", "R216.2", "C206.2")
 SENSE_TIE = "U202.4"
 SHUNT_GND = "R204.2"
 SHUNT_VIAS = ((-0.95, -0.95), (-0.95, 0.95), (-1.55, 0.0))
@@ -1228,6 +1403,54 @@ POWER_EXPLICIT = [
     ("COIL_NEG SS110 to FET drain", "/Driver/COIL_NEG", 1.0,
      ["D201.2", (67.0, 15.0), (67.0, 24.0)]),
 ]
+
+
+def zroute(cop, a, b, width, net, ign, axis="h", step=0.05, reach=7.0):
+    """One-turn or two-turn path from a to b with the middle line SCANNED.
+
+    `trace` tries a fixed ladder of perpendicular offsets, which is enough
+    when there is a clear lane somewhere near the straight line. The sense
+    side's ground trunk has to thread the 1.1 mm gaps between the op-amp's
+    feedback resistors and between the two Kelvin taps, and the lane that
+    works is 0.05 mm wide in the choice of offset. So scan it: every candidate
+    is still clearance-checked in full before anything is drawn, and the
+    shortest one that clears wins.
+    """
+    lo, hi = (sorted((a[1], b[1])) if axis == "h" else sorted((a[0], b[0])))
+    lo, hi = lo - reach, hi + reach
+    cands = []
+    n = int((hi - lo) / step) + 1
+    for i in range(n):
+        m = lo + i * step
+        pts = ([a, (a[0], m), (b[0], m), b] if axis == "h"
+               else [a, (m, a[1]), (m, b[1]), b])
+        out = [pts[0]]
+        for q in pts[1:]:
+            if dist(q, out[-1]) > 1e-9:
+                out.append(q)
+        cands.append((round(path_len(out), 2), out))
+    cands.sort(key=lambda c: c[0])
+    for _l, pts in cands:
+        if cop.path_clear(pts, width, "F.Cu", net, ign) is None:
+            return pts
+    return None
+
+
+def sense_tie(cop, label, a_spec, b_spec, width):
+    """Draw one leg of the sense-side ground, trying hard before giving up."""
+    pts = cop.trace(label, a_spec, b_spec, width,
+                    stubs=(0.0, 0.5, 0.8, 1.1, 1.5, 2.0, 2.6), quiet=True)
+    if pts:
+        return pts
+    a, b = cop.pad(a_spec), cop.pad(b_spec)
+    ign = (a_spec, b_spec)
+    for axis in ("h", "v"):
+        pts = zroute(cop, a, b, width, "GND", ign, axis=axis)
+        if pts:
+            cop.add_path(pts, width, "F.Cu", "GND")
+            cop.lengths[label] = path_len(pts)
+            return pts
+    return None
 
 
 def step7_power(cop):
@@ -1249,14 +1472,43 @@ def step7_power(cop):
     print("  %d of %d power/driver traces drawn"
           % (ok, len(POWER) + len(POWER_EXPLICIT)))
     # single-point ground at the shunt
+    # The trunk first, then a TREE: each remaining sense pad is wired to
+    # whichever pad is already on the trunk and nearest to it, not all of them
+    # back to pin 4. The OC_REF pads sit on the op-amp's east face and pin 4 is
+    # on its west, so a star at pin 4 asks three of them to go right round the
+    # part; chained, each hop is a couple of millimetres.
+    #
+    # 0.25 mm, not 0.50: this run carries no current at all - it is the sense
+    # side's only reference - and 0.50 mm cannot get past the op-amp's own
+    # feedback trio, which stands between pin 4 and the shunt.
     n = 0
-    for spec in SENSE_GND:
-        if cop.trace("sense ground %s" % spec, spec, SENSE_TIE, 0.25,
-                     stubs=(0.0, 0.6, 0.9, 1.3, 1.8)):
-            n += 1
-    if cop.trace("sense ground to the shunt", SENSE_TIE, SHUNT_GND, 0.5,
-                 stubs=(0.0, 0.6, 1.0, 1.5, 2.0, 2.6)):
+    joined = [SHUNT_GND]
+    if sense_tie(cop, "sense ground trunk to the shunt", SENSE_TIE, SHUNT_GND,
+                 0.25):
         n += 1
+        joined.append(SENSE_TIE)
+    else:
+        cop.fails.append("sense ground trunk %s -> %s: no clear F.Cu path, "
+                         "even scanned" % (SENSE_TIE, SHUNT_GND))
+    todo = list(SENSE_GND)
+    while todo:
+        cand = sorted((dist(cop.pad(a), cop.pad(b)), a, b)
+                      for a in todo for b in joined)
+        a = cand[0][1]
+        got = None
+        for _d, aa, b in cand:
+            if aa != a:
+                continue
+            got = sense_tie(cop, "sense ground %s" % a, a, b, 0.2)
+            if got:
+                break
+        todo.remove(a)
+        if got:
+            n += 1
+            joined.append(a)
+        else:
+            cop.fails.append("sense ground %s: no clear F.Cu path to any pad "
+                             "already on the trunk, even scanned" % a)
     c = cop.pad(SHUNT_GND)
     nv = 0
     for dx, dy in SHUNT_VIAS:
@@ -1283,8 +1535,17 @@ RC = [
 ]
 RC_CHAIN = [("R402.2", "C401.1"), ("R403.2", "C402.1"), ("R404.2", "C403.1"),
             ("R408.2", "C405.1"), ("R406.2", "C404.1"),
-            ("R212.1", "R210.1"), ("R102.2", "R103.1")]
-RC_MAX = 12.0
+            # R212.1 -> R210.1 is NOT here: that is the whole I_SENSE run from
+            # the op-amp's output to the filter at the MCU pin, ~11 mm across
+            # the analog corner, not a local filter link. Drawn as one straight
+            # 0.25 mm trace it cut six QFN escapes on the east and south rows.
+            # It belongs to the router.
+            ("R102.2", "R103.1")]
+# 6.5 mm, down from 12.0. A "filter at the MCU pin" that is 8 mm away is not
+# a filter link any more, and drawn as one straight 0.25 mm trace across the
+# corner of the part it cut five QFN escapes on the east and south rows -
+# I_SENSE from pad 16 to R212 did exactly that. Over this, the router gets it.
+RC_MAX = 6.5
 
 
 def step8_filters(cop):
@@ -1370,6 +1631,72 @@ def keepout_clean(cop, xr):
     return sorted(set(bad))
 
 
+def sense_ground_table(cop):
+    """ADR 0003 decision 4, checked pad by pad.
+
+    "The sense side of R204 joins the pour only at the shunt." Two things have
+    to hold for every pad on that side: it reaches the tie at R204's ground
+    pad through scripted F.Cu copper only, and it has no via of its own
+    anywhere. This walks the copper this run actually drew - it is not a
+    restatement of the intent - and the run exits non-zero if a row fails.
+    """
+    print("\n--- sense-side ground (ADR 0003 decision 4)")
+    pads = list(SENSE_GND) + [SENSE_TIE, SHUNT_GND]
+    # graph over the F.Cu GND segments this run drew
+    def key(p):
+        return (round(p[0], 3), round(p[1], 3))
+    adj = collections.defaultdict(set)
+    for (a, b, hw, lay, net) in cop.segs:
+        if net != "GND" or lay != "F.Cu":
+            continue
+        adj[key(a)].add(key(b))
+        adj[key(b)].add(key(a))
+    boxes = {spec: cop.padbox(spec) for spec in pads}
+    # a pad owns every segment endpoint that lands on its copper
+    nodes = {}
+    for spec, r in boxes.items():
+        nodes[spec] = [n for n in adj
+                       if point_rect_dist(n, r) <= 0.05]
+    seen = set()
+    stack = [n for n in nodes[SHUNT_GND]]
+    seen.update(stack)
+    while stack:
+        n = stack.pop()
+        for m in adj[n]:
+            if m not in seen:
+                seen.add(m)
+                stack.append(m)
+    bad = []
+    print("  %-10s %-38s %-10s %s"
+          % ("pad", "reaches the tie at " + SHUNT_GND + " on F.Cu",
+             "own via", ""))
+    for spec in pads:
+        if spec == SHUNT_GND:
+            continue
+        on_fcu = bool(nodes[spec]) and any(n in seen for n in nodes[spec])
+        r = boxes[spec]
+        own = [v for (v, rad, dr, vnet) in cop.vias
+               if vnet == "GND" and point_rect_dist(v, r) < rad + 0.05]
+        ok = on_fcu and not own
+        print("  %-10s %-38s %-10s %s"
+              % (spec, "yes" if on_fcu else "NO - not connected by this run",
+                 "none" if not own else "%d - FAIL" % len(own),
+                 "PASS" if ok else "FAIL"))
+        if not ok:
+            bad.append(spec)
+    nv = len([1 for (v, rad, dr, vnet) in cop.vias
+              if vnet == "GND" and point_rect_dist(v, boxes[SHUNT_GND])
+              < rad + 0.6])
+    print("  the one tie into the pour: %s, %d via(s) in its own copper"
+          % (SHUNT_GND, nv))
+    if nv == 0:
+        bad.append(SHUNT_GND)
+        print("  %s has NO via into the pour - FAIL" % SHUNT_GND)
+    if bad:
+        print("  SENSE GROUND FAILED (%d): %s" % (len(bad), ", ".join(bad)))
+    return bad
+
+
 def run_drc():
     out = os.path.join(OUT, "drc-copper.json")
     os.makedirs(OUT, exist_ok=True)
@@ -1432,8 +1759,12 @@ def main():
     # would otherwise close escape routes a signal needed.
     xr = step1_zones(cop)
     osc = step4_crystal(cop, xr)
-    step5_vdda(cop, xr)
+    # VDDA used to go before the fanout because it needed the crystal
+    # channel. It does not any more (step 5), so the pin-row stubs claim
+    # their space first: pin 9's neighbours 10, 11 and 12 are pedal inputs
+    # with nowhere else to go, and a 0.20 mm VDDA leg can bend round them.
     step2_fanout(cop)
+    step5_vdda(cop, xr)
     usb = step6_usb(cop)
     step3_decoupling(cop)
     step7_power(cop)
@@ -1499,6 +1830,8 @@ def main():
             print("  " + f)
 
     rc = 0
+    if sense_ground_table(cop):
+        rc = 1
     if t_drc:
         errs, warns, unc, par, raw = run_drc()
         by = unconnected_by_net(raw)

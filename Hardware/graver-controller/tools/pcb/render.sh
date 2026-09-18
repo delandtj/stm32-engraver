@@ -67,9 +67,9 @@ zoom() {   # name x_mm y_mm w_mm h_mm
     echo "$out/$name.png"
 }
 zoom zoom-rear   0  0 110 30
-zoom zoom-mcu   30 20  40 35
+zoom zoom-mcu   34 32  40 30
 zoom zoom-power  0 12  36 50
-zoom zoom-driver 48 10  52 30
+zoom zoom-driver 48 10  52 34
 
 # Crops off the copper views, for reviewing the scripted copper block by
 # block: stubs colliding, vias on pads, the guard ring crossing a trace.
@@ -81,8 +81,11 @@ czoom() {   # name source x_mm y_mm w_mm h_mm
     magick "$out/$src.png" -crop "$geo" +repage -resize 1600x "$out/$name.png"
     echo "$out/$name.png"
 }
-czoom cu-qfn    top  38 30  20 22
-czoom cu-xtal   top  41 40  16 12
-czoom cu-usb    top  22  0  24 32
-czoom cu-driver top  48  8  32 26
+# Windows follow the third-pass geometry: the MCU cluster sits at
+# (46, 44) and the crystal island is south-west of it, in the corner at the
+# low pin numbers.
+czoom cu-qfn    top  37 33  24 26
+czoom cu-xtal   top  37 43  16 14
+czoom cu-usb    top  22  0  26 34
+czoom cu-driver top  48 16  34 28
 czoom cu-buck   top   2 38  36 26

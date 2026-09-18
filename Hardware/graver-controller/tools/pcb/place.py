@@ -176,8 +176,70 @@ DRIVER_SATS = [
     ("U201", ("Q201.1", "5", 4.0, -1.5), "gatedrv"),   # driver out at the gate
     ("R202", ("U201.3", "2", 2.6, 0.0), "gatedrv"),    # GATE_IN pulldown
     ("R204", ("Q201.3", "1", 3.2, 2.5), "shunt"),      # 1 R shunt at the source
-    ("U202", ("R204.1", "4", 5.0, 0.0), "opamp"),      # TLV9062 at the shunt
+    # 7.0 mm, not 5.0: the Kelvin taps now own the room directly south of the
+    # shunt, and at 5.0 the op-amp sat so close that the column at its own
+    # west pads - where its feedback network R210/R211/C204 belongs - was one
+    # part wide, and the resolver threw R210 and R211 12 mm north into the
+    # rear half. The ADR limit is 10 mm part to part; this is still under 5.
+    ("U202", ("R204.1", "4", 7.0, 0.0), "opamp"),      # TLV9062 at the shunt
 ]
+
+# ------------------------------------------------------- Kelvin taps --------
+# R209 and R213 are the shunt's sense resistors and they have to sit AT the
+# shunt: ADR 0003 component breakdown 4, "Kelvin traces from the shunt pads to
+# the TLV9062". In the second pass they were satellites of R204 pad 1, whose
+# outward normal points EAST straight into Q201's 11 mm DPAK courtyard; the row
+# search walked east ring by ring and dumped them 12.5 mm away on the far side
+# of the op-amp, where copper.py refused to draw the taps at all.
+#
+# So they are placed as a RIGID PAIR, right after the shunt and before the MCU
+# search, with offsets measured from R204's own pad 1 and the rotation fixed.
+# Both lie FLAT (0/180) with pad 1 facing the shunt pad: standing them up costs
+# 3.05 mm of courtyard height, and the only slot that tall between the shunt's
+# courtyard and the MCU's north escape band is one part wide.
+#
+# y = pad 1 + 2.5 mm is the floor: the 1206's courtyard reaches 1.175 mm south
+# of its pad centre, group air is 0.15 mm, and a flat 0603 is 0.775 mm half
+# height. That leaves about 1.2 mm of bare laminate between the shunt pad's
+# copper and each tap's own pad, which is what the Kelvin connection is about -
+# the centre-to-centre figure cannot be under 2 mm with a 1206 and an 0603.
+# R209 (the current-sense channel) takes the east slot so its run to U202 pin 3
+# stays short; R213 (the over-current comparator, less critical) takes the west.
+KELVIN_TAPS = (
+    # (ref, dx from R204.1, dy from R204.1, rotation)
+    ("R209", 1.04, 2.5, 0),        # flat, pad 1 west towards the shunt pad
+    ("R213", -1.46, 3.25, 270),    # on end, pad 1 north towards it
+)
+# R213 stands on END rather than lying flat beside R209. Flat it is 3.05 mm
+# wide and its far pad lands on x 51.5-52.3, which is the only lane left
+# between the MCU's east fanout vias (out to x 51.0) and the shunt: the
+# sense-side ground trunk has to come up that lane to reach R204's ground pad,
+# and with R213 lying across it copper.py could not draw the single tie ADR
+# 0003 decision 4 asks for at all. On end it is 1.55 mm wide, its sense pad is
+# 1.20 mm from the shunt pad's copper instead of 1.23, and the lane is free.
+
+# ------------------------------------------------- op-amp feedback net ------
+# R210 (feedback), R211 (gain set to ground) and C204 (the A+ filter cap) all
+# belong at U202's west pads, and they are a rigid trio for the same reason
+# the Kelvin taps are: the Kelvin pair owns the room directly south of the
+# shunt, so the column at the op-amp's west face is 2.1 mm wide - one 0603 on
+# its side - and satellites of pins 1, 2 and 3 fought over it and lost. Two of
+# them were thrown 12-14 mm north into the rear half, next to the handpiece
+# terminal, with copper.py refusing every trace in the feedback path.
+#
+# Stood on end they are 1.55 mm wide and three of them stack down the column
+# in pin order. Offsets are from U202's own pad 1; rotation 270 puts pad 1 at
+# the north end of each, which is the U202 pin each one feeds.
+# The 3.6 mm spacing is deliberate and 0.4 mm more than they need: it leaves
+# 1.1 mm of bare laminate between each pair of pads, and the sense-side ground
+# trunk from U202 pin 4 to the shunt has to cross this column on its way. At
+# 3.2 mm the gaps are 0.7 mm, which a 0.20 mm trace fits only if it is centred
+# to within 0.03 mm.
+OPAMP_WEST = (
+    ("R210", -2.53, 0.66, 270),    # A out -> A-
+    ("C204", -2.53, 4.26, 270),    # A+ filter
+    ("R211", -2.53, 7.86, 270),    # A- to the sense ground
+)
 
 # ------------------------------------------------------------ MCU search ----
 # The MCU and everything that must sit at its pins form one rigid cluster.
@@ -187,8 +249,13 @@ DRIVER_SATS = [
 MCU_SEARCH_X = (34.0, 70.0, 2.0)
 MCU_SEARCH_Y = (24.0, 48.0, 2.0)
 MCU_LINKS = [
-    ("33", "J301.A6", 3.0),     # USB_DP
-    ("32", "J301.A7", 3.0),     # USB_DM
+    # The USB pair has the only HARD length budget on the board (ADR 0003
+    # component breakdown 3: 40 mm, no vias). Third pass: at weight 3 the
+    # search picked a pose 2 mm further from the receptacle and copper.py drew
+    # 40.39 mm - over budget with the pair already at its limit - so these two
+    # links outweigh everything else.
+    ("33", "J301.A6", 6.0),     # USB_DP
+    ("32", "J301.A7", 6.0),     # USB_DM
     ("15", "J401.3", 2.0),      # LCD_SCK
     ("17", "J401.4", 2.0),      # LCD_MOSI
     ("21", "J401.6", 2.0),      # LCD_DC
@@ -237,9 +304,22 @@ MCU_REFERENCE_POSE = (42.0, 36.0, 180)   # what pass 1 picked by hand
 #
 # ref:     (host pad,   own pin, out, side)
 DECAPS = {
-    # One 100 nF per VDD/VBAT pin, pad 1 facing the pin. Placed before
-    # everything else that wants MCU-adjacent space.
-    "C301": ("U301.1", "1", 2.0, 0.0),
+    # One 100 nF per VDD pin, pad 1 facing the pin. Placed before everything
+    # else that wants MCU-adjacent space.
+    #
+    # C301 is VBAT's, and it is deliberately pushed sideways rather than left
+    # in front of pad 1: the corner in front of pads 1-5 is what the crystal
+    # island needs (third pass), a cap parked at pad 1 is placed BEFORE the
+    # island and denies it that corner, and that is exactly how the island
+    # ended up in front of pads 5-12 and trapped NRST and the two pedal pins.
+    # 1.56 mm out and 3.25 mm along the edge parks it just past C304, pad 48's
+    # own 100 nF, on the same +3V3 / GND corner - 2.9 mm from pad 1 instead of
+    # 1.8 mm, which is why its criterion is advisory. VBAT on a part with no
+    # battery is tied to VDD and pad 1 also gets a 0.97 mm jumper to pad 48.
+    # The 1.56 mm is not free either: at 1.0 mm its pads sat across the inner
+    # channel lane, the one escape the pad the island shadows (LED_STAT on
+    # pad 2) has, and copper.py then had nowhere to take it.
+    "C301": ("U301.1", "1", 1.56, 3.25),
     "C302": ("U301.24", "1", 2.0, 0.0),
     "C303": ("U301.36", "1", 2.0, 0.0),
     "C304": ("U301.48", "1", 2.0, 0.0),
@@ -274,12 +354,8 @@ SATELLITES = {
     "R203": ("Q201.1", "2", 2.6, 0.0),      # gate pulldown at the FET
     "C201": ("U201.1", "1", 2.2, 0.0),      # driver bypass at its pins
     "C202": ("U201.1", "1", 2.2, 2.0),
-    # Shunt sense: Kelvin taps at the shunt pads, feedback at the op-amp.
-    "R209": ("R204.1", "1", 2.4, 0.0),
-    "R213": ("R204.1", "1", 2.4, 2.2),
-    "C204": ("U202.3", "1", 2.4, 0.0),
-    "R210": ("U202.1", "1", 2.4, 0.0),
-    "R211": ("U202.2", "2", 2.4, 0.0),
+    # R209 / R213, the Kelvin taps, are NOT satellites - see KELVIN_TAPS.
+    # R210 / R211 / C204 are NOT satellites - see OPAMP_WEST.
     "R214": ("U202.5", "2", 2.4, 0.0),
     "R215": ("U202.6", "2", 2.4, 0.0),
     "R216": ("U202.6", "2", 2.4, 2.2),
@@ -320,8 +396,14 @@ SATELLITES = {
     "D101": ("Q101.1", "2", 3.0, 0.0),      # gate zener at the P-FET
     "R101": ("Q101.1", "1", 3.0, 2.6),      # gate pulldown
     "D203": ("Q202.1", "1", 3.0, 0.0),      # bypass gate zener
-    "R110": ("U101.5", "1", 3.0, 0.0),      # buck FB divider
-    "R109": ("R110.1", "2", 2.0, 0.0),
+    # Buck FB divider. Both hang off the FB pin and march SOUTH along U101's
+    # east face, not east: chained one behind the other (R109 on R110's pad 1)
+    # the pair folded back over the part and R109 ended up across the SW node,
+    # which ADR 0003 component breakdown 2 explicitly wants kept clear ("SW
+    # node short", "FB divider away from SW"). Pad 7's BST cap owns the first
+    # 1.8 mm of that face, hence the 0.4 mm and 2.2 mm side offsets.
+    "R110": ("U101.5", "1", 2.4, 2.2),      # FB node to ground
+    "R109": ("U101.5", "2", 2.4, 0.4),      # output to the FB node
     "C109": ("R109.1", "1", 2.0, 0.0),      # feed-forward
     "C110": ("R109.1", "1", 2.0, 2.0),
     "C111": ("D105.1", "1", 2.6, 0.0),      # buck output caps
@@ -336,8 +418,8 @@ SATELLITES = {
 # have none. Pads 5-9 are five consecutive pins on 2 mm of QFN edge and the
 # crystal, its two load caps and the VDDA network all want that space.
 MCU_RING_FIRST = (
+    "C309",                         # NRST, pad 7 - lowest pin number first
     "C306", "FB301",                # VDDA ferrite + 1 uF, the essential pair
-    "C309",                         # NRST
 )
 MCU_RING = (
     "C307",                         # VDDA 100 nF, after the crystal
@@ -405,26 +487,54 @@ XTAL_CLEAR = 0.4          # extra courtyard air around the island. Small on
 # other way round - and with the crystal flip the distance search prefers -
 # the two oscillator legs have to cross each other between the pin row and
 # the caps, which on one layer is not routable at all.
+#
+# THIRD PASS - the island moved into the CORNER in front of pads 1-5.
+#
+# The second-pass island sat in front of pads 5-12 and left a 0.81 mm channel
+# that takes exactly one 0.20 mm trace, which VDDA needed; pads 7 (NRST), 11
+# (PEDAL_TIP) and 12 (PEDAL_RING) then had no escape at all. Pads 3, 4 and 10
+# are unconnected on this design and pad 1 is VBAT (see DECAPS), so the corner
+# at the LOW pin numbers is the one side of the part that can be given away.
+#
+# Geometry, all from the real pad pitch (0.5 mm, pads 0.25 x 0.875, south row
+# at y = pad_row, pad copper reaching 0.4375 mm out):
+#
+#   - the crystal's own pads are 2.9 mm wide (3225, pads 1.4 x 1.2 at
+#     +-1.1/+-0.85), so at rotation 270 the island's pad bbox is 2.9 mm and
+#     its east edge can stay west of pad 7's escape. The load caps are 0402
+#     and go OUTSIDE the crystal - one west of it, one behind it - so they
+#     never widen the face the QFN sees.
+#   - rotation 270 puts XIN (pad 1) at the NORTH-WEST corner and XOUT (pad 3)
+#     at the SOUTH-EAST. That is the only one of the four rotations where
+#     OSC_IN is both nearest the MCU and west of OSC_OUT, which is the order
+#     MCU pads 5 and 6 want: the two legs then never cross. At rotation 0
+#     (second pass) XIN is the far SOUTH-WEST pad, shadowed by the GND pad
+#     directly north of it, and the only way in is the crystal's own 0.8 mm
+#     centre slot - which OSC_OUT's load cap also needs.
+#   - OSC_OUT leaves pad 6 straight south at x = pad6, 0.20 mm clear of the
+#     crystal's north-east GND pad and 0.30 mm clear of pad 7's stub, and
+#     turns west into XOUT. OSC_IN leaves pad 5, runs west along the channel
+#     between the pin row and the island, and drops into XIN.
+#   - the island's north pad edge is kept about 1.0 mm clear of the pin row's
+#     copper, which is a real channel (two 0.20 mm lanes at 0.15 mm) instead
+#     of the second pass's one.
+#
+# (ref, offset along the QFN edge, offset outward, rotation added to the base)
+# Positive "along" runs towards the LOW pin numbers. Rotations are relative to
+# the island's base rotation, which is 90 when the OSC pads face +-x and 0 when
+# they face +-y, so the table reads the same whichever way the MCU search puts
+# the part.
 XTAL_ISLAND = (
-    ("Y301",   0.0, 3.8),
-    ("C310",   1.7, 1.5),
-    ("C311",  -1.7, 1.5),
+    ("Y301",   1.50, 3.562, 270),   # 3225, XIN north-west, XOUT south-east
+    ("C310",   3.95, 3.562, 270),   # OSC_IN load, west of the crystal
+    ("C311",   0.65, 6.862, 270),   # OSC_OUT load, behind it, on XOUT's side
 )
-# Which way round the crystal goes is a ROUTING decision, not a distance one:
-# the flip has to put the crystal's own OSC_IN pad (pad 1) on the same side as
-# C310 and MCU pad 5. The search below still runs and prints both, so the cost
-# in worst-leg length is visible; None = let the search decide.
-XTAL_FORCE_FLIP = 0
-                          # far enough back to clear the load caps
-XTAL_BIAS = -1.5          # slide the island along the edge, away from the
-                          # VBAT decap on pad 1, which otherwise collides
-                          # with the left load cap and throws the whole
-                          # group 1-2 mm out
+XTAL_BIAS = 0.0           # the offsets above are measured from the midpoint
+                          # of the two OSC pads, so no extra bias is wanted
 
 # ---------------------------------------------- ADR 0003 distance checks ----
 # (label, kind, a, b, limit, direction) - direction "max" = must be <= limit.
 CRITERIA = [
-    ("100 nF C301 to VDD pin U301.1", "pad", "C301.1", "U301.1", 2.0, "max"),
     ("100 nF C302 to VDD pin U301.24", "pad", "C302.1", "U301.24", 2.0, "max"),
     ("100 nF C303 to VDD pin U301.36", "pad", "C303.1", "U301.36", 2.0, "max"),
     ("100 nF C304 to VDD pin U301.48", "pad", "C304.1", "U301.48", 2.0, "max"),
@@ -446,6 +556,16 @@ CRITERIA = [
     ("VDDA 100nF C307 to U301.9", "pad", "C307.1", "U301.9", 3.0, "max"),
     ("VDDA ferrite FB301 to U301.9", "pad", "FB301.2", "U301.9", 3.0, "max"),
     ("NRST cap C309 to U301.7", "pad", "C309.1", "U301.7", 3.0, "max"),
+    # Added in the third pass.
+    ("VBAT cap C301 to U301.1", "pad", "C301.1", "U301.1", 2.0, "max"),
+    # Kelvin taps: copper edge to copper edge off the shunt's sense pad. The
+    # centre-to-centre number cannot be under 2 mm with a 1206 and a 0603
+    # (see the note in SATELLITES), the edge gap is what matters, and 2 mm of
+    # it is already loose.
+    ("Kelvin tap R209 to shunt pad R204.1", "padgap", "R209.1", "R204.1",
+     2.0, "max"),
+    ("Kelvin tap R213 to shunt pad R204.1", "padgap", "R213.1", "R204.1",
+     2.0, "max"),
 ]
 
 # Criteria that are REPORTED but do not gate the exit code, because the target
@@ -464,6 +584,15 @@ ADVISORY = {
     "VDDA 100nF C307 to U301.9": "see the VDDA 1uF note above",
     "VDDA ferrite FB301 to U301.9": "see the VDDA 1uF note above",
     "NRST cap C309 to U301.7": "see the VDDA 1uF note above",
+    "VBAT cap C301 to U301.1": (
+        "Pad 1 is VBAT, not a VDD pin. The corner in front of pads 1-5 is the "
+        "only place the crystal island can go without trapping NRST and the "
+        "two pedal pins (third pass), and a cap parked at pad 1 is placed "
+        "first and takes it. VBAT on a part with no battery is tied to VDD, "
+        "its 100 nF is a formality, and pad 1 reaches +3V3 through a 0.78 mm "
+        "jumper to pad 48 - whose own 100 nF, C304, is 1.79 mm away and is "
+        "what actually decouples that corner. C301 sits beside C304 on the "
+        "same +3V3 / GND copper."),
     "clamp loop (no FET)": (
         "Floor is about 24 mm: the closing edge between J201's own VIN and "
         "coil pins is 5.08 mm, each of the two legs that touch those pads has "
@@ -1274,6 +1403,22 @@ def place_all(board, fps):
                         group=grp(ref, spec[0].split(".")[0]))
         placed.add(ref)
 
+    # 3d. the Kelvin taps, as a rigid pair off the shunt's sense pad
+    sx, sy = pad_xy(fps, "R204.1")
+    place_group(fps, [(r, dx, dy, rot) for r, dx, dy, rot in KELVIN_TAPS],
+                sx, sy, field, grp("R209", "R204"), "Kelvin taps", step=0.25)
+    for ref, _dx, _dy, _rot in KELVIN_TAPS:
+        placed.add(ref)
+    ux, uy = pad_xy(fps, "U202.1")
+    place_group(fps, list(OPAMP_WEST), ux, uy, field, grp("R210", "U202"),
+                "op-amp feedback trio", step=0.25)
+    for ref, _dx, _dy, _rot in OPAMP_WEST:
+        placed.add(ref)
+    for ref in ("R209", "R213"):
+        print("  Kelvin tap %s pad 1 is %.2f mm of laminate from the shunt "
+              "pad R204.1" % (ref, measure(fps, "padgap", ref + ".1",
+                                           "R204.1")))
+
     # 4. MCU pose by search, then the cluster around it
     search_mcu(fps, field)
     placed.add("U301")
@@ -1317,6 +1462,25 @@ def place_all(board, fps):
         (-1, 0): (mbox[0] - g, mbox[1] - g, mbox[0], mbox[3] + g),
         (1, 0): (mbox[2], mbox[1] - g, mbox[2] + g, mbox[3] + g),
     }
+    # The two bands PERPENDICULAR to the crystal's side cover the two corners
+    # of that side as well, and the island needs one of those corners: it now
+    # sits at the low-pin-number end of the OSC row (third pass), which is a
+    # corner, not the middle of a side. Clip them back to the courtyard there.
+    # Nothing is lost: those corners are diagonally off the part, so no pad on
+    # the perpendicular row escapes through them.
+    for side in list(bands):
+        if side == xtal_side or side[0] * xtal_side[0] + side[1] * xtal_side[1]:
+            continue
+        b = list(bands[side])
+        if xtal_side == (0, 1):
+            b[3] = mbox[3]
+        elif xtal_side == (0, -1):
+            b[1] = mbox[1]
+        elif xtal_side == (1, 0):
+            b[2] = mbox[2]
+        else:
+            b[0] = mbox[0]
+        bands[side] = tuple(b)
     for side, box in bands.items():
         if side != xtal_side:
             field.reserve(box, grp("U301"))
@@ -1374,49 +1538,22 @@ def place_all(board, fps):
     ox, oy = ox + bias[0], oy + bias[1]
     perp = (-out[1], out[0])
     xr = 90 if out[0] else 0
-    # The island is RIGID: load caps flanking the OSC pair between crystal
-    # and MCU as ADR 0003 requires, crystal behind them. Placing the three one
-    # at a time let whichever went first steal the others' slot, which put the
-    # load caps 5 mm from the pins they belong to.
-    # Try the crystal both ways round and keep whichever puts XIN/XOUT
-    # (pads 1 and 3) nearer OSC_IN/OSC_OUT - the footprint's pad 1 is at a
-    # corner, so the wrong way costs over a millimetre on one leg.
-    best = None
-    for flip in (0, 180):
-        mark = field.snapshot()
-        rows = []
-        for ref, po, oo in XTAL_ISLAND:
-            rows.append((ref,
-                         po * perp[0] + oo * out[0],
-                         po * perp[1] + oo * out[1],
-                         (xr + flip) % 360 if ref == XTAL
-                         else (90 if out[0] else 0)))
-        place_group(fps, rows, ox, oy, field, grp(XTAL), "Y301 island",
-                    quiet=True)
-        d = max(measure(fps, "pad", "Y301.1", "U301.%s" % XTAL_OSC_PADS[0]),
-                measure(fps, "pad", "Y301.3", "U301.%s" % XTAL_OSC_PADS[1]))
-        field.rollback(mark)
-        if best is None or d < best[0]:
-            best = (d, flip, rows)
-    if XTAL_FORCE_FLIP is not None and best[1] != XTAL_FORCE_FLIP:
-        print("  crystal flip: search preferred %d deg (%.2f mm), forced to "
-              "%d deg so OSC_IN stays on pad 5's side"
-              % (best[1], best[0], XTAL_FORCE_FLIP))
-        for flip, rows in (("keep", None),):
-            pass
-        rows = []
-        for ref, po, oo in XTAL_ISLAND:
-            rows.append((ref,
-                         po * perp[0] + oo * out[0],
-                         po * perp[1] + oo * out[1],
-                         (xr + XTAL_FORCE_FLIP) % 360 if ref == XTAL
-                         else (90 if out[0] else 0)))
-        best = (best[0], XTAL_FORCE_FLIP, rows)
-    place_group(fps, best[2], ox, oy, field, grp(XTAL), "Y301 island")
-    print("  crystal flip %d deg, worst OSC leg %.2f mm"
-          % (best[1], max(measure(fps, "pad", "Y301.1", "U301.%s" % XTAL_OSC_PADS[0]),
-                          measure(fps, "pad", "Y301.3", "U301.%s" % XTAL_OSC_PADS[1]))))
-    for ref, _p, _o in XTAL_ISLAND:
+    # The island is RIGID and its arrangement is DICTATED, not searched: the
+    # rotation of the crystal decides which of its four pads faces the MCU and
+    # therefore whether the two oscillator legs can be drawn at all, which a
+    # distance search cannot see. See the note on XTAL_ISLAND.
+    rows = []
+    for ref, po, oo, dr in XTAL_ISLAND:
+        rows.append((ref,
+                     po * perp[0] + oo * out[0],
+                     po * perp[1] + oo * out[1],
+                     (xr + dr) % 360))
+    place_group(fps, rows, ox, oy, field, grp(XTAL), "Y301 island", step=0.125)
+    leg_in = measure(fps, "pad", "Y301.1", "U301.%s" % XTAL_OSC_PADS[0])
+    leg_out = measure(fps, "pad", "Y301.3", "U301.%s" % XTAL_OSC_PADS[1])
+    print("  crystal island in the corner at the low pin numbers: OSC_IN leg "
+          "%.2f mm, OSC_OUT leg %.2f mm (limit 5.00)" % (leg_in, leg_out))
+    for ref, _p, _o, _r in XTAL_ISLAND:
         placed.add(ref)
     # keep the island clear
     island = [crtyd(fps[r]) for r in (XTAL,) + XTAL_LOADS]
@@ -1544,11 +1681,25 @@ def check_all(fps, field):
     return fail
 
 
+def pad_box(fps, spec):
+    """'REF.PAD' -> its copper bounding box in board-local mm."""
+    ref, num = spec.split(".", 1)
+    pad = fps[ref].FindPadByNumber(num)
+    if pad is None:
+        raise KeyError(spec)
+    b = pad.GetBoundingBox()
+    return (tomm(b.GetLeft()) - ORIGIN[0], tomm(b.GetTop()) - ORIGIN[1],
+            tomm(b.GetRight()) - ORIGIN[0], tomm(b.GetBottom()) - ORIGIN[1])
+
+
 def measure(fps, kind, a, b):
     if kind == "pad":
         ax, ay = pad_xy(fps, a)
         bx, by = pad_xy(fps, b)
         return math.hypot(ax - bx, ay - by)
+    if kind == "padgap":
+        # copper edge to copper edge - the number a Kelvin tap is about
+        return box_gap(pad_box(fps, a), pad_box(fps, b))
     return box_gap(crtyd(fps[a]), crtyd(fps[b]))
 
 
