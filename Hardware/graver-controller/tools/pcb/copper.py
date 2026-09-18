@@ -34,6 +34,12 @@ piece of copper already drawn, the board edge and the keepouts BEFORE it is
 committed, at the pairwise net-class clearance; a path that cannot be made to
 clear is reported, not drawn.
 
+Widths come from the committed graver-controller.kicad_dru, not from a table
+here: `net_floors()` reads the per-class `track_width (min ...)` rules and
+`width_floor_table` checks every scripted segment against the floor for its
+net, so a Power tap at 0.25 mm or a HighCurrent Kelvin tap at 0.20 mm fails
+the run instead of turning up as a DRC error after the router has gone.
+
 Usage:  python3 tools/pcb/copper.py [--no-drc] [--no-refill] [--verbose]
 """
 
@@ -41,6 +47,7 @@ import collections
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 
@@ -55,6 +62,7 @@ PROJ = os.path.normpath(os.path.join(HERE, "..", ".."))
 NAME = "graver-controller"
 PCB = os.path.join(PROJ, NAME + ".kicad_pcb")
 PRO = os.path.join(PROJ, NAME + ".kicad_pro")
+DRU = os.path.join(PROJ, NAME + ".kicad_dru")
 OUT = os.path.join(PROJ, "output", "pcb")
 
 ORIGIN = (50.0, 50.0)          # must match place.py
@@ -86,6 +94,55 @@ W_RAIL = 0.5          # +3V3 / +5V distribution
 W_POWER = 1.0         # VIN and the flyback loop
 W_GUARD = 0.3         # crystal ground guard
 
+
+# ------------------------------------------------- the .kicad_dru floors ---
+# ADR 0003 decision 5: a net class's track width is KiCad's DEFAULT for new
+# copper, not a limit, so graver-controller.kicad_dru carries one
+# `track_width (min ...)` rule per class and DRC fails a power net drawn at the
+# signal width. The numbers are READ out of the two committed files rather than
+# repeated here: a floor that has drifted from the rule it is meant to satisfy
+# is worse than no floor at all, and this is the only reason a 0.25 mm rail tap
+# or a 0.20 mm Kelvin tap is not a legal piece of copper on this board.
+def class_floors():
+    """net class -> minimum track width in mm, from the committed .kicad_dru."""
+    try:
+        with open(DRU) as fh:
+            txt = fh.read()
+    except OSError:
+        return {}
+    out = {}
+    for blk in re.split(r"(?=\(rule\b)", txt):
+        cls = re.search(r"A\.NetClass\s*==\s*'([^']+)'", blk)
+        w = re.search(r"\(constraint\s+track_width\s+\(min\s+([0-9.]+)\s*mm\)",
+                      blk)
+        if cls and w:
+            out[cls.group(1)] = max(out.get(cls.group(1), 0.0),
+                                    float(w.group(1)))
+    return out
+
+
+def net_floors():
+    """net name -> the minimum track width DRC enforces on it."""
+    floors = class_floors()
+    try:
+        with open(PRO) as fh:
+            pro = json.load(fh)
+    except OSError:
+        return {}
+    out = {}
+    for p in pro["net_settings"].get("netclass_patterns") or []:
+        w = floors.get(p["netclass"])
+        if w:
+            out[p["pattern"]] = w
+    return out
+
+
+W_FLOOR = net_floors()
+# The two ladder floors the tables below use, named so a change to the
+# .kicad_dru shows up as a changed number here and not as a DRC error.
+W_RAIL_MIN = W_FLOOR.get("+3V3", 0.3)         # Power class
+W_HC_MIN = W_FLOOR.get("VIN", 0.5)            # HighCurrent class
+
 # ------------------------------------------------------- GND stitching -----
 # Every top-side GND pad that is not already tied gets a short fat stub of its
 # own and a via into the pour, so that GND is CLOSED by this script and the
@@ -108,7 +165,20 @@ EDGE_STITCH_RIB = 0.3
 # to C301.2's is 1.40 mm and C301.2's to the ground guard is 1.48 mm) and it
 # touches 23 of the 63 pieces, where 3.50 mm would touch 46. See
 # "GND is closed by the script" in the README.
-GND_SPINE_MAX = (2.0, 2.5)
+#
+# Each sweep is (cap, lone stubs only, may enter the QFN annulus). The THIRD
+# one is the sixth pass's targeted fix and it is deliberately the last resort:
+# after the first two, two stubs were still pieces of their own - C309.2, whose
+# hop to the crystal ground guard is 2.02 mm (0.02 mm over the first cap, and
+# then inside the annulus the second one will not enter) and C205.2, whose
+# nearest piece is 2.90 mm (0.40 mm over the second cap). Both came back as
+# open GND pad pairs once the router had diced the pour under them. A stub that
+# is STILL lone after both sweeps is the one case where a long hop through the
+# annulus is worth more than the escape lane it costs: there is nothing else
+# holding it to the rest of GND. It only ever fires on a piece the other two
+# could not reach, so it cannot draw the 14 long hops a bigger cap on sweep 2
+# would (see below).
+GND_SPINE_MAX = ((2.0, False, False), (2.5, True, False), (3.0, True, True))
 GND_SPINE_W = (0.3, 0.25, 0.2)
 # The second sweep is for the pieces the first one could not reach at all: a
 # LONE stub, under this much copper of its own, may take a slightly longer
@@ -237,9 +307,15 @@ FIRST_RING = [
     # Pad 1 is VBAT and its 100 nF sits round the corner with pad 48's, so
     # there is no first-ring trace for it: step 2's shadow escape jumpers pad
     # 1 to pad 48 instead, and +3V3 carries on from there.
-    ("24", "C302.1", W_SIG),
-    ("36", "C303.1", W_SIG),
-    ("48", "C304.1", W_SIG),
+    # The three VDD pads are W_RAIL_MIN and not W_SIG: they are +3V3, which is
+    # in the Power class, and the .kicad_dru holds it to 0.30 mm at a 0.5 mm
+    # pitch pad as much as anywhere else. 0.30 mm leaves 0.375 - 0.35 =
+    # 0.025 mm to the GND pad next door, so it is drawable but only just; a pad
+    # whose trace does not clear keeps its plain radial stub and its cap goes
+    # back to the router.
+    ("24", "C302.1", W_RAIL_MIN),
+    ("36", "C303.1", W_RAIL_MIN),
+    ("48", "C304.1", W_RAIL_MIN),
     # ("22", "C308.1") was here and never came out: C308 is 7.79 mm away in
     # the SECOND ring and the two-segment search has to thread the C302 / C104
     # row on the way. It is an explicit path now, see SIGNAL_EXPLICIT.
@@ -1161,14 +1237,17 @@ def step2_fanout(cop):
 # ====================================================== decoupling etc ====
 # Signal-side traces, pin to cap. Everything here is short and on F.Cu.
 DECOUPLE = [
-    ("U201 1 uF bypass at its pins", "C201.1", "U201.1", W_SIG),
-    ("U201 second bypass", "C202.1", "C201.1", W_SIG),
-    ("U202 100 nF bypass", "C203.1", "U202.8", W_SIG),
+    # The three bypasses on a rail are W_RAIL_MIN, not W_SIG: +5V and +3V3 are
+    # Power-class nets and the .kicad_dru's floor for the class is 0.30 mm.
+    ("U201 1 uF bypass at its pins", "C201.1", "U201.1", W_RAIL_MIN),
+    ("U201 second bypass", "C202.1", "C201.1", W_RAIL_MIN),
+    ("U202 100 nF bypass", "C203.1", "U202.8", W_RAIL_MIN),
     ("buck CIN 1 (1206)", "C105.1", "U101.2", 0.6),
     ("buck CIN 2 (1206)", "C106.1", "U101.2", 0.6),
     # C107 sits on the far side of the RON resistor from the 1206 pair, so
-    # it joins VIN at the EN/UVLO divider's top instead.
-    ("buck CIN 3 (100 nF)", "C107.1", "R105.1", 0.4),
+    # it joins VIN at the EN/UVLO divider's top instead. W_HC_MIN: VIN is
+    # HighCurrent and the floor for it is 0.50 mm.
+    ("buck CIN 3 (100 nF)", "C107.1", "R105.1", W_HC_MIN),
     ("buck BST cap at the pins", "C108.1", "U101.7", W_SIG),
     ("buck SW at the BST cap", "C108.2", "U101.8", 0.5),
     ("LDO input cap", "C113.1", "U102.1", W_RAIL),
@@ -1361,8 +1440,7 @@ def gnd_spine(cop):
     qfn = loc(cop.fps[QFN].GetPosition())
     hops, tried = [], set()
     before = len(_gnd_fcu_pieces(cop))
-    for sweep, cap in enumerate(GND_SPINE_MAX):
-        lone_only = sweep > 0
+    for sweep, (cap, lone_only, in_annulus) in enumerate(GND_SPINE_MAX):
         while True:
             pieces = _gnd_fcu_pieces(cop)
             if len(pieces) < 2:
@@ -1401,7 +1479,7 @@ def gnd_spine(cop):
                          if path_len(f) <= d * GND_SPINE_SLACK + 0.5]
                 forms.sort(key=lambda f: (round(path_len(f), 3), len(f)))
                 for pts in forms:
-                    if lone_only and any(
+                    if lone_only and not in_annulus and any(
                             seg_point_dist(pts[i], pts[i + 1], qfn)
                             < GND_SPINE_KEEP_R
                             for i in range(len(pts) - 1)):
@@ -1419,17 +1497,45 @@ def gnd_spine(cop):
             if not drew:
                 break
     left = len(_gnd_fcu_pieces(cop))
-    print("  GND spine: %d hop(s) (%d short of at most %.2f mm, %d long of at "
-          "most %.2f mm off a lone stub), %.2f mm of copper; %d piece(s) of "
-          "F.Cu GND copper left of %d, so a diced pour cannot orphan them one "
-          "at a time"
-          % (len(hops), len([h for h in hops if h[4] == 0]), GND_SPINE_MAX[0],
-             len([h for h in hops if h[4] == 1]), GND_SPINE_MAX[1],
+    print("  GND spine: %d hop(s) in %d sweep(s) (%s), %.2f mm of copper; "
+          "%d piece(s) of F.Cu GND copper left of %d, so a diced pour cannot "
+          "orphan them one at a time"
+          % (len(hops), len(GND_SPINE_MAX),
+             ", ".join("%d at <= %.2f mm" % (len([h for h in hops
+                                                  if h[4] == i]), c)
+                       for i, (c, _l, _a) in enumerate(GND_SPINE_MAX)),
              sum(h[2] for h in hops), left, before))
+    # What is STILL a lone piece, and why the hop to its nearest neighbour was
+    # refused. Those are the pieces whose connection depends on the pour island
+    # under their one via, which is exactly what the router can cut away - so
+    # the run names them rather than leaving them to turn up as an open GND pad
+    # pair after a 45-minute route.
+    pieces = _gnd_fcu_pieces(cop)
+    own = {r: _piece_len(cop, pts) for r, pts in pieces.items()}
+    for ra in sorted(pieces):
+        if own[ra] > GND_SPINE_LONE:
+            continue
+        near = sorted((dist(p, q), p, q) for p in pieces[ra]
+                      for rb in pieces if rb != ra for q in pieces[rb])
+        if not near:
+            continue
+        d, p, q = near[0]
+        why = "over the %.2f mm cap" % GND_SPINE_MAX[-1][0]
+        if d <= GND_SPINE_MAX[-1][0]:
+            for w in GND_SPINE_W:
+                why = cop.path_clear([p, q], w, "F.Cu", "GND")
+                if why is None:
+                    why = "drawable at %.2f mm - not reached by the sweeps" % w
+                    break
+        cop.notes.append("GND lone piece at (%.2f, %.2f), %.2f mm of copper: "
+                         "nearest piece %.2f mm away at (%.2f, %.2f), %s"
+                         % (p[0], p[1], own[ra], d, q[0], q[1], why))
+    names = ("short", "long", "last-resort")
     for p, q, ln, w, sweep in hops:
-        cop.notes.append("GND spine %s (%.2f, %.2f) -> (%.2f, %.2f)  %.2f mm "
-                         "at %.2f mm" % ("long " if sweep else "short",
-                                         p[0], p[1], q[0], q[1], ln, w))
+        cop.notes.append("GND spine %-12s (%.2f, %.2f) -> (%.2f, %.2f)  "
+                         "%.2f mm at %.2f mm"
+                         % (names[sweep] if sweep < len(names) else sweep,
+                            p[0], p[1], q[0], q[1], ln, w))
     return len(hops)
 
 
@@ -1786,12 +1892,19 @@ def shadow_escape(cop, num, net, xr):
     if mate and mate[0][0] <= 1.6:
         tgt = "%s.%s" % (QFN, mate[0][1])
         pts = [a, cop.pad(tgt)]
-        why = cop.path_clear(pts, W_FINE, "F.Cu", net, (spec, tgt))
-        if why is None:
-            cop.add_path(pts, W_FINE, "F.Cu", net)
-            return ("pad %s (%s): %.2f mm jumper to pad %s on the same net, "
-                    "no channel lane and no via needed"
-                    % (num, short, mate[0][0], mate[0][1]))
+        # Widest first, because the jumper is on a rail: pad 1 is VBAT and the
+        # mate is a VDD pad, so this is Power copper and the .kicad_dru's
+        # 0.30 mm floor applies to it. At 0.5 mm pad pitch that is not always
+        # drawable, and a jumper that necks is still better than a bare pad -
+        # the run says which width it took.
+        why = None
+        for w in sorted({W_FLOOR.get(net, W_FINE), W_FINE}, reverse=True):
+            why = cop.path_clear(pts, w, "F.Cu", net, (spec, tgt))
+            if why is None:
+                cop.add_path(pts, w, "F.Cu", net)
+                return ("pad %s (%s): %.2f mm jumper to pad %s on the same "
+                        "net at %.2f mm, no channel lane and no via needed"
+                        % (num, short, mate[0][0], mate[0][1], w))
         cop.notes.append("pad %s jumper to %s blocked: %s" % (num, tgt, why))
     u0, v0 = _uv(d, t, a)
     vs = [_uv(d, t, p)[1] for p in
@@ -1821,6 +1934,43 @@ def shadow_escape(cop, num, net, xr):
 
 
 # ============================================================== VDDA ======
+def power_escape(cop, spec, net, width, lengths=(0.85, 1.0, 1.2, 1.5, 1.8,
+                                                 2.2, 2.6)):
+    """A stub of at least `width` off a pad, with a via, placed by search.
+
+    The same idea as gnd_via_quiet, for a pad on a net the .kicad_dru holds to
+    a floor: sixteen directions at growing distance, and the first one where
+    both the stub and the via clear wins. The point is not the via - it is that
+    the piece of copper the router picks up is wide enough to be legal, because
+    at a 0.25 mm pad the router's own bridge never is.
+    """
+    a = cop.pad(spec)
+    d0 = cop.outward(spec)
+    s2 = math.sqrt(0.5)
+    c, s = math.cos(math.pi / 8.0), math.sin(math.pi / 8.0)
+    dirs = [d0, (-d0[1], d0[0]), (d0[1], -d0[0]), (-d0[0], -d0[1]),
+            (s2, s2), (-s2, s2), (s2, -s2), (-s2, -s2),
+            (c, s), (c, -s), (-c, s), (-c, -s),
+            (s, c), (-s, c), (s, -c), (-s, -c)]
+    # With a via first, because a via is a real escape; then without one, which
+    # is still what matters here - the router continues from a TRACK END with
+    # no pad-width cap on it, so a bare stub of the floor width is enough.
+    for want_via in (True, False):
+        for ln in (lengths if want_via else sorted(lengths, reverse=True)):
+            for d in dirs:
+                p = (round(a[0] + d[0] * ln, 3), round(a[1] + d[1] * ln, 3))
+                if cop.path_clear([a, p], width, "F.Cu", net,
+                                  (spec,)) is not None:
+                    continue
+                if want_via and cop.via_clear(p, net, (spec,)) is not None:
+                    continue
+                cop.add_path([a, p], width, "F.Cu", net)
+                if want_via:
+                    cop.add_via(p, net)
+                return p, want_via
+    return None
+
+
 def step5_vdda(cop, xr):
     print("\n--- 5. VDDA / VSSA")
     for a, b in (("FB301.2", "C307.1"), ("FB301.2", "C306.1")):
@@ -1835,14 +1985,44 @@ def step5_vdda(cop, xr):
     # Short stubs first: the NRST cap ends up 1.0 mm west of pin 9's own
     # first-ring slot (the island's courtyard pushes it there), so a full
     # 1.15 mm radial stub runs into its pad and the leg has to turn early.
-    run = cop.trace("VDDA pin 9 to C306", "%s.9" % QFN, "C306.1", W_FINE,
-                    stubs=(0.55, 0.7, 0.9, QFN_STUB, QFN_STUB + 0.3, 0.0))
-    if run is None:
-        return 0.0
-    total = path_len(run)
-    print("  pin 9 -> C306 %.2f mm on F.Cu, 0 vias, %.2f mm wide - a plain "
-          "radial escape now that the island is off this side" % (total, W_FINE))
-    return total
+    # SIXTH PASS: at the floor first. VDDA is a Power-class net and the
+    # .kicad_dru holds it to W_RAIL_MIN, so a 0.20 mm escape here is a DRC
+    # error wherever it goes - and leaving the pad to the ROUTER is not an
+    # escape either: pad 9 is 0.25 mm wide, and the router's via-to-pad bridge
+    # is capped at the pad's own width (pcb_modification: w = min(track,
+    # pad.size_x, pad.size_y)), so whatever the router does at this pad it
+    # does at 0.25 mm. Something >= the floor has to leave the pad here or the
+    # net cannot be legal at all.
+    run = None
+    for w in (W_RAIL_MIN, W_FINE):
+        run = cop.trace("VDDA pin 9 to C306", "%s.9" % QFN, "C306.1", w,
+                        stubs=(0.55, 0.7, 0.9, QFN_STUB, QFN_STUB + 0.3, 0.0),
+                        quiet=(w != W_FINE))
+        if run is not None:
+            break
+    if run is not None:
+        total = path_len(run)
+        print("  pin 9 -> C306 %.2f mm on F.Cu, 0 vias, %.2f mm wide - a plain "
+              "radial escape now that the island is off this side" % (total, w))
+        return total
+    # No lane to C306 at any width on this pose (C309, NRST's cap, sits on the
+    # only one). Then at least get OFF the pad at the floor width and put a via
+    # at the end of it, so what the router picks up is a legal piece of copper
+    # and not the pad itself.
+    got = power_escape(cop, "%s.9" % QFN, "/MCU/VDDA", W_RAIL_MIN)
+    if got:
+        p, v = got
+        print("  pin 9 -> C306 could not be drawn at %.2f mm or %.2f mm; pad 9 "
+              "has a %.2f mm escape to (%.2f, %.2f)%s instead, and the router "
+              "carries on from there"
+              % (W_RAIL_MIN, W_FINE, W_RAIL_MIN, p[0], p[1],
+                 " and a via" if v else " (no room for a via)"))
+        return dist(cop.pad("%s.9" % QFN), p)
+    cop.fails.append("VDDA pad 9: no escape at %.2f mm in any direction, so "
+                     "the router will reach the pad with a bridge capped at "
+                     "the pad's own 0.25 mm width - one unavoidable "
+                     "track_width error" % W_RAIL_MIN)
+    return 0.0
 
 
 # =============================================================== USB ======
@@ -2223,8 +2403,14 @@ POWER = [
     ("GATE_IN pulldown at the driver", "R202.1", "U201.3", 0.25),
     # shunt and its Kelvin taps
     ("SHUNT FET source to R204", "Q201.3", "R204.1", 1.0),
-    ("Kelvin tap to R209", "R204.1", "R209.1", 0.2),
-    ("Kelvin tap to R213", "R204.1", "R213.1", 0.2),
+    # W_HC_MIN and not 0.2: the taps carry no current at all, so their width is
+    # free electrically - what matters is that they leave the shunt pad's own
+    # copper EDGE - but they are on SHUNT_HI, and the .kicad_dru holds every
+    # HighCurrent track to 0.5 mm. Widening them is the cheapest of the three
+    # ways to satisfy that rule; the geometry still has to clear, and the run
+    # says so if it does not.
+    ("Kelvin tap to R209", "R204.1", "R209.1", W_HC_MIN),
+    ("Kelvin tap to R213", "R204.1", "R213.1", W_HC_MIN),
     ("R209 to op-amp A+", "R209.2", "U202.3", 0.2),
     ("op-amp A+ filter cap", "C204.1", "U202.3", 0.2),
     ("R213 to op-amp B+", "R213.2", "U202.5", 0.2),
@@ -2246,7 +2432,9 @@ POWER = [
     ("FB feed-forward 2", "C110.1", "C109.1", 0.25),
     ("EN/UVLO divider", "R105.2", "U101.3", 0.25),
     ("EN/UVLO divider mid", "R106.1", "R105.2", 0.25),
-    ("EN/UVLO top to VIN", "R105.1", "C105.1", 0.4),
+    # W_HC_MIN, not 0.4: this leg is on VIN, which the .kicad_dru holds to
+    # 0.5 mm however little current an enable divider draws.
+    ("EN/UVLO top to VIN", "R105.1", "C105.1", W_HC_MIN),
     ("RON to the buck", "R107.1", "U101.4", 0.25),
     # +5 V ORing and the LDO
     ("+5V ORing to VBUS diode", "D105.1", "D103.1", 0.5),
@@ -2551,8 +2739,12 @@ def step8_filters(cop):
 # already on their first-ring cap - and so is anything already joined.
 RAILS = [
     # (net, widths to try, pads never used as an endpoint)
-    ("+3V3", (W_RAIL, 0.35, W_SIG), (QFN,)),
-    ("+5V", (W_RAIL, 0.35, W_SIG), ()),
+    # The narrow rung is W_RAIL_MIN (0.30) and not W_SIG (0.25): both rails are
+    # in the Power class and the .kicad_dru's floor for it is 0.30 mm, so a
+    # 0.25 mm tap is a DRC error rather than a thin tap. It costs the tree the
+    # hops that only fitted at 0.25 - the run prints the islands that leaves.
+    ("+3V3", (W_RAIL, 0.35, W_RAIL_MIN), (QFN,)),
+    ("+5V", (W_RAIL, 0.35, W_RAIL_MIN), ()),
 ]
 RAIL_VIA_BUDGET = {"+3V3": 8, "+5V": 0}
 RAIL_LEN_BUDGET = {"+3V3": 120.0}
@@ -2830,6 +3022,38 @@ def keepout_clean(cop, xr):
     return sorted(set(bad))
 
 
+def width_floor_table(cop):
+    """Every scripted net against the .kicad_dru's track_width floor for it.
+
+    ADR 0003 decision 5 through the rules file: a Power net may not be drawn
+    under 0.30 mm and a HighCurrent one not under 0.50 mm, at a pad escape or
+    anywhere else - the rule has no necking exception and there is no way to
+    give it one without editing a committed file. So the floors are checked
+    here, on the copper this run drew, and the run exits non-zero on a FAIL
+    rather than leaving it for kicad-cli to find after the router has gone.
+    """
+    print("\n--- scripted track widths against the .kicad_dru floors")
+    if not W_FLOOR:
+        print("  no track_width rule found in %s" % os.path.basename(DRU))
+        return 0
+    bad = 0
+    for net in sorted(W_FLOOR):
+        w = [s[2] * 2.0 for s in cop.segs if s[4] == net]
+        if not w:
+            print("  %-18s floor %.2f mm   no scripted copper" % (net, W_FLOOR[net]))
+            continue
+        under = [x for x in w if x < W_FLOOR[net] - 1e-6]
+        bad += len(under)
+        print("  %-18s floor %.2f mm   %2d segment(s), min %.2f mm   %s"
+              % (net, W_FLOOR[net], len(w), min(w),
+                 "PASS" if not under else
+                 "FAIL: %d under the floor" % len(under)))
+    if bad:
+        print("  %d scripted segment(s) below the .kicad_dru floor - each one "
+              "is a track_width error kicad-cli will report" % bad)
+    return bad
+
+
 def sense_ground_table(cop):
     """ADR 0003 decision 4, checked pad by pad.
 
@@ -2927,7 +3151,6 @@ def run_drc():
 
 def unconnected_by_net(unc):
     """Which nets the router still has to finish, with pad counts."""
-    import re
     c = collections.Counter()
     for u in unc:
         txt = " ".join(i.get("description", "") for i in (u.get("items") or []))
@@ -3052,6 +3275,8 @@ def main():
 
     rc = 0
     if sense_ground_table(cop):
+        rc = 1
+    if width_floor_table(cop):
         rc = 1
     if t_drc:
         errs, warns, unc, par, raw = run_drc()

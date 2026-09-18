@@ -13,19 +13,22 @@ What it does, in order:
   2. Asks kicad-cli which nets still have unconnected pad pairs on that
      stripped board. That set - minus NO_ROUTE - is the routing scope, and
      nothing outside it is ever imported.
-  3. Copies the board and the PRISTINE .kicad_pro outside the repository and
-     runs KiCadRoutingTools there. Never on a repo file, per ADR 0003 risk
-     "Autorouter rewrites the rules". The nets in FIRST go in a pass of their
-     own so the QFN escapes get first pick of the corridors, everything else
-     follows on that pass's output, and whatever is still short gets up to
-     two mop-up passes with permission to rip. The whole chain runs once per
-     ORDERINGS entry and the best-scoring attempt wins. No --write-fill: the
-     GND pour is copper.py's and the router's refill of it ignores the
-     0.25 mm hole clearance at J301's NPTH pegs. The scripted copper is
-     KiCad-locked, so the router will not rip it.
+  3. Copies the board and the PRISTINE .kicad_pro AND .kicad_dru outside the
+     repository and runs KiCadRoutingTools there. Never on a repo file, per
+     ADR 0003 risk "Autorouter rewrites the rules". Nets are routed in one
+     pass per .kicad_dru track-width floor, widest floor first, then the
+     nets in FIRST so the QFN escapes get first pick of the corridors, then
+     everything else; each pass runs on the last one's output and whatever is
+     still short gets up to two mop-up passes with permission to rip. The
+     whole chain runs once per ORDERINGS entry and the best-scoring attempt
+     wins. No --write-fill: the GND pour is copper.py's and the router's
+     refill of it ignores the 0.25 mm hole clearance at J301's NPTH pegs.
+     The scripted copper is KiCad-locked, so the router will not rip it.
   4. Grades the board this run WOULD commit - the stripped repo board plus
      the copper about to be imported, filled by pcbnew, with the pristine
-     .kicad_pro beside it - with `kicad-cli pcb drc`. Not the router's own
+     .kicad_pro AND .kicad_dru beside it - with `kicad-cli pcb drc`. Without
+     the rules file that grade does not check a track width at all, which is
+     how the fifth pass imported 237 undersized segments. Not the router's own
      output file, whose re-emitted pour is 400-odd violations of its own, and
      not the router's "no violations" messages, which mean nothing.
   5. Imports tracks and vias of the scope nets that are NEW in the copy.
@@ -69,6 +72,9 @@ import time
 
 import pcbnew
 
+# The .kicad_dru width floors, from the one place that parses them.
+import copper
+
 # KiCad 10 + Python 3.14: the SWIG iterator lost its .next shim.
 if not hasattr(pcbnew.SwigPyIterator, "next"):
     pcbnew.SwigPyIterator.next = pcbnew.SwigPyIterator.__next__
@@ -78,6 +84,7 @@ PROJ = os.path.normpath(os.path.join(HERE, "..", ".."))
 NAME = "graver-controller"
 PCB = os.path.join(PROJ, NAME + ".kicad_pcb")
 PRO = os.path.join(PROJ, NAME + ".kicad_pro")
+DRU = os.path.join(PROJ, NAME + ".kicad_dru")
 OUT = os.path.join(PROJ, "output", "pcb")
 
 AUTOROUTED_GROUP = "autorouted"
@@ -104,6 +111,33 @@ VIA_SIZE = 0.6
 VIA_DRILL = 0.3
 GRID_STEP = 0.05
 GND_WIDTH = 0.4
+
+# --power-nets-widths is what the router TRIES, not what it delivers, and that
+# distinction is what produced 237 track_width errors in the fifth pass.
+#
+# KiCadRoutingTools honours the widths - the log prints the assignment table -
+# but when a wide route is blocked it says "Wide route blocked - retrying at
+# default track width (neck-down)", re-routes the WHOLE net at the layer's
+# default width and then only re-widens the segments where the wide clearance
+# happens to fit (single_ended_routing._neck_width_for_net returns
+# config.get_track_width(layer), i.e. --track-width, with no reference to the
+# net's own floor). With one --track-width of 0.2 mm for the whole board, every
+# necked segment of a Power or HighCurrent net is a .kicad_dru violation: VIN
+# came out 97 mm of 0.2 mm copper inside a 0.8 mm net, +3V3 82 segments,
+# VBUS 62, VDDA all 10.
+#
+# So each width class gets a ROUTING PASS OF ITS OWN whose --track-width IS
+# that class's .kicad_dru floor. The neck-down then necks to a width the rules
+# allow, and a route that cannot be made at the floor fails honestly and shows
+# up as an open pad pair instead of as illegal copper. The floors are read from
+# the committed .kicad_dru by copper.net_floors(), so the two cannot drift.
+#
+# The .kicad_dru is also copied next to every scratch board: the router reads
+# the sibling rules file itself (design_rules.DesignRules.from_project) and
+# uses it for the per-net draw width and for the rescue ladder's floors, and
+# the import gate's kicad-cli grade is worthless without it - that grade is
+# what let 237 undersized segments through in the first place.
+NET_FLOOR = copper.net_floors()
 
 # Nets the router must not be handed, whatever DRC says about them.
 #   USB      ADR 0003: scripted, via-free, length-matched. The two pad pairs
@@ -140,9 +174,16 @@ ROUTE_SUMMARY = "route-summary.txt"
 # ones the QFN fan-out boxes in: they have one way out each and lose it to
 # whatever the ordering happens to route first. Measured, not guessed - see
 # "Routing the rest" in the README for the runs that produced this list.
+#
+# ENC_A and ENC_B joined the list in the sixth pass, and the evidence for them
+# is two runs deep: ENC_B was the open net in p7 and ENC_A in the first p8 run,
+# on the same placement and with nothing between them changed. They come off
+# adjacent fanned pads (40 and 41) and run 52 mm to the same connector in the
+# front-right corner, so they want one corridor between them - and both were
+# in the bulk pass, where 25 other nets take it first.
 FIRST = ("+3V3", "NTC", "OC_TRIP", "GATE_IN", "/MCU/VDDA", "PEDAL_TIP",
-         "I_SENSE", "ENC_SW", "LCD_MOSI", "LCD_SCK", "LCD_DC", "LCD_RST",
-         "NRST", "PEDAL_RING")
+         "I_SENSE", "ENC_SW", "ENC_A", "ENC_B", "LCD_MOSI", "LCD_SCK",
+         "LCD_DC", "LCD_RST", "NRST", "PEDAL_RING")
 
 # ADC-versus-switching coupling check (ADR 0003 decision 4 / the expert Q).
 ADC_NETS = ("I_SENSE", "VIN_SENSE", "NTC", "PEDAL_TIP", "PEDAL_RING")
@@ -220,6 +261,33 @@ def net_widths():
     return out
 
 
+def floor_of(net):
+    """The narrowest track the .kicad_dru allows on `net`, in mm."""
+    return max(TRACK_W, NET_FLOOR.get(net.replace("{slash}", "/"), 0.0))
+
+
+def by_floor(nets):
+    """`nets` grouped by their .kicad_dru floor, widest floor first."""
+    groups = collections.defaultdict(list)
+    for n in nets:
+        groups[floor_of(n)].append(n)
+    return [(w, sorted(groups[w])) for w in sorted(groups, reverse=True)]
+
+
+def copy_siblings(path):
+    """The pristine .kicad_pro and .kicad_dru beside a scratch board.
+
+    Both, and always: the router discovers them by basename next to its input
+    (design_rules.DesignRules.from_project) and rewrites the project with its
+    own relaxed minimums, and kicad-cli reads them next to whatever board it
+    grades. A candidate graded without the .kicad_dru is graded without the
+    width rules, which is exactly how 237 undersized segments were imported.
+    """
+    stem = os.path.splitext(path)[0]
+    shutil.copy(PRO, stem + ".kicad_pro")
+    shutil.copy(DRU, stem + ".kicad_dru")
+
+
 def strip_group(board, name):
     """Remove everything a previous run put in the group `name`.
 
@@ -292,13 +360,13 @@ def point_seg_dist(p, a, b):
 
 
 # -------------------------------------------------------------- router -----
-def run_router(work, scope, ordering, rip, src, dst, tag):
-    shutil.copy(PRO, os.path.splitext(src)[0] + ".kicad_pro")
+def run_router(work, scope, ordering, rip, src, dst, tag, track_w=TRACK_W):
+    copy_siblings(src)
 
     pats, widths = zip(*net_widths())
     cmd = [KRT_PY, os.path.join("py_router", "route.py"), src, dst,
            "--nets"] + list(scope) + [
-        "--track-width", str(TRACK_W),
+        "--track-width", str(track_w),
         "--clearance", str(CLEARANCE),
         "--via-size", str(VIA_SIZE),
         "--via-drill", str(VIA_DRILL),
@@ -313,15 +381,15 @@ def run_router(work, scope, ordering, rip, src, dst, tag):
     if rip:
         cmd += ["--rip-existing-nets", "*"]
     log = os.path.join(work, "route-%s.log" % tag)
-    print("  router pass %s: %d net(s), ordering %s%s"
-          % (tag, len(scope), ordering,
+    print("  router pass %s: %d net(s) at %.2f mm, ordering %s%s"
+          % (tag, len(scope), track_w, ordering,
              ", ripping non-locked copper" if rip else ""))
     with open(log, "w") as fh:
         fh.write(" ".join(cmd) + "\n\n")
         fh.flush()
         subprocess.run(cmd, cwd=KRT_DIR, stdout=fh, stderr=subprocess.STDOUT)
     # The router rewrites the sibling project with its own relaxed minimums.
-    shutil.copy(PRO, os.path.splitext(dst)[0] + ".kicad_pro")
+    copy_siblings(dst)
     st = route_stats(work, tag)
     if st:
         print("    failed %s: %s (the tool's own grade is ignored)"
@@ -378,13 +446,18 @@ def new_copper(routed, scope, before_keys):
     return by_net
 
 
-def undersized(items):
+def undersized(items, floor=TRACK_W):
     """Copper the router made below the board minimums, despite --strict-sizes.
 
     The tool's "net rescue" pass narrows a track or a via when it cannot
     otherwise close a net, and then writes the relaxed floor into the sibling
     .kicad_pro so its own check passes. ADR 0003 decision 5 says no smaller
     via anywhere; this is the gate that enforces it on the way in.
+
+    `floor` is the net's own .kicad_dru track-width minimum, not the board's
+    0.20 mm: the neck-down ladder is not a rescue and does not announce itself
+    as one, so a Power net that came back with 40 mm of legal-looking 0.2 mm
+    copper is caught here and nowhere else.
     """
     bad = []
     for t in items:
@@ -393,10 +466,10 @@ def undersized(items):
                 bad.append("via %.3f/%.3f mm at (%.2f, %.2f)"
                            % (tomm(width_of(t)), tomm(t.GetDrill()),
                               tomm(t.GetPosition().x), tomm(t.GetPosition().y)))
-        elif t.GetWidth() < mm(TRACK_W) - 1:
-            bad.append("track %.3f mm at (%.2f, %.2f)"
+        elif t.GetWidth() < mm(floor) - 1:
+            bad.append("track %.3f mm at (%.2f, %.2f), floor %.2f"
                        % (tomm(t.GetWidth()), tomm(t.GetStart().x),
-                          tomm(t.GetStart().y)))
+                          tomm(t.GetStart().y), floor))
     return bad
 
 
@@ -450,7 +523,7 @@ def build_candidate(by_net, nets, path):
     board.BuildConnectivity()
     pcbnew.ZONE_FILLER(board).Fill(board.Zones())
     pcbnew.SaveBoard(path, board)
-    shutil.copy(PRO, os.path.splitext(path)[0] + ".kicad_pro")
+    copy_siblings(path)
     return board, made
 
 
@@ -477,6 +550,38 @@ def attributable(drc, scope):
 
 
 # ---------------------------------------------------------------- report ---
+def width_table(board, nets):
+    """Per-net minimum track width on the whole board against its floor.
+
+    The table ADR 0003 decision 5 is really about: a net class width is a
+    default and the .kicad_dru minimum is the rule, so what matters is the
+    NARROWEST piece of copper on each net - a 0.8 mm trunk with one 0.2 mm
+    neck is a 0.2 mm net as far as both DRC and the current are concerned.
+    """
+    wide = collections.defaultdict(list)
+    for t in board.GetTracks():
+        if isinstance(t, pcbnew.PCB_VIA):
+            continue
+        wide[netname_of(t)].append(tomm(t.GetWidth()))
+    print("\n  per-net track width against the .kicad_dru floor:")
+    print("    %-20s %6s %6s %6s %5s  %s"
+          % ("net", "floor", "min", "max", "segs", "verdict"))
+    bad = []
+    for net in nets:
+        w = wide.get(net) or []
+        fl = NET_FLOOR.get(net.replace("{slash}", "/"), 0.0)
+        if not w:
+            print("    %-20s %6.2f %6s %6s %5d  no copper"
+                  % (net, fl, "-", "-", 0))
+            continue
+        verdict = "PASS" if min(w) >= fl - 1e-6 else "FAIL"
+        if verdict == "FAIL":
+            bad.append("%s min %.2f mm, floor %.2f mm" % (net, min(w), fl))
+        print("    %-20s %6.2f %6.2f %6.2f %5d  %s"
+              % (net, fl, min(w), max(w), len(w), verdict))
+    return bad
+
+
 def net_metrics(board, nets=None):
     """length (mm) and via count per net, over the whole board."""
     length = collections.Counter()
@@ -674,10 +779,19 @@ def report_board(board, imported_nets, items, do_drc):
         par = d.get("schematic_parity") or []
         print("  errors %d   parity %d   unconnected %d   warnings %d"
               % (len(errs), len(par), len(unc), len(warns)))
-        print("  errors by type:   %s"
-              % dict(collections.Counter(x["type"] for x in errs)))
+        bytype = collections.Counter(x["type"] for x in errs)
+        print("  errors by type:   %s" % dict(bytype))
         print("  warnings by type: %s"
               % dict(collections.Counter(x["type"] for x in warns)))
+        # kicad-cli stops reporting a given violation type at 199 markers and
+        # says nothing about it. The fifth pass's "199 track_width errors" was
+        # really 237 - the last 38 only appeared once the first ones were
+        # fixed. Any count that lands exactly on 199 is a floor, not a total.
+        for t, n in bytype.items():
+            if n >= 199:
+                print("  NOTE: %s is at %d, which is kicad-cli's per-type "
+                      "reporting limit - the real count is at least this"
+                      % (t, n))
         for x in errs[:20]:
             print("    ERROR %-26s %s"
                   % (x["type"], x.get("description", "")[:110]))
@@ -702,6 +816,15 @@ def report_board(board, imported_nets, items, do_drc):
     for n, L in sorted(length.items(), key=lambda kv: -kv[1])[:10]:
         print("    %-34s %7.2f mm  %2d via(s)" % (n, L, vias.get(n, 0)))
 
+    # The width table the brief asks for: every net the .kicad_dru holds to a
+    # floor, plus the two the ADR names for current even though they are
+    # Default class.
+    wnets = sorted(set(NET_FLOOR) | {"+5V", "/Driver/COIL_NEG"})
+    wbad = width_table(board, wnets)
+    if wbad:
+        print("    %d net(s) below the .kicad_dru floor: %s"
+              % (len(wbad), "; ".join(wbad)))
+
     bad, notes = keepout_check(board, items)
     print("\n  autorouted copper in an M3 ring, or a via or a foreign net in "
           "the crystal island: %s"
@@ -715,7 +838,7 @@ def report_board(board, imported_nets, items, do_drc):
     print("  imported B.Cu copper crossing under the USB pair (ADR: unbroken "
           "bottom ground): %s"
           % ("none" if not usb else "%d - %s" % (len(usb), "; ".join(usb[:6]))))
-    bad += usb
+    bad += usb + wbad
 
     hits = parallel_check(board)
     if not hits:
@@ -810,11 +933,20 @@ def main():
              ", ".join(skipped) or "-"))
 
     # --- 3/4/5. route a copy, grade it, keep the best attempt -----------
-    # The board is handed to the router in passes: nets named with --first go
-    # in a pass of their own and so get first pick of the corridors, which is
-    # the one lever that moves the nets the QFN fan-out boxes in. Everything
-    # else follows on that pass's output, and the nets that are still short
-    # get a mop-up pass with permission to rip.
+    # The board is handed to the router in passes, and each pass carries the
+    # --track-width its nets are allowed to be drawn at:
+    #
+    #   1. one pass per .kicad_dru width floor above the signal width, widest
+    #      first (HighCurrent at 0.50, then Power at 0.30). That is the whole
+    #      width fix - see NET_FLOOR above - and it puts the wide nets first,
+    #      which is also the order that suits them: a 0.8 mm trunk has far
+    #      fewer places to go than a 0.2 mm signal;
+    #   2. the nets named with --first, which the QFN fan-out boxes in and
+    #      which lose their one way out to whatever the ordering routes first;
+    #   3. everything else.
+    #
+    # Each pass runs on the last one's output, and the nets that are still
+    # short get a mop-up pass per class with permission to rip.
     #
     # The tool's result is NOT reproducible from one board file to the next -
     # part positions are identical run to run but the serialisation order is
@@ -822,8 +954,22 @@ def main():
     # and the best-scoring attempt is the one that gets imported; an ordering
     # that leaves five pad pairs open and one that leaves twelve are both
     # things it does with the same input.
-    head = [n for n in first if n in scope]
-    tail = [n for n in scope if n not in head]
+    stages = []
+    for w, nets in by_floor(scope):
+        wide = w > TRACK_W + 1e-9
+        head = [n for n in first if n in nets]
+        tail = [n for n in nets if n not in head]
+        tag = "w%d" % round(w * 100) if wide else "rest"
+        if head:
+            stages.append((tag + "-first" if wide else "first", head, w))
+        if tail:
+            stages.append((tag, tail, w))
+    print("  stages: %s"
+          % "; ".join("%s %d net(s) at %.2f mm" % (t, len(n), w)
+                      for t, n, w in stages))
+    for t, n, w in stages:
+        if w > TRACK_W + 1e-9:
+            print("    %-6s %s" % (t, ", ".join(n)))
 
     def gate_and_grade(wd, path, tag, quiet=False):
         """Build the board this run WOULD commit from `path`, and grade it.
@@ -838,7 +984,7 @@ def main():
         by_net = new_copper(routed, set(scope), before_keys)
         take = set(by_net)
         for net in sorted(by_net):
-            bad = undersized(by_net[net])
+            bad = undersized(by_net[net], floor_of(net))
             if bad:
                 take.discard(net)
                 if not quiet:
@@ -891,7 +1037,15 @@ def main():
                                 parity=False)
         a["errs"] = [x for x in a["drc"].get("violations", [])
                      if x["severity"] == "error"]
-        a["open"] = sum(unconnected_nets(a["drc"]).values())
+        left = unconnected_nets(a["drc"])
+        a["open"] = sum(left.values())
+        # GND is scored on its own and ahead of everything but the errors.
+        # copper.py closes GND before the router runs, so a GND pad pair on the
+        # candidate means one thing only: the router's B.Cu cut the pour island
+        # a scripted stitching via lands in. That is the one open pad pair on
+        # this board that is not merely unfinished but wrong, and two attempts
+        # that differ by one GND pair and three signal pairs are not a tie.
+        a["gnd"] = left.get("GND", 0)
         return a
 
     def attempt(tag, name):
@@ -901,24 +1055,32 @@ def main():
         if not reuse:
             src = os.path.join(wd, "in.kicad_pcb")
             shutil.copy(PCB, src)
-            if head:
-                src = run_router(wd, head, name, rip, src,
-                                 os.path.join(wd, "stage1.kicad_pcb"), "1")
-            run_router(wd, tail, name, rip, src, out, "2")
+            for i, (stag, nets, w) in enumerate(stages):
+                dst = (out if i == len(stages) - 1 else
+                       os.path.join(wd, "stage-%s.kicad_pcb" % stag))
+                src = run_router(wd, nets, name, rip, src, dst, stag, w)
         if not os.path.exists(out):
             return None
         a = gate_and_grade(wd, out, "2")
         mop = 0
         while a["short"] and not reuse and mop < 2:
             mop += 1
-            print("  still short after pass %d: %s - mopping up with a rip"
-                  % (mop + 1, ", ".join(a["short"])))
-            nxt = os.path.join(wd, "mop%d.kicad_pcb" % mop)
+            print("  still short after the pass chain: %s - mopping up with "
+                  "a rip" % ", ".join(a["short"]))
             n = unlock_router_copper(a["path"])
             if n:
                 print("    unlocked %d of the router's own track(s)" % n)
-            run_router(wd, a["short"], name, True, a["path"], nxt, "m%d" % mop)
-            if not os.path.exists(nxt):
+            # One mop-up pass per width class, as above: --track-width is the
+            # floor the neck-down may fall back to.
+            src, nxt = a["path"], None
+            for j, (w, nets) in enumerate(by_floor(a["short"])):
+                nxt = os.path.join(wd, "mop%d-%d.kicad_pcb" % (mop, j))
+                src = run_router(wd, nets, name, True, src, nxt,
+                                 "m%d-%d" % (mop, j), w)
+                if not os.path.exists(nxt):
+                    nxt = None
+                    break
+            if nxt is None:
                 break
             b = gate_and_grade(wd, nxt, "m%d" % mop)
             if set(b["short"]) >= set(a["short"]):
@@ -929,8 +1091,8 @@ def main():
 
     # The same input, routed ATTEMPTS times, and the best of them imported.
     # The tool is not deterministic (see ORDERINGS above), so one run is a
-    # sample and not a result: the scoring order is errors, then open pad
-    # pairs, then VIAS, then how many nets were taken.
+    # sample and not a result: the scoring order is errors, then OPEN GND pad
+    # pairs, then open pad pairs, then VIAS, then how many nets were taken.
     plan = ([ordering] if ordering else
             [ORDERINGS[i % len(ORDERINGS)] for i in range(ATTEMPTS)])
     print("\n--- routing a copy in %s, %d attempt(s): %s"
@@ -943,24 +1105,26 @@ def main():
         a = attempt(tag, name)
         if a is None:
             print("  the router produced no output")
-            table.append((tag, None, None, None, None))
+            table.append((tag, None, None, None, None, None))
             continue
         nvias = len([x for x in a["made"] if isinstance(x, pcbnew.PCB_VIA)])
         a["vias"] = nvias
-        print("  attempt %-13s -> %d error(s), %d unconnected pad pair(s), "
-              "%d via(s), %d net(s) imported"
-              % (tag, len(a["errs"]), a["open"], nvias, len(a["take"])))
-        table.append((tag, len(a["errs"]), a["open"], nvias, len(a["take"])))
-        key = (len(a["errs"]), a["open"], nvias, -len(a["take"]))
+        print("  attempt %-13s -> %d error(s), %d unconnected pad pair(s) "
+              "(%d on GND), %d via(s), %d net(s) imported"
+              % (tag, len(a["errs"]), a["open"], a["gnd"], nvias,
+                 len(a["take"])))
+        table.append((tag, len(a["errs"]), a["gnd"], a["open"], nvias,
+                      len(a["take"])))
+        key = (len(a["errs"]), a["gnd"], a["open"], nvias, -len(a["take"]))
         if best is None or key < best[0]:
             best = (key, a)
-    print("\n  attempt        errors  open  vias  nets")
-    for tag, e, o, v, n in table:
+    print("\n  attempt        errors   gnd  open  vias  nets")
+    for tag, e, g, o, v, n in table:
         if e is None:
             print("  %-14s %s" % (tag, "no output"))
         else:
-            print("  %-14s %6d %5d %5d %5d%s"
-                  % (tag, e, o, v, n,
+            print("  %-14s %6d %5d %5d %5d %5d%s"
+                  % (tag, e, g, o, v, n,
                      "   <- imported" if best and best[1]["wd"].endswith(tag)
                      else ""))
     if best is None:
@@ -1010,19 +1174,21 @@ def main():
                      "re-routed, so the mop-up passes did not run and these "
                      "attempt scores are not comparable with a full run\n")
         fh.write("attempts (the router is not deterministic; the best is "
-                 "imported, scored on errors, then open, then vias)\n")
-        fh.write("  %-14s %6s %5s %5s %5s\n"
-                 % ("attempt", "errors", "open", "vias", "nets"))
-        for tag, e, o, v, n in table:
+                 "imported, scored on errors, then open GND, then open, "
+                 "then vias)\n")
+        fh.write("  %-14s %6s %5s %5s %5s %5s\n"
+                 % ("attempt", "errors", "gnd", "open", "vias", "nets"))
+        for tag, e, g, o, v, n in table:
             if e is None:
                 fh.write("  %-14s no output\n" % tag)
             else:
-                fh.write("  %-14s %6d %5d %5d %5d%s\n"
-                         % (tag, e, o, v, n,
+                fh.write("  %-14s %6d %5d %5d %5d %5d%s\n"
+                         % (tag, e, g, o, v, n,
                             "   <- imported" if a["wd"].endswith(tag) else ""))
         fh.write("chosen copy: %s\n" % a["wd"])
         fh.write("  errors      %d\n" % len(errs))
-        fh.write("  open        %d pad pair(s)\n" % a["open"])
+        fh.write("  open        %d pad pair(s), %d of them on GND\n"
+                 % (a["open"], a["gnd"]))
         fh.write("  vias        %d imported\n" % nvi)
         fh.write("  tracks      %d imported\n" % ntr)
         fh.write("  nets        %d of %d in scope\n" % (len(take), len(scope)))
