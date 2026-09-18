@@ -14,12 +14,19 @@ Order, per ADR 0003 decision 8:
   1. GND pour on B.Cu, M3 ground-free rule areas, crystal keepout, User.2
      copies of the keepouts for the router's --keepout
   2. QFN fanout for U301: radial stubs, GND pins into the EP, EP vias
-  3. decoupling: pin -> cap on top, cap GND -> via into the pour
+  3. decoupling: pin -> cap on top
   4. crystal: OSC_IN / OSC_OUT on F.Cu only, load caps, F.Cu ground guard
   5. VDDA / VSSA chain FB301 -> C306/C307 -> pin 9
   6. USB: J301 -> U302 -> MCU as a coupled pair on F.Cu, 0 vias anywhere
   7. power: VIN chain, flyback loop, shunt Kelvin, gate, buck, +5V, +3V3
   8. the RC filters at the MCU's analog pins
+
+and LAST, step 3b, the ground stitching - every top-side GND pad's own stub
+and via, a via row with an F.Cu rib along the two long edges, and a spine
+tying GND's F.Cu pieces to each other. It runs last because its stubs would
+otherwise close escapes a signal needed, and the point of it is that GND
+comes out CLOSED: kicad-cli reports 0 GND pad pairs afterwards, so GND is not
+in the net list autoroute.py hands the router at all.
 
 Geometry is computed from real pad positions and drawn as octilinear
 segments. Every candidate path is clearance-checked against every pad, every
@@ -78,6 +85,56 @@ W_VDDA = 0.4
 W_RAIL = 0.5          # +3V3 / +5V distribution
 W_POWER = 1.0         # VIN and the flyback loop
 W_GUARD = 0.3         # crystal ground guard
+
+# ------------------------------------------------------- GND stitching -----
+# Every top-side GND pad that is not already tied gets a short fat stub of its
+# own and a via into the pour, so that GND is CLOSED by this script and the
+# router never sees it as a net at all. Widest first, shortest first: a 0.40 mm
+# stub 0.85 mm long is the tie a decoupling cap wants, and the narrower and
+# longer rungs only exist so that a pad in a corridor gets a tie rather than
+# nothing. Everything past STITCH_MAX is reported as a long tie.
+STITCH_W = (0.4, 0.3, 0.25)
+STITCH_LEN = (0.85, 1.0, 1.2, 1.5, 1.8, 2.2, 2.6)
+STITCH_MAX = 1.5              # the brief's length; longer ties are reported
+# A via row along the two long edges, to tie the pour. VIA_EDGE_IN is the via
+# centre's distance from the outline, which is EDGE_KEEP + the via radius plus
+# a little; the ribs are what stop every one of them being a dangling via.
+EDGE_STITCH_PITCH = 10.0
+EDGE_STITCH_IN = 1.2
+EDGE_STITCH_RIB = 0.3
+# Every stitching stub is its own little piece of copper ON TOP, joined to its
+# neighbours only through the pour - and the ROUTER's B.Cu copper dices the
+# pour. 2.00 mm, measured: it is what the crystal corner needs (C304.2's stub
+# to C301.2's is 1.40 mm and C301.2's to the ground guard is 1.48 mm) and it
+# touches 23 of the 63 pieces, where 3.50 mm would touch 46. See
+# "GND is closed by the script" in the README.
+GND_SPINE_MAX = (2.0, 2.5)
+GND_SPINE_W = (0.3, 0.25, 0.2)
+# The second sweep is for the pieces the first one could not reach at all: a
+# LONE stub, under this much copper of its own, may take a slightly longer
+# hop, because a lone stub is the whole population at risk - a big piece
+# already holds several vias in several pour islands.
+#
+# 2.50 and not 4.50, measured. At 4.50 the sweep draws 14 long hops and
+# 62.59 mm of extra GND copper, two of them diagonals across the USB corner
+# at y 8..12 and two more through the clamp corner - that is a bigger
+# perturbation of the router's corridors than the thing it buys, and it buys
+# almost nothing: what actually closed the crystal corner is a SHORT
+# L-shaped hop, C301.2's stub to the ground guard, 1.57 mm of copper for a
+# 1.48 mm straight line. The straight line itself does not clear - C301's own
+# +3V3 pad sits 0.24 mm off it where 0.30 is needed - which is why the hop
+# candidates are octilinear and not just a chord.
+#
+# C304.2's stub stays a lone piece whatever the cap: everything south of it
+# has to cross LED_STAT's channel lane and everything north is inside the
+# QFN's escape annulus. It keeps its own via and is the one GND tie on this
+# board whose connection still depends on the pour island under it.
+GND_SPINE_LONE = 3.0
+# No long hop inside the QFN's escape annulus. The second ring ends about
+# 2.9 mm out of a 3.5 mm pad row, so 6.5 mm from the part centre is the first
+# radius at which a GND link is not competing with an escape.
+GND_SPINE_KEEP_R = 6.5
+GND_SPINE_SLACK = 1.6        # copper to straight line, as in rail_tree
 
 # --------------------------------------------------------- mechanical ------
 M3 = 4.0
@@ -684,28 +741,56 @@ class Copper:
         self.fails.append("%s: no room for a GND via off %s" % (label, pad_spec))
         return None
 
-    def gnd_via_quiet(self, pad_spec):
+    def gnd_via_quiet(self, pad_spec, widths=None, lengths=None):
         """Stub off a GND pad into the pour; silent when there is no room.
 
-        Tries the pad's own outward normal first, then the other three axes,
-        then the diagonals, at growing distance.
+        Placed by SEARCH, not tabulated: sixteen directions - the pad's own
+        outward normal first, then the other three axes, then the diagonals,
+        then the eight half-diagonals - at growing distance, and at each
+        (distance, direction) the WIDEST stub that clears. A short fat stub is
+        a better via tie than a long thin one, and a 0.40 mm one still fits
+        between two 0603s at 0.15 mm; the narrow widths are there so that a
+        pad in a corridor gets a tie at all rather than nothing.
+
+        Returns (via point, width, length) or None.
         """
         a = self.pad(pad_spec)
         d0 = self.outward(pad_spec)
         s2 = math.sqrt(0.5)
+        c, s = math.cos(math.pi / 8.0), math.sin(math.pi / 8.0)
         dirs = [d0, (-d0[0], -d0[1]), (-d0[1], d0[0]), (d0[1], -d0[0]),
-                (s2, s2), (-s2, s2), (s2, -s2), (-s2, -s2)]
-        for s in (0.85, 1.05, 1.3, 1.6, 2.0, 2.5):
+                (s2, s2), (-s2, s2), (s2, -s2), (-s2, -s2),
+                (c, s), (c, -s), (-c, s), (-c, -s),
+                (s, c), (-s, c), (s, -c), (-s, -c)]
+        for ln in (lengths if lengths is not None else STITCH_LEN):
             for d in dirs:
-                p = (round(a[0] + d[0] * s, 3), round(a[1] + d[1] * s, 3))
-                if self.path_clear([a, p], W_FINE, "F.Cu", "GND",
-                                   (pad_spec,)) is not None:
-                    continue
+                p = (round(a[0] + d[0] * ln, 3), round(a[1] + d[1] * ln, 3))
                 if self.via_clear(p, "GND", (pad_spec,)) is not None:
                     continue
-                self.add_path([a, p], W_FINE, "F.Cu", "GND")
-                self.add_via(p, "GND")
-                return p
+                for w in (widths if widths is not None else STITCH_W):
+                    if self.path_clear([a, p], w, "F.Cu", "GND",
+                                       (pad_spec,)) is not None:
+                        continue
+                    self.add_path([a, p], w, "F.Cu", "GND")
+                    self.add_via(p, "GND")
+                    return p, w, ln
+        return None
+
+    def has_gnd_via(self, pad_spec):
+        """Is there already a GND via sitting in this pad's own copper?"""
+        r = self.padbox(pad_spec)
+        return any(vnet == "GND" and point_rect_dist(v, r) < rad + 0.05
+                   for (v, rad, _dr, vnet) in self.vias)
+
+    def in_keepout(self, p, no_via=True):
+        """Which keepout, if any, this point is inside."""
+        for kind, g, _allow in self.keepouts:
+            if kind == "circle":
+                cx, cy, r = g
+                if dist(p, (cx, cy)) <= r:
+                    return "M3 ring at (%.1f, %.1f)" % (cx, cy)
+            elif point_rect_dist(p, g) <= 0.0 and no_via:
+                return "crystal keepout (no vias)"
         return None
 
 
@@ -1136,42 +1221,349 @@ def step3_decoupling(cop):
 
 
 def step3b_stitch(cop):
-    """Ground stitching. Runs LAST so its stubs cannot take the space a
-    signal trace needed - in the first pass it closed four of them."""
-    print("\n--- 3b. ground stitching (runs last)")
-    # Every SMD GND pad gets a via into the pour. On a 2-layer board with a
-    # solid bottom plane that is both the right answer electrically and the
-    # cheapest thing that can happen to the router: GND stops being a net it
-    # has to solve. THT GND pads reach the pour through the zone's own
-    # thermal reliefs and are skipped.
-    todo = []
-    skip = set(SENSE_GND) | {SENSE_TIE}
+    """Ground stitching: GND becomes a net the ROUTER NEVER SEES.
+
+    Every top-side GND pad that is not already tied gets its own short stub
+    and its own 0.6/0.3 via into the B.Cu pour, placed by search. THT GND pads
+    need nothing - they reach the pour through the zone's own thermal reliefs.
+    Four sets are excluded on purpose and each one is named in the output:
+
+      - the sense-side reference pads (SENSE_GND + SENSE_TIE), which must keep
+        their SINGLE tie at the shunt, ADR 0003 decision 4;
+      - the QFN, whose perimeter GND pins run into the EP copper and whose EP
+        carries four vias of its own;
+      - pads inside the crystal keepout, where the rule area forbids vias;
+        they are tied to the F.Cu ground guard, which is stitched;
+      - pads that already have a via in their own copper from an earlier step
+        (the shunt's cluster, the guard's).
+
+    It also lays a via row along the two long board edges to tie the pour,
+    with an F.Cu rib between consecutive vias so none of them is a dangling
+    via.
+    """
+    print("\n--- 3b. ground stitching (GND is closed here, not by the router)")
+    todo, excl = [], collections.defaultdict(list)
     for ref in sorted(cop.fps):
+        # A pad NUMBER is not a key on this board: SW301 and SW302 each carry
+        # two pads numbered 2 and SW401 two numbered MP, so the spec has to be
+        # "REF.NUM#i" wherever the number repeats or only the first of them is
+        # ever stitched. SW302's second pad 2 was the one GND pad pair
+        # kicad-cli reported on every run of the fourth pass.
+        seen = collections.Counter()
         for pad in cop.fps[ref].Pads():
-            if pad.GetNetname() != "GND" or not pad.GetNumber():
+            num = pad.GetNumber()
+            if not num:
                 continue
+            seen[num] += 1
+            if pad.GetNetname() != "GND":
+                continue
+            total = len([q for q in cop.fps[ref].Pads()
+                         if q.GetNumber() == num])
+            spec = ("%s.%s" % (ref, num) if total == 1
+                    else "%s.%s#%d" % (ref, num, seen[num] - 1))
             if pad.GetDrillSize().x > 0:
+                excl["THT - reaches the pour through the thermal relief"]\
+                    .append(spec)
                 continue
             if ref == QFN:
-                continue                      # handled by the EP
-            spec = "%s.%s" % (ref, pad.GetNumber())
-            if spec in skip:
-                continue              # sense side: single point at the shunt
+                excl["QFN - the perimeter pins run into the EP, which has "
+                     "4 vias"].append(spec)
+                continue
+            if spec in set(SENSE_GND) | {SENSE_TIE}:
+                excl["sense side - one tie at the shunt (ADR decision 4)"]\
+                    .append(spec)
+                continue
+            where = cop.in_keepout(cop.pad(spec))
+            if where:
+                excl["inside the %s - tied to the F.Cu ground guard" % where]\
+                    .append(spec)
+                continue
+            if cop.has_gnd_via(spec):
+                excl["already has a via in its own copper"].append(spec)
+                continue
             todo.append(spec)
-    done, miss = 0, []
+    done, long_ties, miss = 0, [], []
     for spec in todo:
-        if cop.gnd_via_quiet(spec):
-            done += 1
-        else:
+        got = cop.gnd_via_quiet(spec)
+        if got is None:
             miss.append(spec)
-    print("  GND stitching: %d of %d SMD ground pads carry their own via "
-          "into the pour" % (done, len(todo)))
-    print("  excluded on purpose (the sense side ties into the pour only at "
-          "the shunt): %s" % ", ".join(sorted(skip)))
+            continue
+        done += 1
+        _p, w, ln = got
+        if ln > STITCH_MAX + 1e-6:
+            long_ties.append("%s %.2f mm at %.2f" % (spec, ln, w))
+    print("  %d of %d top-side GND pads got a stub and a via of their own "
+          "(%.2f-%.2f mm wide, <= %.2f mm long, searched over 16 directions)"
+          % (done, len(todo), min(STITCH_W), max(STITCH_W), STITCH_MAX))
+    for why in sorted(excl):
+        print("  not stitched, %s: %s" % (why, ", ".join(sorted(excl[why]))))
+    if long_ties:
+        print("  over the %.2f mm length: %s"
+              % (STITCH_MAX, ", ".join(long_ties)))
     if miss:
-        print("  no room for a via at: %s" % ", ".join(miss))
-        print("  (those pads reach GND through the router or a neighbour)")
+        print("  NO ROOM for a via at: %s" % ", ".join(miss))
+        for spec in miss:
+            cop.fails.append("GND stitching: no room for a via off %s - that "
+                             "pad is left to the router" % spec)
+    edge_stitch(cop)
+    gnd_spine(cop)
     return miss
+
+
+def _gnd_fcu_pieces(cop):
+    """The GND pieces on F.Cu, IGNORING the pour. root -> [terminal points].
+
+    Ignoring the pour is the whole point: what the pour joins is exactly what
+    the router can take away again, so the question this answers is "which
+    stubs would survive the pour being cut to ribbons".
+    """
+    segs = [s for s in cop.segs if s[4] == "GND" and s[3] == "F.Cu"]
+    parent = list(range(len(segs)))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    for i, (a, b, hw, _l, _n) in enumerate(segs):
+        for j in range(i + 1, len(segs)):
+            c, d, hw2, _l2, _n2 = segs[j]
+            if seg_seg_dist(a, b, c, d) <= hw + hw2:
+                ra, rb = find(i), find(j)
+                if ra != rb:
+                    parent[ra] = rb
+    out = collections.defaultdict(set)
+    for i, (a, b, _hw, _l, _n) in enumerate(segs):
+        out[find(i)].add((round(a[0], 3), round(a[1], 3)))
+        out[find(i)].add((round(b[0], 3), round(b[1], 3)))
+    return {r: sorted(p) for r, p in out.items()}
+
+
+def gnd_spine(cop):
+    """Join GND's separate F.Cu pieces to each other where the hop is short.
+
+    A stitching stub with a via of its own is connected - as long as the pour
+    island it lands in is connected. It is not always: the router lays B.Cu
+    tracks in parallel at 0.5 mm pitch, the pour's 0.25 mm clearance leaves no
+    neck between them, and a pour island holding one stub and nothing else is
+    a GND pad pair again. That is measured, not feared: the fourth pass's
+    first route run came out with two of them, both in the crystal corner,
+    where the island's own User.2 keepout plus the M3 ring plus the QFN
+    squeeze the pour into slivers and the router's tracks cut each sliver.
+
+    So the pieces are tied together ON F.CU, where a short hop clears:
+    a cluster that is one piece on top cannot be orphaned one stub at a time,
+    whatever the router does underneath. Kruskal again - shortest hop first
+    between two pieces that are not yet one - with a hard GND_SPINE_MAX,
+    because a long GND link is a corridor taken from a signal, and it runs
+    after every other thing this script draws.
+    """
+    qfn = loc(cop.fps[QFN].GetPosition())
+    hops, tried = [], set()
+    before = len(_gnd_fcu_pieces(cop))
+    for sweep, cap in enumerate(GND_SPINE_MAX):
+        lone_only = sweep > 0
+        while True:
+            pieces = _gnd_fcu_pieces(cop)
+            if len(pieces) < 2:
+                break
+            own = {r: _piece_len(cop, pts) for r, pts in pieces.items()}
+            cands = []
+            roots = sorted(pieces)
+            for i, ra in enumerate(roots):
+                for rb in roots[i + 1:]:
+                    if lone_only and min(own[ra], own[rb]) > GND_SPINE_LONE:
+                        continue
+                    for p in pieces[ra]:
+                        for q in pieces[rb]:
+                            d = dist(p, q)
+                            if d <= cap and (p, q) not in tried:
+                                cands.append((round(d, 4), p, q))
+            if not cands:
+                break
+            cands.sort()
+            drew = False
+            for d, p, q in cands:
+                tried.add((p, q))
+                # A straight hop first, then the two L shapes and the two
+                # 45-degree ones: the crystal corner needs the L, because the
+                # straight line to the guard grazes C301's +3V3 pad.
+                forms = [[p, q]]
+                for m in OCT_MODES:
+                    pts = oct_route(p, q, m)
+                    out = [pts[0]]
+                    for r in pts[1:]:
+                        if dist(r, out[-1]) > 1e-9:
+                            out.append(r)
+                    if all_octilinear(out):
+                        forms.append(out)
+                forms = [f for f in forms
+                         if path_len(f) <= d * GND_SPINE_SLACK + 0.5]
+                forms.sort(key=lambda f: (round(path_len(f), 3), len(f)))
+                for pts in forms:
+                    if lone_only and any(
+                            seg_point_dist(pts[i], pts[i + 1], qfn)
+                            < GND_SPINE_KEEP_R
+                            for i in range(len(pts) - 1)):
+                        continue        # inside the QFN's escape annulus
+                    for w in GND_SPINE_W:
+                        if cop.path_clear(pts, w, "F.Cu", "GND") is None:
+                            cop.add_path(pts, w, "F.Cu", "GND")
+                            hops.append((p, q, path_len(pts), w, sweep))
+                            drew = True
+                            break
+                    if drew:
+                        break
+                if drew:
+                    break
+            if not drew:
+                break
+    left = len(_gnd_fcu_pieces(cop))
+    print("  GND spine: %d hop(s) (%d short of at most %.2f mm, %d long of at "
+          "most %.2f mm off a lone stub), %.2f mm of copper; %d piece(s) of "
+          "F.Cu GND copper left of %d, so a diced pour cannot orphan them one "
+          "at a time"
+          % (len(hops), len([h for h in hops if h[4] == 0]), GND_SPINE_MAX[0],
+             len([h for h in hops if h[4] == 1]), GND_SPINE_MAX[1],
+             sum(h[2] for h in hops), left, before))
+    for p, q, ln, w, sweep in hops:
+        cop.notes.append("GND spine %s (%.2f, %.2f) -> (%.2f, %.2f)  %.2f mm "
+                         "at %.2f mm" % ("long " if sweep else "short",
+                                         p[0], p[1], q[0], q[1], ln, w))
+    return len(hops)
+
+
+def _piece_len(cop, pts):
+    """How much F.Cu GND copper a piece holds, by its terminal set."""
+    keys = set(pts)
+    return sum(dist(a, b) for (a, b, _hw, lay, net) in cop.segs
+               if net == "GND" and lay == "F.Cu"
+               and ((round(a[0], 3), round(a[1], 3)) in keys
+                    or (round(b[0], 3), round(b[1], 3)) in keys))
+
+
+def edge_stitch(cop):
+    """A via row along the two long board edges, with an F.Cu rib.
+
+    The rear (y = 0) and front (y = 70) edges are the two long ones. A bare
+    via in the pour is connected on ONE layer, which kicad-cli calls a
+    dangling via, so consecutive vias are joined by a 0.30 mm F.Cu rib where
+    the rib clears: that makes each of them a real two-layer tie and gives the
+    edge a ground rib rather than a row of holes. The M3 rings are keepouts
+    and the clearance model refuses them by itself; the USB pair's User.2
+    bands are checked explicitly, because they are a rule for the router and
+    not part of this script's own model.
+    """
+    usb = [(a, b) for (a, b, _hw, lay, net) in cop.segs
+           if net in (USB_DP, USB_DM) and lay == "F.Cu"]
+    usb_keep = USB_KEEP + VIA_D / 2.0 + CLEARANCE_DEFAULT
+    rows, total, ribs = [], 0, 0
+    for label, y in (("rear", EDGE_STITCH_IN),
+                     ("front", BOARD_H - EDGE_STITCH_IN)):
+        placed, skipped = [], 0
+        x = EDGE_STITCH_PITCH / 2.0
+        while x <= BOARD_W - EDGE_STITCH_PITCH / 2.0 + 1e-6:
+            p = (round(x, 3), round(y, 3))
+            x += EDGE_STITCH_PITCH
+            if any(seg_point_dist(a, b, p) < usb_keep for a, b in usb):
+                skipped += 1
+                continue
+            if cop.via_clear(p, "GND") is not None:
+                skipped += 1
+                continue
+            cop.add_via(p, "GND")
+            placed.append(p)
+        n = 0
+        for i in range(len(placed) - 1):
+            pts = [placed[i], placed[i + 1]]
+            if cop.path_clear(pts, EDGE_STITCH_RIB, "F.Cu", "GND") is None:
+                cop.add_path(pts, EDGE_STITCH_RIB, "F.Cu", "GND")
+                n += 1
+        rows.append((label, y, len(placed), skipped, n))
+        total += len(placed)
+        ribs += n
+    print("  edge stitching, %.0f mm pitch, %.2f mm in from the outline:"
+          % (EDGE_STITCH_PITCH, EDGE_STITCH_IN))
+    for label, y, n, skipped, nr in rows:
+        print("    %-5s edge y = %5.2f   %2d via(s), %d position(s) skipped "
+              "(M3 ring, USB band or occupied), %d F.Cu rib(s)"
+              % (label, y, n, skipped, nr))
+    print("    %d edge via(s) and %d rib(s) in all; the rib is what keeps "
+          "them off the via_dangling list" % (total, ribs))
+    return total
+
+
+def gnd_islands(cop):
+    """Pieces of scripted GND copper that do NOT reach the pour.
+
+    Union-find over real GEOMETRY, not over shared endpoints: two pieces of
+    copper of the same net on the same layer are one piece when they overlap
+    anywhere, which is how KiCad sees it and is the difference between a
+    report that matches kicad-cli and one that does not. A tie that lands in
+    the MIDDLE of the crystal guard's leg is connected; keyed on endpoints it
+    is not, and that is how the Y301 island hid behind a run that said "3 of 3
+    island ground ties onto the guard".
+
+    A piece reaches the pour when it carries a via, a B.Cu segment or a THT
+    pad. Anything else is named here, so the remainder is a list of parts
+    rather than "Track [GND], length 2.40 mm" out of kicad-cli.
+    """
+    segs = [s for s in cop.segs if s[4] == "GND"]
+    vias = [v for v in cop.vias if v[3] == "GND"]
+    pads = [p for p in cop.pads if p[1] == "GND"]
+    n = len(segs) + len(vias) + len(pads) + 1
+    pour = n - 1
+    parent = list(range(n))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def uni(a, b):
+        a, b = find(a), find(b)
+        if a != b:
+            parent[a] = b
+    for i, (a, b, hw, lay, _net) in enumerate(segs):
+        if lay == "B.Cu":
+            uni(i, pour)
+        for j in range(i + 1, len(segs)):
+            c, d, hw2, lay2, _n2 = segs[j]
+            if lay2 == lay and seg_seg_dist(a, b, c, d) <= hw + hw2:
+                uni(i, j)
+    for k, (p, rad, _dr, _net) in enumerate(vias):
+        vi = len(segs) + k
+        uni(vi, pour)                     # a via always reaches the B.Cu pour
+        for i, (a, b, hw, _lay, _net2) in enumerate(segs):
+            if seg_point_dist(a, b, p) <= hw + rad:
+                uni(vi, i)
+    for m, (r, _pnet, lay, hole, _hr, _ctr, ref, num) in enumerate(pads):
+        pi = len(segs) + len(vias) + m
+        if hole:
+            uni(pi, pour)                 # through the zone's thermal relief
+        for i, (a, b, hw, slay, _net) in enumerate(segs):
+            if slay in lay and seg_rect_dist(a, b, r) <= hw:
+                uni(pi, i)
+        for k, (p, rad, _dr, _net) in enumerate(vias):
+            if point_rect_dist(p, r) <= rad:
+                uni(pi, len(segs) + k)
+    groups = collections.defaultdict(list)
+    for i in range(n - 1):
+        groups[find(i)].append(i)
+    out = []
+    for root, members in groups.items():
+        if root == find(pour):
+            continue
+        owns, length = [], 0.0
+        for i in members:
+            if i < len(segs):
+                length += dist(segs[i][0], segs[i][1])
+            elif i >= len(segs) + len(vias):
+                p = pads[i - len(segs) - len(vias)]
+                owns.append("%s.%s" % (p[6], p[7]))
+        out.append((sorted(owns), length))
+    return sorted(out, key=lambda o: -o[1])
 
 
 # ============================================================ crystal =====
@@ -1317,17 +1709,46 @@ def step4_crystal(cop, xr):
           % (x0, x1, drawn, nv))
     # Each island GND pad onto the nearest guard leg, and the crystal's own
     # two GND pads to each other.
-    tie = [("Y301.4", "Y301.2"), ("C310.2", None), ("C311.2", None)]
+    #
+    # Y301.2 AND Y301.4 both get a leg of their own, not just the link between
+    # them. Tying the two to each other and to nothing else is what left them
+    # as the one real GND island on the board for three passes: they are inside
+    # the keepout so neither can have a via, and the run reported "3 of 3
+    # island ground ties" while the piece it had made reached the pour nowhere.
+    # GND-to-GND clearance is zero, so a leg that crosses the other load cap's
+    # ground pad is free; the check still refuses one that crosses OSC_IN or
+    # OSC_OUT.
+    # One requirement per PIECE of copper, with the candidates that would
+    # satisfy it: the crystal's two GND pads are one piece as soon as the link
+    # between them is drawn, so either of them reaching the guard does the
+    # job, and Y301.4's own leg runs into OSC_IN on this rotation. Reported as
+    # a failure only when every candidate fails.
+    tie = [("Y301.4 to Y301.2", [("Y301.4", "Y301.2")]),
+           ("the crystal's own GND pads to the guard",
+            [("Y301.2", None), ("Y301.4", None)]),
+           ("C310.2 to the guard", [("C310.2", None)]),
+           ("C311.2 to the guard", [("C311.2", None)])]
     nt = 0
-    for a, b in tie:
-        if b is None:
-            p = cop.pad(a)
-            u, v = _uv(d, t, p)
-            b = _xy(d, t, u, v_lo if abs(v - v_lo) < abs(v - v_hi) else v_hi)
-        if cop.trace("crystal ground tie %s" % (a,), a, b, W_FINE,
-                     stubs=(0.0, 0.4, 0.6, 0.9, 1.2)):
+    for what, cands in tie:
+        got = None
+        for a, b in cands:
+            if b is None:
+                p = cop.pad(a)
+                u, v = _uv(d, t, p)
+                b = _xy(d, t, u,
+                        v_lo if abs(v - v_lo) < abs(v - v_hi) else v_hi)
+            got = cop.trace("crystal ground tie %s" % a, a, b, W_FINE,
+                            stubs=(0.0, 0.4, 0.6, 0.9, 1.2),
+                            quiet=len(cands) > 1)
+            if got:
+                break
+        if got:
             nt += 1
-    print("  %d of %d island ground ties onto the guard" % (nt, len(tie)))
+        elif len(cands) > 1:
+            cop.fails.append("crystal ground: %s - none of %s could be drawn"
+                             % (what, ", ".join(a for a, _b in cands)))
+    print("  %d of %d island ground ties onto the guard (the pads inside the "
+          "keepout cannot have a via of their own)" % (nt, len(tie)))
     return dict(OSC_IN=res.get("/MCU/OSC_IN", 0.0),
                 OSC_OUT=res.get("/MCU/OSC_OUT", 0.0))
 
@@ -1644,7 +2065,7 @@ def step6b_bridges(cop):
 
 
 # ================================================== explicit signals =====
-# Three nets the two-segment search cannot do and the router did not finish.
+# Four nets the two-segment search cannot do and the router did not finish.
 # Same shape as POWER_EXPLICIT: a waypoint is "REF.PAD", "ESCAPE.<QFN pad>"
 # (the far end of that pad's fanned escape, so the path follows the placement
 # rather than a hard-coded number) or a literal (x, y); consecutive points are
@@ -1702,32 +2123,6 @@ SIGNAL_EXPLICIT = [
         (55.250, 44.850), (55.250, 40.300), (54.450, 39.500), "C104.1"]),
     ("VIN_SENSE lane to R103", "VIN_SENSE", W_SIG, [
         (55.250, 44.850), (55.250, 46.175), "R103.1"]),
-    # I_SENSE was the fourth entry here and it is NOT any more. It measured
-    # well and it made the board worse; the two paths are kept in this comment
-    # because the next pass will otherwise try them again:
-    #
-    #   ("I_SENSE pad 16 escape to R212", "I_SENSE", W_SIG, [
-    #       "ESCAPE.16", (52.500, 46.250), (53.375, 47.125),
-    #       (53.375, 50.450), "R212.2"]),          #  5.80 mm, clears
-    #   ("I_SENSE R212 to its filter cap", "I_SENSE", W_SIG, [
-    #       "R212.2", (53.925, 52.300), "C205.1"]),  # 1.94 mm, clears
-    #
-    # Both draw, and they close the two I_SENSE pad pairs the router leaves
-    # open on every attempt. The lane is the 0.80 mm slot between FB301 pad 1
-    # and R217 pad 2, which is the only way through that corner and takes one
-    # 0.25 mm trace, not two - so it splits FB301 from R217 on the +3V3 tree
-    # and the tree goes from 7 open pairs to 8. That much was expected and
-    # would have been a fair trade. What was not: on the route run with these
-    # in, BOTH of the two orderings that win could no longer finish GND, so
-    # the completeness gate dropped GND whole and the board came out at
-    # **7 open pad pairs instead of 4** - I_SENSE closed, GND open in five
-    # places and SWDIO in one. Measured, not guessed: the run before and the
-    # run after differ by nothing but these two paths, and mps and bus agreed
-    # with each other in both.
-    # If this is tried again, the thing to fix first is that the corner has
-    # one lane and three nets want it (I_SENSE, +3V3's FB301 -> R217 hop, and
-    # whatever GND stitching runs there), which is a placement problem:
-    # R212 and C205 are second-ring parts 5-8 mm from pad 16.
     # R102 pad 2 to R103 pad 1: the divider's own mid-point, 7.93 mm down the
     # east side of R217 and R212, which both stand in the straight line.
     # x = 57.25 and not 56.60, which is the shortest lane that clears: at
@@ -1737,6 +2132,26 @@ SIGNAL_EXPLICIT = [
     # and costs this leg 0.54 mm.
     ("VIN_SENSE R103 to R102", "VIN_SENSE", W_SIG, [
         "R103.1", (57.250, 48.175), (57.250, 52.925), "R102.2"]),
+    # --- I_SENSE: the op-amp's output filter at the ADC pin ------------------
+    # FOURTH PASS, in again. These two paths were tried in the fourth pass,
+    # measured well (5.80 and 1.94 mm, both clear) and made the board WORSE:
+    # they take the 0.80 mm slot between FB301 pad 1 and R217 pad 2, which is
+    # the only way through that corner, and with them in it BOTH winning net
+    # orderings stopped being able to finish GND - the completeness gate then
+    # dropped GND whole and the board came out at 7 open pad pairs instead of
+    # 4. So the cost was never I_SENSE's own lane, it was GND's stitching
+    # needing the same corner.
+    #
+    # That is exactly what step 3b took away. GND is now closed by this
+    # script, pad by pad and along the two long edges, and is not in the
+    # router's scope at all, so the corner is I_SENSE's to take. Last, after
+    # every VIN_SENSE leg, because VIN_SENSE has three pads in the same column
+    # and only one lane each.
+    ("I_SENSE pad 16 escape to R212", "I_SENSE", W_SIG, [
+        "ESCAPE.16", (52.500, 46.250), (53.375, 47.125),
+        (53.375, 50.450), "R212.2"]),
+    ("I_SENSE R212 to its filter cap", "I_SENSE", W_SIG, [
+        "R212.2", (53.925, 52.300), "C205.1"]),
 ]
 
 
@@ -2621,6 +3036,20 @@ def main():
         for f in cop.fails:
             print("  " + f)
 
+    print("\n--- GND: is it closed, or is the router still asked for it?")
+    isl = gnd_islands(cop)
+    nv = len([1 for v in cop.vias if v[3] == "GND"])
+    print("  %d GND via(s) scripted in all" % nv)
+    if not isl:
+        print("  every piece of scripted GND copper reaches the pour - the "
+              "router should see no GND pad pair at all")
+    else:
+        print("  %d piece(s) of scripted GND copper with no via and no THT "
+              "pad on them:" % len(isl))
+        for owns, ln in isl:
+            print("    %-46s %.2f mm of F.Cu"
+                  % (", ".join(owns) if owns else "(no pad on it)", ln))
+
     rc = 0
     if sense_ground_table(cop):
         rc = 1
@@ -2631,6 +3060,15 @@ def main():
               "nets):" % (unc, len(by)))
         for net, n in by.most_common():
             print("    %-34s %d" % (net, n))
+        gnd = [u for u in raw
+               if "[GND]" in " ".join(i.get("description", "")
+                                      for i in (u.get("items") or []))]
+        print("\n  GND pad pairs left for the router: %d%s"
+              % (len(gnd), " - the router does not see GND at all"
+                 if not gnd else ""))
+        for u in gnd:
+            print("    %s" % " <-> ".join(i.get("description", "?")
+                                          for i in (u.get("items") or [])))
         if errs or par:
             rc = 1
     return rc

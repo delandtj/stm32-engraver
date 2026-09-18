@@ -10,15 +10,22 @@ None of them routes the rest.
 ## Run it
 
     cd Hardware/graver-controller
+    python3 tools/pcb/place.py --export-manual   # keep your hand routes FIRST
     python3 tools/pcb/place.py          # rebuild + place + check
     python3 tools/pcb/copper.py         # zones, keepouts, critical copper
     python3 tools/pcb/silk.py           # references, connector labels, title
     python3 tools/pcb/autoroute.py      # route the rest, grade it, import it
+    python3 tools/pcb/manual.py --restore   # hand routes back on
     tools/pcb/render.sh                 # PNGs into output/pcb/
 
 or in one go:
 
+    python3 tools/pcb/place.py --export-manual
     python3 tools/pcb/place.py --copper --silk --route
+
+The second line runs the restore itself as its last step. `--export-manual`
+has to come first and separately, because the rebuild is what would destroy
+the copper it collects - see "Hand routes survive a regeneration" below.
 
 `place.py`, `copper.py` and `silk.py` need plain `python3` with the system
 KiCad 10 `pcbnew` bindings - no venv, no extra packages. `autoroute.py` also
@@ -34,8 +41,9 @@ Verify independently with:
     kicad-cli pcb drc --schematic-parity --severity-all graver-controller.kicad_pcb
 
 Expected after `place.py` alone: 0 schematic parity issues, ~250 unconnected
-items, and silkscreen warnings. After `copper.py`: 0 errors, 0 parity, 76
-unconnected items. After `silk.py`: no silkscreen warnings at all. After
+items, and silkscreen warnings. After `copper.py`: 0 errors, 0 parity, 73
+unconnected items **and 0 of them on GND** - see "GND is closed by the
+script" below. After `silk.py`: no silkscreen warnings at all. After
 `autoroute.py`: 0 errors, 0 parity, and the remainder in "Where it came out"
 below - the router is not deterministic, so that number moves between runs.
 See "Known DRC output" below.
@@ -127,9 +135,12 @@ printed every run - use it to tell whether a nudge helped.
   before saving and restores it afterwards, printing which of the two
   happened. If a run ever reports the project as changed and not restored,
   that is a bug - do not commit the result.
-- `graver-controller.kicad_pcb` is derived. Until routing starts, do not hand
-  edit it; change `place.py` and re-run. Once Jan starts routing, this script
-  stops being safe to re-run and the board becomes the source of truth.
+- `graver-controller.kicad_pcb` is derived: everything on it except a hand
+  route belongs to a script, so change the script and re-run rather than
+  editing the board. Hand routes are the one exception and they are safe now -
+  `place.py --export-manual` collects them and the pipeline puts them back,
+  see "Hand routes survive a regeneration". Run the export **before** the
+  pipeline, because the rebuild is what would destroy them.
 
 ## Connector orientation
 
@@ -170,16 +181,16 @@ placement, scripted copper, scripted silk and the router's copper:
 |------|--------------------|--------------------|-----|
 | schematic parity | 0 | 0 | clean |
 | errors | 0 | 0 | clean |
-| unconnected_items | 76 | 4 | see "Routing the rest" for the three nets, named pad by pad |
+| unconnected_items | 73 | 5 | see "Routing the rest" for the three nets, named pad by pad. 0 of the 73 are on GND |
 | silk_overlap | 0 | 0 | was 92 before `silk.py` |
 | silk_over_copper | 0 | 0 | was 92 |
 | silk_edge_clearance | 0 | 0 | was 17 |
 | lib_footprint_mismatch | 4 | 4 | J101, J201, J301, J402 - `silk.py` trims their library silkscreen back to the board outline, see "Silkscreen" below |
-| track_dangling | 16 | 12 | QFN escape stubs whose net the router never reached |
-| via_dangling | 7 | 6 | escape and stitching vias the router never reached |
+| track_dangling | 14 | 7 | QFN escape stubs whose net the router never reached |
+| via_dangling | 7 | 6 | escape and stitching vias the router never reached. The 17 edge-stitching vias are **not** among them - the F.Cu rib between them is what keeps them off this list |
 
-224 warnings before the silk pass, 27 after, 22 once the router's copper is
-in: the 18 remaining deliberate dangling ends plus the 4 trimmed connectors.
+222 warnings before the silk pass, 25 after, 17 once the router's copper is
+in: the 13 remaining deliberate dangling ends plus the 4 trimmed connectors.
 The router is not deterministic, so the two right-hand columns move between
 runs - the numbers here are from the run `output/pcb/route-summary.txt`
 records.
@@ -216,7 +227,8 @@ restores it afterwards, and prints which of the two happened.
 | 2 | U301 QFN fanout | 0.20 mm radial stubs on the pads that do not need more; a 12-pad **escape fan** on the east and west rows (45 degrees at 1.35 mm, own lane at 0.70/0.90 mm pitch, reach 2.6-2.9 mm) with the 4 vias 0.6/0.3 out at 2.90 mm on pads 18/20/42/44; a 0.97 mm same-net jumper on pad 1 and a 6.56 mm channel lane + via on pad 2, the two the island shadows |
 | 2 | U301 GND pins 8/23/35/47 | 0.20 mm, 0.64 mm into the EP copper |
 | 2 | U301 EP | 4 vias 0.6/0.3 inside the pad |
-| 3 | decoupling | 13 pin-to-cap traces on F.Cu; 61 of 63 SMD ground pads get their own via into the pour |
+| 3 | decoupling | 13 pin-to-cap traces on F.Cu |
+| 3b | GND stitching | 58 of 58 top-side ground pads get a 0.25-0.40 mm stub and a 0.6/0.3 via of their own, placed by search; 17 edge vias at 10 mm pitch with 15 F.Cu ribs; 17 spine hops. **GND is closed here and is not in the router's scope at all** |
 | 3 | U101 PowerPAD | 4 thermal vias 0.6/0.3 |
 | 4 | crystal | OSC_IN 6.47 mm, OSC_OUT 7.24 mm (both including the load-cap tap), F.Cu only, 0 vias; F.Cu ground guard bracket, 3 of 3 legs + 2 stitching vias |
 | 5 | VDDA | FB301 -> C306/C307 at 0.40 mm; pin 9 -> C306 is now a 2.5 mm radial escape, left to the router on this pose (see below) |
@@ -224,7 +236,7 @@ restores it afterwards, and prints which of the two happened.
 | 6b | same-net pad bridges | U302's two duplicate I/O pin pairs (1-6 D-, 3-4 D+, 1.35 mm each) and SW401's two MP lugs (11.20 mm) - three pad pairs no router can close |
 | 7 | power | VIN chain 0.8 mm, flyback loop 1.0 mm, gate 0.4 mm, shunt 1.0 mm, Kelvin taps 0.2 mm off the shunt pad's own copper edge, buck, +5 V/+3V3 0.5 mm; sense-side ground tree 0.20/0.25 mm; CLAMP's tap to the bypass FET 12.66 mm over two layers |
 | 7b | power rails as trees | +3V3 as a Kruskal tree with taps into the trunk, 0.5/0.35/0.25 mm |
-| 6c | three explicit signal paths | GATE_IN pad 29 -> the driver 16.67 mm, VCAP1 pad 22 -> C308 10.79 mm, VIN_SENSE's divider + filter + ADC pin 20.20 mm over four legs - all F.Cu, 0 vias, waypoints dictated |
+| 6c | four explicit signal paths | GATE_IN pad 29 -> the driver 16.67 mm, VCAP1 pad 22 -> C308 10.79 mm, VIN_SENSE's divider + filter + ADC pin 20.20 mm over four legs, I_SENSE's filter + ADC pin 7.74 mm over two - all F.Cu, 0 vias, waypoints dictated |
 | 8 | ADC filters | the RC parts at the MCU pins, 0.25 mm, only where the part is within 6.5 mm |
 
 ### Budgets, and how they came out
@@ -236,14 +248,17 @@ restores it afterwards, and prints which of the two happened.
 | flyback loop closed within ~15 mm | ADR decision 4 | 21.38 mm of real copper over its four legs (20.26 before the octilinear preference below, which is worth 1.12 mm over the four and is the right trade), parts inside a 10 x 12 mm block under the terminal |
 | buck CIN within 3 mm of the VIN pin | ADR component breakdown 2 | 2.88 / 2.74 mm pad to pad, 6.95 mm of copper |
 | crystal keepout clean | ADR decision 8 | clean: only OSC_IN, OSC_OUT and the ground guard are inside it (VDDA no longer needs to be) |
+| GND closed by the script, 0 pad pairs for the router | this brief | **0 - PASS.** 58 of 58 top-side ground pads have a stub and a via of their own, 17 edge vias with 15 ribs tie the pour along the two long edges, and 17 spine hops take GND from 63 pieces of F.Cu copper to 46. `kicad-cli` reports 0 GND pad pairs after `copper.py` and GND is therefore not in the net list `autoroute.py` hands the router. It was 2 pairs and 9 router vias before |
+| GND stitching: 0.25-0.40 mm stub, <= 1.5 mm, 0.15 mm clearance | this brief | every one of the 58 came out inside 1.5 mm and 0.30 mm or wider; the search tries the widest that clears at each of 16 directions |
 | shunt is the single ground tie of the sense side | ADR decision 4 | CHECKED, row per pad, and the run exits non-zero on a FAIL: C204.2, R211.2, R216.2, C206.2 and U202.4 each reach R204 pad 2 over scripted F.Cu with no via of their own, and R204 pad 2 carries the 2-via cluster that is the sense side's only path into the pour. C203.2 and C205.2 are deliberately NOT in that set - see below |
 | VIN 0 vias | this brief | the long VIN link is NOT scripted - see below |
 | flyback loop perimeter | ADR | 21.38 mm; buck CIN 6.95 mm; OSC_IN 6.47 mm, OSC_OUT 7.24 mm |
 | Kelvin traces from the shunt PADS to the op-amp | ADR component breakdown 4 | 1.15 mm and 1.23 mm of bare laminate between R204's sense pad and each tap's own pad, 0.20 mm traces drawn from the pad EDGE, not from the 1.0 mm power trace |
-| +3V3 <= 120 mm total, <= 8 vias | this brief | **0 vias - PASS. 120 mm is not reachable and the run says so**: the straight-line minimum spanning tree over the net's 29 pads is 182.95 mm, which is the floor for any routing of it. The scripted tree is 201.98 mm of copper over 15 hops and leaves 6 pad pairs; read it against 182.95, not against 120. It was 240.22 mm over 18 hops and 3 pairs before the three explicit signal paths went in - they take three lanes the tree was using and it gives back three joins for 38 mm of copper, see "Three explicit signal paths". The router closes all six |
+| +3V3 <= 120 mm total, <= 8 vias | this brief | **0 vias - PASS. 120 mm is not reachable and the run says so**: the straight-line minimum spanning tree over the net's 29 pads is 182.95 mm, which is the floor for any routing of it. The scripted tree is 169.63 mm of copper over 14 hops and leaves 8 islands / 7 pad pairs; read it against 182.95, not against 120. It was 240.22 mm over 18 hops and 3 pairs before the explicit signal paths went in - they take four lanes the tree was using and it gives back four joins for 70 mm of copper, see "Four explicit signal paths". The router closes all seven |
 | +5V no via | this brief | 0 vias. The block U101 -> L101 -> ORing diodes -> U102 is scripted at 0.5 mm; the one pad pair left open is U201's supply, which is the pair C201.1 <-> D105.1 at **39.90 mm** across the whole board (x 51, y 23.5 to x 25, y 54). It is neither the ORing-diode-to-LDO leg (D105 -> D103, 7.5 mm, scripted) nor an LDO-to-header leg (+5V is not on J401), it is over `RAIL_MAX_HOP` = 26 mm, and it is a routing decision, not a trunk. Both ends are open on all sides: C201/C202/U201 sit in clear space at the rear and the D103/D105/U102 cluster has the whole front-left. Left to the router |
 | GATE_IN short and explicit | this brief | 16.67 mm of 0.20 mm F.Cu, 0 vias, against a 15.26 mm straight line - pad 29 -> R202 pad 1, and R202 -> U201 pin 3 is the 3.69 mm scripted leg that was already there. The router had produced no copper for it at all |
 | VCAP1 pad 22 -> C308 | ADR / STM32F4 | 10.79 mm of 0.20 mm F.Cu, 0 vias, against a 7.79 mm straight line. Long for a regulator cap and the lever is placement, not copper: C308 is a second-ring part and the only way to it is the 0.55 mm slot between C302 pad 2 and C104 pad 1 |
+| I_SENSE closed | this brief | 7.74 mm of 0.25 mm F.Cu over two legs, 0 vias: pad 16's escape -> R212 pad 2 (5.80 mm, through the 0.80 mm slot between FB301 pad 1 and R217 pad 2) and R212 -> C205 (1.94 mm). Drawable all along; what changed is that GND no longer contends for the same corner, see "GND is closed by the script" |
 | VIN_SENSE closed | this brief | 20.20 mm of 0.25 mm F.Cu over four legs, 0 vias: pad 18's escape -> a lane at x = 55.25 -> C104 (5.91 mm) and -> R103 (2.14 mm), then R103 -> R102 (9.24 mm). Not a board crossing - all three parts are in the x 54..56 column and `RC_MAX` (6.5 mm) had put the three hops 0.24, 0.36 and 1.43 mm out of the filter step's reach |
 | CLAMP tap to the bypass FET | this brief | 12.66 mm, 8.91 mm of it on F.Cu, 2 vias - see "The one path that changes layer". Was ~50 mm of the router's copper down the right-hand edge and back |
 | flyback loop unchanged by the CLAMP tap | ADR decision 4 | 21.38 mm, same four legs; the B.Cu slot the tap costs is at y 21.6, SOUTH of the loop (y 14..20), not under it |
@@ -267,11 +282,17 @@ be made to clear is **reported, not drawn**: the run prints a
 "COULD NOT DRAW" list and those nets are left to the router.
 
 Order matters and is deliberate: the crystal island and the VDDA lane inside
-it have exactly one way out each, so they claim their space first; the three
+it have exactly one way out each, so they claim their space first; the four
 explicit signal paths (step 6c) go before the power block, the filters and the
 rails, because each of their lanes is one a later step would otherwise take;
-the ground stitching runs last, because its stubs would otherwise close
-escape routes a signal needed.
+the ground stitching runs **last**, because its stubs would otherwise close
+escape routes a signal needed. The brief for the fifth pass asked for the
+stitching before the rails and it is still last, deliberately: it is 58 stubs,
+17 edge vias and 17 spine hops now, which is the largest single step in the
+file, and every one of those pieces of copper would be competing with a rail
+trunk or a filter link for the same 1 mm gap. Running it last costs GND
+nothing at all - it is the one net that always has the pour underneath - and
+the measurement is that GND still comes out at 0 pad pairs from there.
 
 ### The crystal island lives in the corner, and two pads pay for it
 
@@ -377,6 +398,91 @@ under it turns 15 mm of 0.20 mm trace around the op-amp into the bypass's
 return path - worse for the op-amp than the thing the rule protects against.
 C205 is the I_SENSE RC cap at the MCU pin, 20 mm away at the other end of the
 board. Both take an ordinary stitching via.
+
+### GND is closed by the script, and the router never sees it
+
+Fifth pass, step 3b, and it is the one change that makes the rest of this pass
+possible. On a 2-layer board with a solid bottom plane, a ground net the
+router has to *solve* is both electrically wrong and the most expensive thing
+that can happen to every other net: GND has more pads than the next three nets
+put together, so whatever order the router picks it up in, it spends corridors
+on it. The fix is that GND is finished before the router runs and is not in its
+scope at all - `autoroute.py` asks kicad-cli what is still open and GND is not
+in the answer, so it is not in the net list the router is given.
+
+Three mechanisms, all of them searched rather than tabulated:
+
+| what | how |
+|------|-----|
+| **pad stitching** | every top-side GND pad gets a stub and a 0.6/0.3 via of its own. Sixteen directions - the pad's own outward normal, the other three axes, the diagonals, then the half-diagonals - at 0.85 to 2.6 mm, and at each position the **widest** stub that clears, from `STITCH_W` = 0.40 / 0.30 / 0.25 mm. Short and fat is what a decoupling cap's ground wants; the narrow rungs exist so that a pad in a corridor gets a tie at all. 58 of 58, all of them inside the 1.5 mm `STITCH_MAX` |
+| **edge stitching** | a via row along the two long edges, 10 mm pitch, 1.20 mm in from the outline: 8 on the rear edge (x 15..95, three positions refused - two M3 rings and J302's THT pads) and 9 on the front. Consecutive vias are joined by a 0.30 mm **F.Cu rib**, which is the point: a bare via in the pour is connected on one layer and kicad-cli calls that a dangling via, so the rib turns 17 holes into two 80 mm ground ribs and adds nothing to the `via_dangling` count |
+| **the spine** | 17 hops, 30.24 mm, tying GND's separate F.Cu pieces to each other - see below |
+
+Four sets are excluded and the run names every one of them with its reason:
+the sense-side reference pads, which must keep their single tie at the shunt
+(ADR 0003 decision 4); the QFN, whose perimeter GND pins run into the EP and
+whose EP carries four vias; the four pads inside the crystal keepout, where
+the rule area forbids vias and which are tied to the F.Cu ground guard; and
+the 13 THT pads, which reach the pour through the zone's own thermal reliefs.
+
+**A pad NUMBER is not a key, and that cost two passes.** SW301 and SW302 each
+carry two pads numbered 2 and SW401 two numbered MP, so a loop that builds
+`"%s.%s" % (ref, num)` stitches the first of each pair twice and the second
+never. SW302's second pad 2 is the `Pad 2 [GND] of SW302` that kicad-cli
+reported on every run of the fourth pass. The spec is `REF.NUM#i` wherever the
+number repeats, the same form `copper.py` already used for the pad bridges.
+
+**The other one was hiding behind a line that said it had worked.** The
+crystal's two GND pads are inside the keepout, cannot have a via, and were
+tied to *each other* and to nothing else - a 2.90 mm piece of copper that
+reached the pour nowhere, while the run printed "3 of 3 island ground ties
+onto the guard". The tie list is one entry per **piece** now, with the
+candidates that would satisfy it, and Y301.2's leg to the guard is what
+closes it (Y301.4's own leg runs into OSC_IN on this rotation and is allowed
+to fail). The report that found it is `gnd_islands`, which does union-find
+over real **geometry** rather than over shared endpoints: a tie that lands in
+the middle of a guard leg is connected, and keyed on endpoints it is not.
+
+#### The spine, and why a via of its own is not enough
+
+A stitching stub with a via is connected - as long as the pour island it lands
+in is connected. It is not always, and this is measured rather than feared.
+The fifth pass's **first** route run came back with two GND pad pairs on a
+board that `copper.py` had left at zero, both of them in the crystal corner:
+the router lays B.Cu tracks in parallel at 0.5 mm pitch, the pour's 0.25 mm
+clearance leaves no neck between two of them, and the island's own User.2
+keepout plus the M3 ring plus the QFN squeeze the pour there into slivers. One
+sliver, one via, one pad pair.
+
+So `gnd_spine` ties GND's F.Cu pieces to each other **on F.Cu**, where a short
+hop clears: a cluster that is one piece on top cannot be orphaned one stub at
+a time, whatever the router does underneath. Kruskal again - shortest hop
+first between two pieces that are not yet one - over pieces computed with the
+pour deliberately **ignored**, because what the pour joins is exactly what the
+router can take away again.
+
+- Candidates are **octilinear**, not just the chord. That is not a nicety: the
+  hop that closes the crystal corner is C301.2's stub to the ground guard, and
+  the straight 1.48 mm line does not clear - C301's own +3V3 pad sits 0.24 mm
+  off it where 0.30 is needed. The L shape is 1.57 mm and clears.
+- Two sweeps, 2.00 mm then 2.50 mm, and the second one only off a **lone
+  stub** (under `GND_SPINE_LONE` = 3.0 mm of copper of its own), because a
+  lone stub is the whole population at risk - a big piece already holds
+  several vias in several pour islands. A long hop is also refused inside
+  6.5 mm of the QFN centre, which is where the escape annulus is.
+- **2.50 mm and not 4.50, measured.** At 4.50 the sweep draws 14 long hops and
+  62.59 mm of extra GND copper, two of them diagonals across the USB corner at
+  y 8..12 and two through the clamp corner. That is a bigger perturbation of
+  the router's corridors than it buys, and it buys almost nothing: what closed
+  the crystal corner is the short L-shaped hop above.
+
+17 hops and 30.24 mm take GND from **63 pieces of F.Cu copper to 46**.
+
+**One tie still depends on its pour island: C304.2's stub.** Everything south
+of it has to cross LED_STAT's channel lane and everything north is inside the
+QFN's escape annulus, so no hop at any cap reaches it. It keeps its own via
+and it is the single place on this board where a diced pour could reopen a GND
+pad pair.
 
 ### The USB-C's reversible duplicate contacts
 
@@ -486,7 +592,7 @@ vias** - 12.66 mm in all. The slot it costs the pour is at y = 21.6, south of
 the flyback loop rather than under it, so the loop's return path is untouched
 and the scripted loop is still 21.38 mm.
 
-### Three explicit signal paths
+### Four explicit signal paths
 
 `SIGNAL_EXPLICIT` in `copper.py`, drawn by step 6c. Same shape as
 `POWER_EXPLICIT`: every waypoint is a pad spec, `ESCAPE.<QFN pad>` (the far
@@ -512,6 +618,7 @@ filter link and had no table to be in.
 | GATE_IN | MCU pad 29 to R202, the gate driver's input pulldown | 16.67 mm down the east side of R307 at x = 49.90, 0.20 mm. See below - the lane is a choice between two, not a search |
 | VCAP1 | MCU pad 22 to C308, the internal regulator's 2.2 uF | east at y = 42.25 to x = 53.50, then straight north into the pad: the 0.55 mm slot between C302 pad 2 and C104 pad 1, which takes a 0.20 mm track with 0.025 mm to spare on each side |
 | VIN_SENSE | R102/R103 divider, C104 filter, MCU pad 18 | pad 18's escape east to a lane at x = 55.25 (the 0.65 mm slot between C207's two pads), branching north over C104 and south to R103; then R103 -> R102 down x = 57.25 |
+| I_SENSE | the op-amp's output filter at the ADC pin: pad 16's escape, R212, C205 | 5.80 mm through the 0.80 mm slot between FB301 pad 1 and R217 pad 2, then 1.94 mm to the cap. In again this pass - see below |
 
 **GATE_IN has exactly two lanes and neither is free.** It has to cross the
 14 mm between the QFN's north row and the driver block, and PA10's pull-up
@@ -529,12 +636,14 @@ The second is taken. Its diagonal is pinned inside a 0.11 mm window: the line
 28's radial stub by 0.39 mm (0.35 needed), and one of the two bounds moves the
 wrong way if the trace is widened past 0.20 mm.
 
-**What the three paths cost, honestly.** They close five pad pairs the router
-could not (VIN_SENSE 3, GATE_IN 1, VCAP1 1) and they open three on +3V3,
+**What the paths cost, honestly.** They close seven pad pairs the router
+could not (VIN_SENSE 3, I_SENSE 2, GATE_IN 1, VCAP1 1) and they open four on +3V3,
 because every one of their lanes is one the `+3V3` tree had been using: the
-tree drops from 18 hops / 240.22 mm / 4 islands to 15 / 201.98 / 7. The three
-new islands are `C302.1 + U301.24`, `FB301.1 + R217.1` and
-`J302.1 + R307.2 + SW301`. That is a fair trade only because it is a trade of
+tree drops from 18 hops / 240.22 mm / 4 islands (third pass, no explicit
+paths) to 14 / 169.63 / 8. The new islands are `C302.1 + U301.24`,
+`C304.1 + U301.1 + U301.48`, `C114.1 + U102.5`, `FB301.1` and `R217.1` -
+I_SENSE's lane is what separates the last two. That is a fair trade only
+because it is a trade of
 *unroutable* pairs for *routable* ones - +3V3 is a Power-class net with a via
 budget of 8 and 0 used, so the router can cross any of the three lanes on
 B.Cu, and it closed the whole +3V3 remainder in the third pass. The scripted
@@ -542,16 +651,22 @@ paths cannot: VCAP1 and GATE_IN are the two nets on this board with nowhere
 to put a via (no 0.75 mm clear radius exists in the QFN's first or second
 ring).
 
-**A fourth path was tried here and taken out again.** I_SENSE (pad 16 ->
-R212 -> C205) draws cleanly at 5.80 + 1.94 mm and closes the two pad pairs
-the router leaves open on every attempt - and with it in, the board came out
-at 7 open pad pairs instead of 4, because both winning orderings then failed
-to finish GND and the completeness gate dropped GND whole. The two paths are
-kept as a comment in `SIGNAL_EXPLICIT` with the measurement, so the next
-pass does not spend the run finding that out again. The general lesson: a
-lane through a corner is not free even when the clearance check says it is,
-because GND's stitching needs corners too and it is the net with the most to
-lose.
+**The fourth path is I_SENSE, and it is in again.** In the fourth pass it was
+drawn, measured well (5.80 + 1.94 mm, both clear) and made the board **worse**:
+7 open pad pairs instead of 4, because both winning net orderings then failed
+to finish GND and the completeness gate dropped GND whole. The diagnosis at
+the time was right about the mechanism and wrong about the cause. The lane
+I_SENSE takes is the 0.80 mm slot between FB301 pad 1 and R217 pad 2, the only
+way through that corner, and it splits FB301 from R217 on the +3V3 tree - that
+was the expected cost and it is a fair one. The unexpected cost was GND, and
+GND was only exposed to it because **GND was the router's job**.
+
+It is not any more (step 3b), so the corner is I_SENSE's to take: 7.74 mm of
+0.25 mm F.Cu over two legs, 0 vias, and the two I_SENSE pad pairs that were
+open on every attempt of both fourth-pass runs are closed by the script. The
+general lesson survives its own correction: a lane through a corner is not
+free even when the clearance check says it is - but the right response was to
+take the contended net out of the contest, not to give up the lane.
 
 `RC_MAX` is also worth a note, because it is why I_SENSE is not drawn by the
 filter step: it measures from the **pad**, and pad 16 to R212 pad 2 is
@@ -615,10 +730,14 @@ taken.
 
 ### What is left for the router, and the exact command
 
-After `copper.py` the board has 76 unconnected pad pairs over 43 nets (it was
-78 over 46 before the three explicit signal paths, and 101 over 49 before the
-escape fan, the pad bridges, the CLAMP crossing and the rail trees) - the GPIO, SPI, UI and long power links ADR 0003 decision 8
-hands to KiCadRoutingTools. Run it on a **copy**, never on the repo:
+After `copper.py` the board has 73 unconnected pad pairs over 41 nets (it was
+76 over 43 before the GND stitching and I_SENSE, 78 over 46 before the three
+explicit signal paths, and 101 over 49 before the escape fan, the pad bridges,
+the CLAMP crossing and the rail trees) - the GPIO, SPI, UI and long power
+links ADR 0003 decision 8 hands to KiCadRoutingTools. **GND is not among
+them**, which is the fifth pass's whole point; it still appears in the
+`--power-nets` list below, which now only fixes a width the router never uses.
+Run it on a **copy**, never on the repo:
 
     tools/pcb/routability.sh after
 
@@ -787,37 +906,50 @@ of the `autorouted` group is that step 1 can find it again.
 
 ### Where it came out
 
-76 unconnected pad pairs before, **4 after**, over 3 nets, with 0 errors and
-0 schematic parity issues on the repo board. 40 nets routed, 1551 tracks and
-122 vias imported (202 vias on the board in all).
+73 unconnected pad pairs before, **5 after**, over 3 nets, with 0 errors and
+0 schematic parity issues on the repo board. 39 nets routed, 1215 tracks and
+125 vias imported (219 vias on the board in all, of which 94 are scripted and
+87 are GND's).
 
-The three attempts of the fourth-pass run this was written from:
+The fifth pass ran the stage **twice**, which is what the brief allowed, and
+the two runs are both worth having in the record because the difference
+between them is one targeted change:
 
-| attempt | ordering | errors | open | vias | nets |
-|---------|----------|--------|------|------|------|
-| 1 | mps | 0 | **4** | 122 | 40 | <- imported |
-| 2 | bus | 0 | 4 | 122 | 40 |
-| 3 | inside_out | 0 | 10 | 108 | 37 |
+| run | what changed | attempts (errors / open / vias / nets) | imported |
+|-----|--------------|----------------------------------------|----------|
+| p6 | GND stitched and closed, I_SENSE explicit | mps 0/6/115/38, bus 0/6/115/38, inside_out 0/15/96/33 | mps, **6 open**: GND 2, BOOT0 2, +5V 1, DECAY_SLOW 1 |
+| p7 | + the GND spine (the one targeted fix) | mps 0/5/125/39, bus 0/5/125/39, inside_out 0/16/118/35 | mps, **5 open**: GND 2, ENC_B 2, +5V 1 |
 
-mps and bus agreed pad pair for pad pair and via for via; `inside_out` lost
-by six, which is the other way round from the third pass, where it won by
-five. Neither result is the tool being consistent about an ordering - it is
-the tool being inconsistent about a board file, which is why three attempts
-are run and the best is kept.
+mps and bus agreed pad pair for pad pair and via for via in both runs;
+`inside_out` lost by nine and eleven. Neither result is the tool being
+consistent about an ordering - it is the tool being inconsistent about a
+board file, which is why three attempts are run and the best is kept.
 
 Named exactly, from `kicad-cli`'s own item descriptions:
 
 | net | pairs | the two ends, and why |
 |-----|-------|-----------------------|
-| I_SENSE | 2 | pad 16's 0.25 mm escape tail to R212 pad 2, and R212 pad 2 to C205 pad 1. Both are drawable - 5.80 and 1.94 mm, measured and clear - and drawing them made the board WORSE, see "Three explicit signal paths" and the comment in `SIGNAL_EXPLICIT`: the one lane through that corner is also the only way GND's stitching gets there, and with I_SENSE in it both winning orderings stopped being able to finish GND. 4 open became 7 |
-| DECAY_SLOW | 1 | pad 27's 1.15 mm radial stub to R207 pad 1 at x = 90 - **42 mm**, right across the board, and the second longest ratsnest on it. The router produced nothing for it on any attempt of either run. Over `RAIL_MAX_HOP` in spirit if not in the table, and a placement question: Q203 and its gate resistor sit with the bypass circuitry they switch, at the far right |
-| LED_STAT | 1 | pad 2's channel lane out past the crystal island to D301 pad 1 at (65, 63) - 26 mm. Unlike the other two the router DOES route this one, and the error gate throws it away: on the mps attempt its copper shorted GND and on the bus attempt it broke the 0.15 mm Default clearance. So this is one the router can reach and cannot do cleanly, which makes it the best hand-route candidate of the three |
+| GND | 2 | C309.2's 0.85 mm stub to the crystal ground guard, and C205.2's 0.85 mm stub to C307.2's via. **Not a hole in the stitching - a hole in the pour.** Both stubs have a via of their own; the router's B.Cu knot round the MCU cut the pour island each via lands in away from the rest. The spine is what fixes this and it does not reach these two: C309.2 to the guard is 2.02 mm, which is 0.02 mm over the short sweep's cap, and the hop then falls inside the 6.5 mm annulus the long sweep will not enter; C205.2's nearest piece is 2.90 mm, which is 0.40 mm over the long cap. Both are a 2 mm hand route and `manual.py` now keeps one. See "GND is closed by the script" |
+| ENC_B | 2 | pad 41's escape to SW401 pad B at (80.5, 57.5) - 52 mm to the encoder in the front-right corner. The router routes it and then cannot finish it: `incomplete in the copy, NOT imported` on both winning attempts of p7, after the mop-up pass with a rip. It was closed in p6 at 77.71 mm and 8 vias, so this is ordering noise on a net that is marginal either way, and the README's own "What is still rough" item 4 already names ENC_A/B as the first hand-route candidates |
+| +5V | 1 | C201.1 <-> D105.1, **39.90 mm** across the whole board. The router produced no copper at all for it in both p6 and p7, as in the third pass; it found it in the fourth (86.25 mm, 4 vias). Not scripted on purpose - it is over `RAIL_MAX_HOP` and is a routing decision, not a trunk |
 
-VIN_SENSE, GATE_IN, VCAP1 and +5V - four of the four nets in the third
-pass's remainder - are closed: the first three by the explicit signal paths
-and +5V by the router, which found the 39.90 mm crossing this time round
-(86.25 mm of copper and 4 vias) after producing nothing for it in the third
-pass.
+**DECAY_SLOW, LED_STAT, I_SENSE, VCAP1, GATE_IN, VIN_SENSE and BOOT0 are all
+closed** - the whole of the fourth pass's remainder. DECAY_SLOW is the
+interesting one: 42 mm across the board, the router had produced nothing for
+it on any attempt of either fourth-pass run and on either p6 attempt, and in
+p7 it came out at 53.11 mm with 5 vias. Nothing was done to it; what changed
+is that GND stopped taking corridors, so the brief's fallback - draw the
+shorter of DECAY_SLOW and LED_STAT explicitly - was not needed.
+
+**The headline number went the wrong way and it is worth being straight about
+it.** The fourth pass committed 4 open pad pairs; this one is 5. By the
+stage's own score (errors, then open, then vias) the old board wins. What is
+better here is what the pairs are made of: two ADC/filter paths that used to
+be open are now short scripted top-layer copper, a 42 mm board crossing is
+routed, and GND carries 87 scripted vias, two 80 mm edge ribs and a spine
+instead of 9 router vias. What is worse is that two of the five are GND, which
+is the one net that must not be open, and they are open for a reason the
+script cannot see in advance.
 
 **The USB band is free now.** It used to cost three pad pairs (10 open
 without it, 13 with); on this board the router finds its way round it and
@@ -850,14 +982,23 @@ fourth-pass runs, which makes it a real 42 mm problem rather than noise.
 `tools/pcb/render.sh` after the stage; `top.png`, `bottom.png` and
 `both.png` are the three to look at.
 
-- **The bottom pour survives, and it is cleaner than the third pass's.** The
-  router's B.Cu copper is a knot round the MCU, one long diagonal out to the
-  USB receptacle and a handful of runs to the driver block and the front
-  edge; the left third, the right third and both long edges are solid, and
-  GND is complete on the finished board (it is not in the remainder). 122
-  imported vias against 133, on a board that is two pad pairs more finished -
-  the three explicit signal paths take three of the nets that used to cost
-  the router vias to cross.
+- **The bottom pour survives everywhere except round the MCU, and that is
+  where the two GND pairs come from.** The router's B.Cu copper is a knot
+  round the MCU, one long diagonal out to the USB receptacle and a handful of
+  runs to the driver block and the front edge; the left third, the right
+  third and both long edges are solid. Inside the knot, `bottom.png` shows
+  what the numbers say: closed loops of routed track, and the pour inside one
+  of those loops is an island of its own. Two of them hold one GND stitching
+  via and nothing else - see item -6 in "What is still rough".
+- **The two edge ribs are the clearest new thing on `top.png`.** A 0.30 mm
+  F.Cu line 1.20 mm in from the rear edge and another in from the front, each
+  running x 15..95 with a via every 10 mm, both stopping clear of the M3
+  rings; the rear row also skips x = 45, where J302's through-holes are. They
+  sit in board margin that nothing else uses, and they are what turns 17 bare
+  stitching holes into two real ground ribs.
+- **The GND stitching reads as a field of dots over the pour in
+  `bottom.png`**, one per top-side ground pad: 87 GND vias, all of them
+  scripted, against 9 the router used to add.
 - **The `D202 -> Q202` clamp tap is fixed.** It was about 50 mm of the
   router's copper down the right-hand side of the board and back west; it is
   now a scripted 12.66 mm over two vias, and the flyback loop is untouched at
@@ -875,46 +1016,50 @@ fourth-pass runs, which makes it a real 42 mm problem rather than noise.
   broken reference ADR 0003 component breakdown 3 forbids - so `copper.py`
   draws a User.2 band along every segment of the pair (`USB_KEEP`, 0.15 mm
   off the centre line) and `autoroute.py` checks it afterwards.
-- **The three explicit signal paths read as intended in `cu-qfn.png` and in
+- **The four explicit signal paths read as intended in `cu-qfn.png` and in
   the x 43..69 / y 22..58 crop.** GATE_IN leaves pad 29, turns once and runs
   straight down x = 49.90 past R307 to the driver; VCAP1 runs east along the
   pad-22 lane and then straight north through the C302 / C104 slot; the
   VIN_SENSE column at x = 55.25 / 57.25 is three parallel lanes with the
-  0.4 mm gaps the table claims.
-- **What is still ugly:** `+3V3` is 301.01 mm and 6 vias, up from 277.92 mm
-  and 2. The tree is 201.98 mm of that and the floor is the 182.95 mm MST;
-  the rest is the router closing six islands instead of three, which is what
-  the explicit paths cost it. `VIN` is 203.27 mm / 6 vias, `ENC_B` 95.75 mm /
-  8 vias and `ENC_A` 75.90 mm / 8 vias - the encoder's three signals between
-  them carry 23 vias for a part that is front-right by ADR decision, and they
-  are the first candidates for a hand route. The right-hand third of the
-  board (x 78..100, y 30..50) is still empty and most of these long runs walk
-  round it rather than through it.
-- **Two of the four remaining pad pairs are 26 and 42 mm board crossings**
-  (LED_STAT and DECAY_SLOW) and both end on a part the ADR puts at the far
-  right. Nothing in `copper.py` will help them; they are a hand route or a
-  placement change.
+  0.4 mm gaps the table claims; and I_SENSE leaves pad 16's escape, steps
+  once at 45 degrees through the FB301 / R217 slot and lands on R212 and its
+  cap.
+- **What is still ugly:** `+3V3` is 299.86 mm and 13 vias, up from 277.92 mm
+  and 2. The tree is 169.63 mm of that and the floor is the 182.95 mm MST;
+  the rest is the router closing eight islands instead of three, which is
+  what the explicit paths cost it. `VIN` is 197.59 mm / 8 vias, `VBUS`
+  96.95 mm / 8 vias and `ENC_SW` 79.46 mm / 6 vias. The right-hand third of
+  the board (x 78..100, y 30..50) is still empty and most of these long runs
+  walk round it rather than through it.
+- **The 42 mm board crossing is gone.** DECAY_SLOW is routed (53.11 mm,
+  5 vias) for the first time in five passes, and LED_STAT with it. What is
+  left in the remainder is ENC_B's 52 mm run to the encoder, which the router
+  closed in the p6 run and could not finish in p7.
 
 ### How the committed board was actually produced
 
 Worth stating, because the committed copper is a **re-import** and not the
 output of the last router run:
 
-1. `place.py --copper --silk` with the three explicit signal paths in, then
-   `autoroute.py --label p4` - three attempts, mps won at 4 open pad pairs.
-2. The I_SENSE experiment (see "Three explicit signal paths"):
-   `place.py --copper --silk` again with two more paths, then
-   `autoroute.py --label p5`. mps 7, bus 7, inside_out 20. Worse.
-3. The two I_SENSE paths out again, `place.py --copper --silk` a third time -
-   which reproduces step 1's board exactly, because the placement and the
-   scripted copper are both deterministic - and then
-   **`autoroute.py --reuse --label p4`**, which re-graded the p4 copies
-   against that board and imported mps again. 13 seconds instead of 45
-   minutes, and the same 4 open pad pairs, 122 vias and 40 nets.
+The fifth pass's board is the straightforward thing and not a re-import:
 
-`--reuse` is safe here precisely because the scripted copper it is graded
-against is byte-equivalent to the one it was routed against; it is not a
-shortcut to use after changing `copper.py` or `place.py`.
+1. `place.py --copper --silk` with the GND stitching, the edge vias and
+   I_SENSE in, then `autoroute.py --label p6` - three attempts, mps won at
+   6 open pad pairs, two of them GND.
+2. The GND spine added to `copper.py` (the one targeted fix the brief
+   allowed), `place.py --copper --silk` again, then
+   `autoroute.py --label p7` - three attempts, mps won at **5**.
+3. `PXMM=24 tools/pcb/render.sh`.
+
+For the record, the **fourth** pass's board was a re-import, and the
+mechanism is worth keeping in mind: `place.py --copper --silk` reproduces a
+board exactly, because the placement and the scripted copper are both
+deterministic, so `autoroute.py --reuse --label <old>` can re-grade an old
+set of routed copies against it in 13 seconds instead of 45 minutes.
+`--reuse` is only safe when the scripted copper it is graded against is
+byte-equivalent to the one it was routed against; it is not a shortcut to use
+after changing `copper.py` or `place.py`, which is why the fifth pass did not
+use it.
 
 ### How to redo it
 
@@ -931,6 +1076,55 @@ Artefacts for one run land in `$PCB_SCRATCH/autoroute/<label>/<ordering>/`:
 `route-1.log` / `route-2.log` / `route-m1.log` and their JSON summaries,
 `stage1.kicad_pcb`, `routed.kicad_pcb`, and `candidate.kicad_pcb` with the
 DRC report that graded it. None of it is ever committed.
+
+## Hand routes survive a regeneration
+
+`manual.py`. `place.py` rebuilds the board from the schematic on every run, so
+anything drawn by hand in pcbnew used to be gone the next time the pipeline
+ran - which is why the README used to say the script "stops being safe to
+re-run" once routing starts by hand. It does not any more.
+
+    python3 tools/pcb/place.py --export-manual   # board -> tools/pcb/manual.json
+    python3 tools/pcb/manual.py --export         # the same, standalone
+    python3 tools/pcb/manual.py --restore        # manual.json -> board
+
+**There is no marker to set and nothing to remember in the GUI.** Every piece
+of generated copper on this board belongs to a PCB group that its own script
+strips and remakes - `scripted-copper`, `scripted-silk`, `autorouted` - so a
+track that is in none of them is by definition a hand route, and that is the
+whole rule. Draw it in pcbnew, anywhere, any net, any layer; the export finds
+it.
+
+Tracks, arcs and vias are collected, as geometry and net **names** rather than
+UUIDs, because a UUID does not survive `place.py` rebuilding the footprint it
+hangs off. Coordinates are mm from the board's top-left corner, the same
+convention as the placement tables, so `manual.json` is readable and editable
+by hand. A stored item whose net no longer exists on the board is reported and
+skipped, not silently dropped.
+
+The restore runs as the **last** step of a pipeline run - `place.py` calls it
+itself after copper.py, silk.py and autoroute.py - puts everything into a group
+named `manual`, and refills the zones so the pour closes round it. The group
+name is what makes the next export find the same items again, and the restore
+is idempotent the same way the other stages are: it drops the previous
+`manual` group's members before adding, so it never stacks copper.
+
+`manual.json` is the **source of truth**, in both directions. An absent or
+empty store means the board must not carry a `manual` group either, so the
+way to take a hand route out again is to delete it from the file (or delete
+the file) and re-run - and the common case, nothing stored and nothing on the
+board, does not rewrite the board at all.
+
+Order matters and only one way round works: **export before regenerating**,
+because the regeneration is what destroys them. `--export-manual` therefore
+does nothing else - it reads the board, writes the file and exits.
+
+Round-tripped before it was documented: a 4 mm 0.30 mm GND track at
+(86, 46)-(90, 46) plus a via drawn into the board with pcbnew in no group,
+exported (2 items), `place.py --copper --silk` run, and both came back in the
+group `manual`; then `manual.json` removed and `manual.py --restore` took them
+off again and left the board with `scripted-copper` and `scripted-silk` only.
+`manual.json` is absent in the repo, which is what an empty store looks like.
 
 ## Silkscreen
 
@@ -1281,8 +1475,26 @@ pair, I_SENSE, shunt, gate). The committed `.kicad_pcb` carries none of them.
 
 ## What is still rough
 
-Honest list, worst first. Items -5..-1 are copper and routing; the rest are
+Honest list, worst first. Items -6..-1 are copper and routing; the rest are
 placement and the numbers in them are from the second pass.
+
+-6. **Two GND pad pairs, and they are the worst thing on this board.**
+    `C309.2`'s stub to the crystal ground guard and `C205.2`'s stub to
+    C307.2's via - the NRST cap's ground and the I_SENSE filter cap's ground,
+    both genuinely open, both a 2 mm hand route. Neither is a gap in the
+    stitching: both pads have a stub and a via of their own, and it is the
+    **pour island** under each via that the router's B.Cu knot round the MCU
+    cut away from the rest. That is the failure mode the GND spine exists to
+    remove and it does not reach these two - one is 0.02 mm over the short
+    sweep's 2.00 mm cap and then inside the annulus the long sweep will not
+    enter, the other is 0.40 mm over the long sweep's 2.50 mm cap. The
+    one-line change the next pass should try first is `GND_SPINE_MAX` to
+    (2.1, 3.0) with `GND_SPINE_KEEP_R` at 4.5 rather than 6.5, which reaches
+    both; it is not applied here because the constants have to match the
+    board that was routed against them, and the brief allowed two route runs
+    and both are spent. Until then they are two hand routes, and `manual.py`
+    now keeps a hand route across a regeneration - which is exactly what that
+    mechanism is for.
 
 -3. **The crystal island: done.** It sits in the corner at the low pin
     numbers, the OSC legs are 3.24 and 4.75 mm (were 4.99 and 4.13), the
@@ -1301,26 +1513,27 @@ placement and the numbers in them are from the second pass.
     carries no measurement current, only the comparator's high-impedance
     input after the series resistor.
 
--5. **Four pad pairs are still open, and two of them are board crossings.**
-    `I_SENSE` (2), `DECAY_SLOW` (1) and `LED_STAT` (1) - named pad by pad in
-    "Where it came out". I_SENSE is drawable and drawing it costs GND five
-    pairs, which is measured and written up in `SIGNAL_EXPLICIT`;
-    DECAY_SLOW's two ends are 42 mm apart and LED_STAT's 26 mm, and the
-    router reaches LED_STAT but only with copper that fails the clearance
-    gate. All three are hand routes or placement changes, not copper-script
-    changes.
+-5. **Five pad pairs are still open, and three of them are not GND.**
+    `GND` (2, item -6), `ENC_B` (2) and `+5V` (1) - named pad by pad in
+    "Where it came out". ENC_B is a 52 mm run to the encoder that the router
+    closed in the p6 run and could not finish in p7, so it is ordering noise
+    on a net that is marginal either way; +5V is the 39.90 mm C201 <-> D105
+    crossing the router has now produced nothing for in three of four passes.
+    Both are hand routes or placement changes, not copper-script changes.
+    The fourth pass's remainder - I_SENSE, DECAY_SLOW and LED_STAT - is
+    closed.
 
--4. **+3V3 is 301.01 mm long and 120 mm was asked for.** The brief's budget
+-4. **+3V3 is 299.86 mm long and 120 mm was asked for.** The brief's budget
     is below the floor: the straight-line minimum spanning tree over the
     net's 29 pads is 182.95 mm, so nothing can route it under that. The
-    scripted tree is 201.98 mm with **0 vias** and the router adds 99 mm and
-    6 vias for the six islands left; the router alone did it in 229 mm, with
-    a ring round the MCU and more vias. It was 240.22 mm scripted / 2 router
-    vias in the third pass and the difference is the three explicit signal
-    paths: they take three of the tree's lanes, so three joins the tree used
-    to make become the router's and cost it 4 vias. So the tree still buys
-    the topology and a trunk that does not move between runs, but it buys
-    less of the via count than it did. If Jan wants the length back, the levers are placement,
+    scripted tree is 169.63 mm with **0 vias** and the router adds 130 mm and
+    13 vias for the eight islands left; the router alone did it in 229 mm,
+    with a ring round the MCU and more vias. It was 240.22 mm scripted / 2
+    router vias in the third pass and the difference is the four explicit
+    signal paths: they take four of the tree's lanes, so four joins the tree
+    used to make become the router's. So the tree still buys the topology and
+    a trunk that does not move between runs, but it buys less of the via
+    count than it did. If Jan wants the length back, the levers are placement,
     not routing: J302's +3V3 pin is 60 mm from the LDO, SW301's two halves
     are at the rear edge, and R304/R104 are front-right - four satellites
     that between them are most of the 183 mm floor.
@@ -1349,7 +1562,7 @@ placement and the numbers in them are from the second pass.
     pad, 0.04 mm", which was wrong in a way worth remembering: `trace` prints
     the reason its LAST candidate failed, not its best one, and that report
     came from a detour candidate 7 mm from the direct path. The real blocker
-    was the +3V3 tree. See "Three explicit signal paths".
+    was the +3V3 tree. See "Four explicit signal paths".
 
     `pin 19 -> C207` (NTC's filter cap) came off this list with the escape
     fan: it was blocked by VIN_SENSE's old first-ring via, and it is drawn

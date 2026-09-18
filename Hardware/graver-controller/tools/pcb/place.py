@@ -1883,6 +1883,13 @@ def main():
     do_copper = "--copper" in sys.argv
     do_silk = "--silk" in sys.argv
     do_route = "--route" in sys.argv
+    # --export-manual reads the board and writes tools/pcb/manual.json; it
+    # regenerates NOTHING, because the regeneration is what would destroy the
+    # hand-drawn copper it is there to collect. Run it BEFORE a pipeline run.
+    if "--export-manual" in sys.argv:
+        print("=== manual.py --export ===")
+        return subprocess.call([sys.executable,
+                                os.path.join(HERE, "manual.py")])
     pro_before = None
     if os.path.exists(PRO):
         with open(PRO, "rb") as fh:
@@ -1947,11 +1954,21 @@ def main():
             return rc
     if do_route:
         print("\n=== autoroute.py ===")
-        return subprocess.call([sys.executable,
-                                os.path.join(HERE, "autoroute.py")]
-                               + [a for a in sys.argv[1:]
-                                  if a in ("--no-drc",)])
-    return 0
+        rc = subprocess.call([sys.executable,
+                              os.path.join(HERE, "autoroute.py")]
+                             + [a for a in sys.argv[1:]
+                                if a in ("--no-drc",)])
+        if rc:
+            return rc
+    # LAST, after every stage that strips and remakes a group of its own:
+    # whatever Jan drew by hand goes back on, in the group `manual`, and the
+    # zones are refilled round it. `place.py` is the only stage that destroys
+    # it, because it is the only one that rebuilds the board from scratch.
+    print("\n=== manual.py --restore ===")
+    return subprocess.call([sys.executable,
+                            os.path.join(HERE, "manual.py"), "--restore"]
+                           + [a for a in sys.argv[1:]
+                              if a in ("--no-refill",)])
 
 
 if __name__ == "__main__":
