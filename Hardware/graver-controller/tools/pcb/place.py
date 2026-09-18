@@ -18,7 +18,12 @@ What it does
 
 It does NOT route and it does NOT pour. See README.md.
 
-Usage:  python3 tools/pcb/place.py [--no-netlist]
+`--copper` chains copper.py after a clean run, and `--silk` chains silk.py
+after that, which is the full board:
+
+    python3 tools/pcb/place.py --copper --silk
+
+Usage:  python3 tools/pcb/place.py [--no-netlist] [--copper] [--silk]
 """
 
 import collections
@@ -1801,6 +1806,7 @@ def ratsnest_report(rn):
 def main():
     do_netlist = "--no-netlist" not in sys.argv
     do_copper = "--copper" in sys.argv
+    do_silk = "--silk" in sys.argv
     pro_before = None
     if os.path.exists(PRO):
         with open(PRO, "rb") as fh:
@@ -1847,10 +1853,18 @@ def main():
     print("\nall placement checks and ADR criteria pass")
     if do_copper:
         print("\n=== copper.py ===")
+        rc = subprocess.call([sys.executable,
+                              os.path.join(HERE, "copper.py")]
+                             + [a for a in sys.argv[1:]
+                                if a in ("--no-drc", "--no-refill")])
+        if rc:
+            return rc
+    if do_silk:
+        print("\n=== silk.py ===")
         return subprocess.call([sys.executable,
-                                os.path.join(HERE, "copper.py")]
+                                os.path.join(HERE, "silk.py")]
                                + [a for a in sys.argv[1:]
-                                  if a in ("--no-drc", "--no-refill")])
+                                  if a in ("--no-drc", "--verbose")])
     return 0
 
 

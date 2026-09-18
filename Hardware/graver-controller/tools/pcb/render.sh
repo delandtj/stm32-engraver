@@ -89,3 +89,11 @@ czoom cu-xtal   top  37 43  16 14
 czoom cu-usb    top  22  0  26 34
 czoom cu-driver top  48 16  34 28
 czoom cu-buck   top   2 38  36 26
+
+# Crops off silk.png, for reading the silkscreen (silk.py) block by block:
+# references landing on a neighbour, a connector legend off its pin.
+czoom silk-rear-l  silk   0  0  56 20
+czoom silk-rear-r  silk  54  0  56 20
+czoom silk-mcu     silk  34 32  30 28
+czoom silk-front   silk  10 50  50 20
+czoom silk-power   silk   0 12  36 50

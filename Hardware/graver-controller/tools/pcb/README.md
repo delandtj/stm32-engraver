@@ -1,21 +1,23 @@
-# tools/pcb - board generation, placement and the scripted copper
+# tools/pcb - board generation, placement, the scripted copper and the silk
 
-Scripted placement and scripted critical copper for
+Scripted placement, scripted critical copper and a scripted silkscreen for
 `graver-controller.kicad_pcb`, per ADR 0003 decision 8. Placement is data in
 `place.py`, which regenerates the whole board from the schematic every run;
 the critical copper is data in `copper.py`, which draws it on top of that and
-locks it. Neither routes the rest.
+locks it; the silkscreen is `silk.py`, which searches rather than tabulates.
+None of them routes the rest.
 
 ## Run it
 
     cd Hardware/graver-controller
     python3 tools/pcb/place.py          # rebuild + place + check
     python3 tools/pcb/copper.py         # zones, keepouts, critical copper
+    python3 tools/pcb/silk.py           # references, connector labels, title
     tools/pcb/render.sh                 # PNGs into output/pcb/
 
 or in one go:
 
-    python3 tools/pcb/place.py --copper
+    python3 tools/pcb/place.py --copper --silk
 
 `place.py` needs plain `python3` with the system KiCad 10 `pcbnew` bindings -
 no venv, no extra packages. It exits non-zero if any placement check or ADR
@@ -31,7 +33,8 @@ Verify independently with:
 
 Expected after `place.py` alone: 0 schematic parity issues, ~250 unconnected
 items, and silkscreen warnings. After `copper.py`: 0 errors, 0 parity, 101
-unconnected items. See "Known DRC output" below.
+unconnected items. After `silk.py`: no silkscreen warnings at all. See
+"Known DRC output" below.
 
 ## What it does
 
@@ -157,22 +160,22 @@ pin 5 at x = 47.16, all at y = 2.5. It fits there because J301 moved 3 mm left
 ## Known DRC output
 
 `kicad-cli pcb drc --schematic-parity --severity-all` on the placed board
-with the scripted copper:
+with the scripted copper and the scripted silk:
 
 | type | count | why |
 |------|-------|-----|
 | schematic parity | 0 | clean |
 | errors | 0 | clean |
 | unconnected_items | 101 | what the router still has to finish (107 in the second pass) |
-| silk_overlap | 92 | silkscreen is a later pass |
-| silk_over_copper | 92 | ditto |
-| silk_edge_clearance | 17 | ditto |
+| silk_overlap | 0 | was 92 before `silk.py` |
+| silk_over_copper | 0 | was 92 |
+| silk_edge_clearance | 0 | was 17 |
+| lib_footprint_mismatch | 4 | J101, J201, J301, J402 - `silk.py` trims their library silkscreen back to the board outline, see "Silkscreen" below |
 | track_dangling | 18 | the QFN fanout stubs, dangling on purpose |
 | via_dangling | 7 | fanout and stitching vias the router has not reached yet |
 
-Silkscreen has not been touched at all: every reference is still at its
-library default offset, and the second pass packs parts tighter, so the count
-went up. Cleaning it up is a pass of its own, after routing.
+226 warnings before the silk pass, 29 after, and the 29 are the 25 deliberate
+dangling ends plus the 4 trimmed connectors.
 
 The assembly view instead gets its labels from F.Fab: `place.py` hides every
 footprint's **Value** field (it was the "100nF 100V" text that buried
@@ -439,6 +442,211 @@ which on this placement it will not be - the honest answer is that the rear
 edge has no second corridor, and the fix is a placement one (the DC jack and
 the terminal on the same side of the USB-C, or the pedal jack's slot reused).
 
+## Silkscreen
+
+`silk.py` runs after `copper.py` (or as `place.py --copper --silk`) and
+touches **F.Silkscreen only**: it creates no copper item, moves none and
+deletes none, and it leaves F.Fab exactly as `place.py` made it. The run
+prints a before/after copper census (tracks, vias, zones) and exits non-zero
+if any of the three numbers moved.
+
+    python3 tools/pcb/silk.py             # place + DRC before/after
+    python3 tools/pcb/silk.py --no-drc    # skip both kicad-cli DRC runs
+    python3 tools/pcb/silk.py --verbose   # one line per reference
+
+It is idempotent in two different ways, because there are two kinds of silk.
+Everything it **creates** - the rear-edge connector labels, the two pin
+legends, the pin-1 markers and the board title - goes into a PCB group named
+`scripted-silk`, and the first thing a run does is delete that group's
+members, exactly as `copper.py` does with `scripted-copper`. Everything it
+**moves** - every footprint's reference field - is positioned absolutely from
+the part's own body box and never relative to where the field currently
+sits, so a second run computes the same answer. Verified: re-running on an
+already-silked board gives a byte-for-byte identical set of 739 silk items.
+
+### What the stage does
+
+1. **Clips the library silkscreen to the board outline.** All four rear
+   connectors are right-angle parts that overhang the rear edge on purpose
+   (`EDGE_PARTS` in `place.py`), and their library outlines overhang with
+   them - that is 15 of the 17 `silk_edge_clearance` warnings. A graphic that
+   still has a piece inside the board is shortened in place, one that is
+   wholly outside is removed: 15 shortened, 11 dropped. Clipping an already
+   clipped segment is a no-op, which is what keeps this idempotent. The price
+   is 4 `lib_footprint_mismatch` warnings, one per trimmed connector; there
+   is no way to trim a footprint's own graphics and keep it byte-identical to
+   the library, and the alternative is silk printed over the board edge.
+2. **Resets every reference** to 1.0 mm text at 0.15 mm stroke on
+   F.Silkscreen, upright, `keep_upright` off (ADR 0003 decision 5 minimum).
+   The four mounting-hole references (`MH401`-`MH404`) are hidden instead -
+   brief item 4, they do not need a silk label. The other 2 edge-clearance
+   warnings were two of those.
+3. **Places the labels first**, before any reference: they are the ones that
+   have to be somewhere specific.
+4. **Places the 113 references** by searching.
+
+### The obstacle set, and the search
+
+Every candidate position is tested as the text's **real** bounding box -
+`PCB_TEXT::GetBoundingBox()` after actually setting the position and angle,
+not a width estimate - against:
+
+- every **mask opening** on the front, taken as the pad's bounding box grown
+  by 0.05 mm, with 0.03 mm of air required. That is KiCad's `silk_over_copper`
+  rule ("silkscreen clipped by solder mask"); vias are tented on this board
+  so they have no opening and do not count.
+- every **silk graphic** of every footprint, decomposed to segments
+  (rectangles to four edges, circles to 16 chords, arcs through their mid
+  point, polygons to their outline), 0.03 mm of air past the line's own half
+  width. That is `silk_overlap`.
+- every **silk text already placed**, same 0.03 mm.
+- the **board outline** with its 2 mm corner radii, 0.5 mm of clearance,
+  which is the brief's number and stricter than `silk_edge_clearance` needs.
+
+The box is always larger than the glyphs it contains - about 0.25 mm on each
+side at 1.0 mm text - so a box that clears by 0.03 mm has a quarter of a
+millimetre of real ink clearance. 1024 obstacles go into a 4 mm spatial hash,
+because the search probes tens of thousands of positions and a linear scan
+would be minutes.
+
+Candidate order per part, first legal wins:
+
+1. **inside its own body outline** for a part whose F.Fab body is 20 mm2 or
+   more - the connectors, the QFN, the DPAK, the SO-8s, the inductor, the
+   buttons and the encoder. 10 references land here. The part's own outline
+   is still an obstacle, so this only succeeds where the body really is
+   empty: the QFN's exposed pad and the USB receptacle's shell pads push
+   those two back out.
+2. **ring by ring outwards**, 0.15 mm to 1.50 mm in 0.15 mm steps, and inside
+   a ring above, below, left, right, then the four corners - the brief's
+   order. Text runs across the part above and below it and along the part at
+   its two sides, which is what stops a row of standing 0603s fighting for
+   one lane.
+3. the same ladder out to 3.0 mm.
+4. **a 0.25 mm grid sweep** out to 12 mm round the body centre, nearest
+   first. The eight ring directions are a ladder and a ladder misses pockets
+   that are not on an axis; where a whole block is this tight what comes out
+   of the sweep is a line of references above or below the row of parts,
+   which is the brief's "reference row".
+
+Parts are placed big bodies first (they are the ones that can carry their
+reference inside their own outline), then small parts **most crowded first**:
+the tightest neighbourhood gets first pick, because a part with room to spare
+still has room after its neighbour has taken the one lane that was left.
+
+### A legal label is not a readable one
+
+DRC cannot ask which part a label belongs to. A reference that sits nearer
+someone else's body than its own reads as that other part's, which is worse
+than a reference 4 mm out in clear space. So the search runs twice: the first
+pass requires the part's own body to be the nearest body, give or take
+`OWN_SLACK` (0.25 mm, without which two 0603s 1.6 mm apart could never both
+be labelled); the second pass drops that test for the 12 parts that are boxed
+in on all sides, and for those it does **not** take the first legal position
+but collects the legal candidates at roughly the best distance available and
+picks the one with the most air round it. Without that, R210's reference
+landed 7.15 mm from R210 and 0.20 mm from U202 and read as the op-amp's; it
+is now 6.52 mm out with 0.70 mm of air.
+
+The run prints every label that is still nearer another body than its own,
+worst first. 28 of 113 are, but 21 of those are ties inside a quarter of a
+millimetre between two adjacent passives, which context resolves. The ones
+worth knowing about:
+
+| ref | from itself | nearest other | why |
+|-----|-------------|---------------|-----|
+| R210 | 6.52 | 0.70 (U202) | the `OPAMP_WEST` column: three 0603s on end at 3.6 mm pitch between the op-amp and the ground trunk, no gap anywhere near them |
+| C308 | 4.27 | 1.35 (U301) | second ring behind the QFN's east pin row |
+| R211 | 4.35 | 1.69 (R408) | as R210 |
+| C102 | 2.27 | 0.00 (J201) | inside the terminal's outline, above C102. The 1.8 mm band in front of J201 is 0.01 mm too narrow for 1.0 mm text and D202 owns everything past it |
+| C405, R212 | 5.10, 4.80 | 4.85, 4.57 | both out in clear space below the MCU; ambiguous but not misleading |
+
+### Where the counts came out
+
+| bucket | count |
+|--------|-------|
+| inside its own body outline | 10 |
+| ring 1, <= 1.5 mm of air | 87 |
+| ring 2, <= 3.0 mm of air | 7 |
+| reference row, > 3.0 mm | 9 |
+| own-part test relaxed (boxed in) | 12 of the above |
+| no legal position anywhere | 0 |
+| silk label dropped | 4 (MH401-404) |
+
+The nine in a reference row are Y301 3.75, R212 4.80, R211 4.35, C311 3.50,
+C405 5.10, C308 4.27, R210 6.52, R407 3.85, R405 3.49 mm - the VDDA / crystal
+fan below the QFN and the op-amp column, the same two blocks the placement's
+own "What is still rough" list already calls out.
+
+### How to nudge a label
+
+`REF_OVERRIDE` at the top of `silk.py`, same shape as the placement tables in
+`place.py`: `ref -> (dx, dy, rot)` puts that reference at the footprint
+**origin** plus `(dx, dy)` mm at `rot` degrees and skips the search entirely.
+
+    REF_OVERRIDE = {
+        "C102": (0.0, -2.5, 0),      # 2.5 mm above C102's origin, upright
+        "R210": (1.6, 0.0, 90),      # 1.6 mm east, running along the part
+    }
+
+The run counts these separately, and because it still tests them it prints
+`OVERRIDE <ref> is not legal: <what it hits>` when a nudge lands on a pad or
+on another label. It does not move it back - a nudge is an instruction, not a
+suggestion - so read the line.
+
+Everything else is a table too:
+
+- `REAR_LABELS` - `(ref, text, seed (x, y), size)` for the five rear names.
+  The seed is intent, not a coordinate: the label is searched outwards from it
+  on a 0.1 mm grid and the run prints how far off the seed it ended up (all
+  five landed on their seed).
+- `PIN_LEGEND` - `(ref, pad, text, offset from that pad, rot, size)`. The
+  offset is from the **pad**, so the legend follows the connector if
+  `place.py` moves it.
+- `PIN1_MARKS` - `(ref, pad, seed, direction the tip points)` for the filled
+  triangles.
+- `TITLE` - the board title lines.
+- `EDGE_CLR`, `PAD_CLR`, `SILK_CLR`, `OWN_SLACK`, `BIG_AREA`, `FREE_R` - the
+  numbers behind the search, one comment each.
+
+### The rear edge, and the two connectors that are their own label
+
+ADR 0003's "Polish" item, plus SWD:
+
+| ref | text | at | note |
+|-----|------|----|------|
+| J101 | `DC 24V` | 17.60, 1.58 | inside the jack outline, between the rear edge and the +24 V pad. 1.2 mm text in a 2.17 mm band, which is why the label size is the bottom of the brief's 1.2-1.5 mm range |
+| J301 | `USB` | 29.00, 4.20 | inside the receptacle outline, between the two rows of shell pads |
+| J302 | `SWD` | 43.60, 5.60 | in front of the header, with a filled triangle at 37.00, 4.95 pointing at pin 1 |
+| J201 | `HANDPIECE` | 61.90, 4.60 | plus `4 GND` / `3 NTC` / `2 COIL` / `1 VIN` at 1.0 mm on the pin pitch at y = 7.00, and a triangle at 71.85, 10.05 pointing west at pin 1 |
+| J402 | `PEDAL` | 88.00, 1.75 | inside the Neutrik outline |
+| J401 | pin names | y = 66.90 | `G 3V3 SCK SDA RST DC BL` rotated 90 degrees along the pins, in front of the body, plus a triangle at 20.00, 57.30 pointing down at pin 1 |
+
+The J201 legend follows the **board** order, not the schematic's: J201 is
+forced to rotation 180 because its four wire-entry funnels are drawn on its
++y side, which reverses the pins. Seen from the front, left to right, it is
+4 GND / 3 NTC / 2 COIL_NEG / 1 VIN. See "Connector orientation" above.
+
+Two of the six labels are honest compromises and worth stating. J201's and
+J402's names sit **inside their own connector body outline**, because both
+parts are right-angle types that cover the board from the rear edge inwards
+and the space in front of them is occupied (D201, D202, C102, U401 for the
+terminal; U401, D203, C103, Q202 for the jack). The brief asks for the label
+"just inside the rear edge next to each connector", which is where they are;
+they will be under the part once it is mounted. The same is true of `DC 24V`
+and `USB`. If Jan wants them visible on an assembled board the fix is
+mechanical - the names belong on the rear wall of the cover plate - not a
+silkscreen one.
+
+`J401`'s pin-1 triangle is the one marker that is not next to its pin name
+row: the name row is in front of the connector and C111/C112 sit under pins
+1 and 2 there, so the triangle went into the 1.7 mm band **above** the
+connector at pin 1's own x. Pin 1's name, `G`, is also 1.1 mm further out
+than the other six for the same reason.
+
+The board title is `GRAVER CTRL r0.1` at 57.00, 67.30 and `2026-09` at
+74.00, 67.30, both 1.4 mm, in the empty front-centre strip.
+
 ## Routability test
 
 `tools/pcb/routability.sh [label]` is a **placement test, not the routing
@@ -520,6 +728,10 @@ placement is it7: every ADR criterion passes and 11 nets are left open.
 | `both.png` | B.Cu under F.Cu over F.Fab | both layers against the bodies |
 | `zoom-*.png` | crops of `placement.png` | one block at a time |
 | `cu-*.png` | crops of `top.png` | the scripted copper one block at a time: qfn, xtal, usb, driver, buck |
+| `silk-*.png` | crops of `silk.png` | the silkscreen one block at a time: rear-l, rear-r, mcu, front, power |
+
+`PXMM=24 tools/pcb/render.sh` is worth it for the silk crops - the default 18
+pixels per mm is marginal for reading 1.0 mm references.
 
 The crop windows in `render.sh` are tied to the current MCU pose (46, 44) and
 to the crystal island being south-west of the part. Move the MCU and they need
@@ -627,8 +839,12 @@ and the numbers in them are from the second pass.
 6. **C111/C112 (buck output caps) drift to y ~64**, below J401, about 10 mm
    from D105. They are the last of the "oring" group to be placed and the
    front-left is full by then.
-7. **Silkscreen is untouched** - all 272 DRC warnings are references
-   overlapping pads and each other.
+7. **Silkscreen: done.** `silk.py` takes the three silk warning types from
+   92 / 92 / 17 to 0 / 0 / 0. What it cannot fix is that 12 parts are boxed
+   in hard enough that their reference has to leave its own neighbourhood -
+   the VDDA / crystal fan below the QFN and the three-part op-amp column -
+   and 4 footprints now differ from their library copy because their
+   overhanging silk was trimmed to the board edge. See "Silkscreen" above.
 8. **No keepouts drawn yet.** ADR 0003 wants a ground guard and no signal
    under the crystal; `place.py` only keeps other *parts* off the island
    (`XTAL_CLEAR`). Draw a User.2 polygon over Y301/C310/C311 before any
