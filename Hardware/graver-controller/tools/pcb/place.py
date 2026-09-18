@@ -18,12 +18,13 @@ What it does
 
 It does NOT route and it does NOT pour. See README.md.
 
-`--copper` chains copper.py after a clean run, and `--silk` chains silk.py
-after that, which is the full board:
+`--copper` chains copper.py after a clean run, `--silk` chains silk.py after
+that and `--route` chains autoroute.py after that, which is the full board:
 
-    python3 tools/pcb/place.py --copper --silk
+    python3 tools/pcb/place.py --copper --silk --route
 
 Usage:  python3 tools/pcb/place.py [--no-netlist] [--copper] [--silk]
+                                   [--route]
 """
 
 import collections
@@ -1807,6 +1808,7 @@ def main():
     do_netlist = "--no-netlist" not in sys.argv
     do_copper = "--copper" in sys.argv
     do_silk = "--silk" in sys.argv
+    do_route = "--route" in sys.argv
     pro_before = None
     if os.path.exists(PRO):
         with open(PRO, "rb") as fh:
@@ -1861,10 +1863,18 @@ def main():
             return rc
     if do_silk:
         print("\n=== silk.py ===")
+        rc = subprocess.call([sys.executable,
+                              os.path.join(HERE, "silk.py")]
+                             + [a for a in sys.argv[1:]
+                                if a in ("--no-drc", "--verbose")])
+        if rc:
+            return rc
+    if do_route:
+        print("\n=== autoroute.py ===")
         return subprocess.call([sys.executable,
-                                os.path.join(HERE, "silk.py")]
+                                os.path.join(HERE, "autoroute.py")]
                                + [a for a in sys.argv[1:]
-                                  if a in ("--no-drc", "--verbose")])
+                                  if a in ("--no-drc",)])
     return 0
 
 

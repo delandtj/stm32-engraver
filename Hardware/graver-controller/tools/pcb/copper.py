@@ -166,6 +166,7 @@ FIRST_RING = [
 USB_DP, USB_DM = "/MCU/USB_DP", "/MCU/USB_DM"
 USB_W, USB_GAP = 0.2, 0.15
 USB_PITCH = USB_W + USB_GAP     # 0.35 centre to centre
+USB_KEEP = 0.15                 # User.2 band off the pair's centre line
 
 # ---------------------------------------------------------- explicit paths -
 # (label, net, layer, width, [waypoints]) - a waypoint is "REF.PAD" or (x, y).
@@ -680,6 +681,21 @@ def parts_bbox(cop, refs, margin):
             ys += [tomm(bb.GetTop()) - ORIGIN[1], tomm(bb.GetBottom()) - ORIGIN[1]]
     return (min(xs) - margin, min(ys) - margin,
             max(xs) + margin, max(ys) + margin)
+
+
+def seg_band(a, b, hw):
+    """The segment a-b swollen by hw, as a four-point polygon."""
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    L = math.hypot(dx, dy)
+    if L < 1e-9:
+        return [(a[0] - hw, a[1] - hw), (a[0] + hw, a[1] - hw),
+                (a[0] + hw, a[1] + hw), (a[0] - hw, a[1] + hw)]
+    ux, uy = dx / L, dy / L
+    nx, ny = -uy, ux
+    return [(a[0] - ux * hw + nx * hw, a[1] - uy * hw + ny * hw),
+            (b[0] + ux * hw + nx * hw, b[1] + uy * hw + ny * hw),
+            (b[0] + ux * hw - nx * hw, b[1] + uy * hw - ny * hw),
+            (a[0] - ux * hw - nx * hw, a[1] - uy * hw - ny * hw)]
 
 
 def rect_pts(r):
@@ -1309,6 +1325,21 @@ def step6_usb(cop):
               % (legs[0][3], legs[1][3], skew, USB_W, USB_GAP,
                  "PASS" if max(l[3] for l in legs) <= 40.0 else "OVER"))
         res["dp"], res["dm"], res["skew"] = legs[0][3], legs[1][3], skew
+    # ADR 0003 component breakdown 3 asks for the pair "over unbroken bottom
+    # ground". The pair's own F.Cu copper keeps other F.Cu off it, but
+    # nothing keeps the router from crossing UNDER it on B.Cu and cutting the
+    # reference - it did, with +3V3. A User.2 band along every segment of the
+    # pair is what the router reads with --keepout, and it costs almost
+    # nothing on F.Cu because the locked pair is already there: 0.15 mm off
+    # the centre line is the pair's own half width plus 0.05.
+    nb = 0
+    for (a, b, hw, lay, net) in list(cop.segs):
+        if net in (USB_DP, USB_DM) and lay == "F.Cu":
+            add_user_poly(cop, seg_band(a, b, USB_KEEP), pcbnew.User_2)
+            nb += 1
+    print("  %d User.2 band(s) along the pair, %.2f mm off the centre line: "
+          "the router may not cross under it on B.Cu" % (nb, USB_KEEP))
+
     for a, b in (("J301.A5", "R305.1"), ("J301.B5", "R306.1")):
         cop.trace("CC pull-down %s" % a, a, b, W_SIG,
                   stubs=(0.0, 0.5, 0.9, 1.3))

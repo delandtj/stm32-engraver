@@ -13,16 +13,18 @@ None of them routes the rest.
     python3 tools/pcb/place.py          # rebuild + place + check
     python3 tools/pcb/copper.py         # zones, keepouts, critical copper
     python3 tools/pcb/silk.py           # references, connector labels, title
+    python3 tools/pcb/autoroute.py      # route the rest, grade it, import it
     tools/pcb/render.sh                 # PNGs into output/pcb/
 
 or in one go:
 
-    python3 tools/pcb/place.py --copper --silk
+    python3 tools/pcb/place.py --copper --silk --route
 
-`place.py` needs plain `python3` with the system KiCad 10 `pcbnew` bindings -
-no venv, no extra packages. It exits non-zero if any placement check or ADR
-distance criterion fails, and prints a table of every criterion with its
-measured value.
+`place.py`, `copper.py` and `silk.py` need plain `python3` with the system
+KiCad 10 `pcbnew` bindings - no venv, no extra packages. `autoroute.py` also
+needs the KiCadRoutingTools checkout and its venv (see "Routing the rest").
+`place.py` exits non-zero if any placement check or ADR distance criterion
+fails, and prints a table of every criterion with its measured value.
 
 `--no-netlist` skips the `kicad-cli sch export netlist` step and reuses
 `output/pcb/netlist.xml`. Use it while iterating on placement numbers.
@@ -33,8 +35,9 @@ Verify independently with:
 
 Expected after `place.py` alone: 0 schematic parity issues, ~250 unconnected
 items, and silkscreen warnings. After `copper.py`: 0 errors, 0 parity, 101
-unconnected items. After `silk.py`: no silkscreen warnings at all. See
-"Known DRC output" below.
+unconnected items. After `silk.py`: no silkscreen warnings at all. After
+`autoroute.py`: 0 errors, 0 parity, 13 unconnected items. See "Known DRC
+output" below.
 
 ## What it does
 
@@ -159,23 +162,23 @@ pin 5 at x = 47.16, all at y = 2.5. It fits there because J301 moved 3 mm left
 
 ## Known DRC output
 
-`kicad-cli pcb drc --schematic-parity --severity-all` on the placed board
-with the scripted copper and the scripted silk:
+`kicad-cli pcb drc --schematic-parity --severity-all` on the finished board -
+placement, scripted copper, scripted silk and the router's copper:
 
-| type | count | why |
-|------|-------|-----|
-| schematic parity | 0 | clean |
-| errors | 0 | clean |
-| unconnected_items | 101 | what the router still has to finish (107 in the second pass) |
-| silk_overlap | 0 | was 92 before `silk.py` |
-| silk_over_copper | 0 | was 92 |
-| silk_edge_clearance | 0 | was 17 |
-| lib_footprint_mismatch | 4 | J101, J201, J301, J402 - `silk.py` trims their library silkscreen back to the board outline, see "Silkscreen" below |
-| track_dangling | 18 | the QFN fanout stubs, dangling on purpose |
-| via_dangling | 7 | fanout and stitching vias the router has not reached yet |
+| type | after copper + silk | after autoroute.py | why |
+|------|--------------------|--------------------|-----|
+| schematic parity | 0 | 0 | clean |
+| errors | 0 | 0 | clean |
+| unconnected_items | 101 | 13 | see "Routing the rest" for the eight nets |
+| silk_overlap | 0 | 0 | was 92 before `silk.py` |
+| silk_over_copper | 0 | 0 | was 92 |
+| silk_edge_clearance | 0 | 0 | was 17 |
+| lib_footprint_mismatch | 4 | 4 | J101, J201, J301, J402 - `silk.py` trims their library silkscreen back to the board outline, see "Silkscreen" below |
+| track_dangling | 18 | 9 | QFN fanout stubs whose net the router never reached |
+| via_dangling | 7 | 3 | fanout and stitching vias the router never reached |
 
-226 warnings before the silk pass, 29 after, and the 29 are the 25 deliberate
-dangling ends plus the 4 trimmed connectors.
+226 warnings before the silk pass, 29 after, 16 once the router's copper is
+in: the 12 remaining deliberate dangling ends plus the 4 trimmed connectors.
 
 The assembly view instead gets its labels from F.Fab: `place.py` hides every
 footprint's **Value** field (it was the "100nF 100V" text that buried
@@ -213,7 +216,7 @@ restores it afterwards, and prints which of the two happened.
 | 3 | U101 PowerPAD | 4 thermal vias 0.6/0.3 |
 | 4 | crystal | OSC_IN 6.33 mm, OSC_OUT 7.23 mm (both including the load-cap tap), F.Cu only, 0 vias; F.Cu ground guard bracket, 3 of 3 legs + 2 stitching vias |
 | 5 | VDDA | FB301 -> C306/C307 at 0.40 mm; pin 9 -> C306 is now a 2.5 mm radial escape, left to the router on this pose (see below) |
-| 6 | USB | D+ 37.88 mm, D- 37.88 mm, skew 0.00 mm, **0 vias on either net** |
+| 6 | USB | D+ 37.88 mm, D- 37.88 mm, skew 0.00 mm, **0 vias on either net**; 17 User.2 bands 0.15 mm off the centre line so the router cannot cross under the pair on B.Cu |
 | 7 | power | VIN chain 0.8 mm, flyback loop 1.0 mm, gate 0.4 mm, shunt 1.0 mm, Kelvin taps 0.2 mm off the shunt pad's own copper edge, buck, +5 V/+3V3 0.5 mm; sense-side ground tree 0.20/0.25 mm |
 | 8 | ADC filters | the RC parts at the MCU pins, 0.25 mm, only where the part is within 6.5 mm |
 
@@ -437,10 +440,209 @@ they cross. The reserved VIN corridor at y 14..17 is exactly where the pair
 crosses it. Something has to change layer, and the ADR says the pair does
 not ("no vias, over unbroken bottom ground"), so the pair is scripted
 via-free and the VIN link is handed to the router with
-`--power-nets-widths 0.8`. Its result is imported only if it is via-free,
-which on this placement it will not be - the honest answer is that the rear
-edge has no second corridor, and the fix is a placement one (the DC jack and
-the terminal on the same side of the USB-C, or the pedal jack's slot reused).
+`--power-nets-widths 0.8`.
+
+What the router did with it, and what is committed: **VIN is 191.24 mm of
+0.8 mm copper with 5 vias**. It is not via-free and on this placement it
+cannot be - the rear edge has no second corridor - so the vias are the price
+of keeping the USB pair via-free, which is the ADR requirement of the two.
+None of them is under the pair: the pair is on F.Cu over unbroken B.Cu pour
+for its whole 37.88 mm, checked by `autoroute.py` and enforced by the User.2
+bands `copper.py` draws along it. The fix if Jan wants VIN flat is a
+placement one (the DC jack and the terminal on the same side of the USB-C,
+or the pedal jack's slot reused), not a routing one.
+
+## Routing the rest
+
+`autoroute.py` is the routing step. `routability.sh` is the placement test
+and imports nothing; this one produces the copper that ships.
+
+    cd Hardware/graver-controller
+    python3 tools/pcb/autoroute.py            # route, grade, import, report
+    python3 tools/pcb/autoroute.py --strip    # undo: remove it and refill
+    python3 tools/pcb/place.py --copper --silk --route      # the whole board
+
+It needs the KiCadRoutingTools checkout and its venv (`--system-site-packages`
+plus numpy, scipy, shapely, Pillow, so `pcbnew` stays importable). Both are
+found through `KRT_DIR` / `KRT_PY`, which default into the scratch directory
+`PCB_SCRATCH` points at. The stage refuses to run if its work directory is
+inside the git repository.
+
+Options: `--strip`, `--no-import` (route and grade, touch nothing),
+`--reuse` (grade and import the copy already routed), `--ordering NAME` (one
+ordering instead of all four), `--first A,B,...`, `--nets ...`,
+`--label NAME`, `--rip`, `--no-drc`.
+
+### What the stage does
+
+1. **Removes** the group `autorouted` from the board, refills the zones and
+   saves. That is what makes it idempotent and what `--strip` stops after:
+   the router's copper is never edited in place, it is thrown away and
+   redone.
+2. **Asks kicad-cli what is still open** on that stripped board. Those nets,
+   minus `NO_ROUTE` and the auto-named `unconnected-*` ones, are the scope,
+   and nothing outside the scope is ever imported.
+3. **Routes a copy** outside the repository, in passes:
+   - pass 1: the nets in `FIRST`, so the QFN escapes get first pick of the
+     corridors;
+   - pass 2: everything else, on pass 1's output;
+   - up to two mop-up passes for whatever is still short, with
+     `--rip-existing-nets '*'`.
+
+   The whole chain is run once per entry in `ORDERINGS` (mps, inside_out,
+   bus, original) and the best-scoring attempt is the one that gets imported.
+4. **Grades** - see below.
+5. **Imports** the surviving nets' tracks and vias into the repo board, not
+   locked (they are the router's and regenerable) but grouped `autorouted`,
+   and refills the zones with pcbnew's `ZONE_FILLER` so the pour closes round
+   the new copper.
+6. **Reports**: kicad-cli on the repo board, vias total and per net, the
+   longest ten nets, the keepout check and the ADC-versus-switching
+   parallel-run check.
+
+The exact router call, per pass:
+
+    route.py <in> <out> --nets <scope> \
+        --track-width 0.2 --clearance 0.15 --via-size 0.6 --via-drill 0.3 \
+        --grid-step 0.05 --escalation off --strict-sizes \
+        --keepout --keepout-layer User.2 --keep-input-copper \
+        --ordering <mps|inside_out|bus|original> \
+        --power-nets GND +3V3 +5V VBUS /MCU/VDDA VIN /Driver/COIL_NEG \
+            /Driver/CLAMP /Driver/SHUNT_HI \
+        --power-nets-widths 0.4 0.5 0.5 0.5 0.5 0.8 0.8 0.8 0.8
+
+The widths come out of the committed `.kicad_pro` net classes (Power 0.5,
+HighCurrent 0.8); GND is a Default-class net and gets 0.4 because its job
+here is the return path between two pour islands, not a signal. There is
+**no `--write-fill`**: the pour is `copper.py`'s, and the router's own refill
+of it does not apply the 0.25 mm hole clearance to J301's two NPTH pegs -
+that is the pair of `hole_clearance` errors `routability.sh` has always
+reported. The candidate board is filled by pcbnew instead, which does.
+
+### The grading rule
+
+The router's own pass messages are ignored, and so is `kicad-cli` on the
+router's **output file**: its writer re-emits the GND pour, and a run that
+routed nothing at all still graded 433 errors, all of them the zone. What is
+graded is the board the stage **would commit**: the stripped repo board plus
+the copper about to be imported, filled by `ZONE_FILLER`, with the pristine
+`.kicad_pro` beside it. Nothing is written to the repo until that candidate
+passes.
+
+Four gates, in order, each of which only ever **removes** a net from the
+import:
+
+| gate | rule |
+|------|------|
+| size | a net with any track under 0.20 mm or any via under 0.6/0.3 is dropped whole. `--strict-sizes` is not enough: the tool's "net rescue" narrows a via to 0.45/0.20 and then writes the relaxed floor into the sibling `.kicad_pro` so its own check passes |
+| complete | a net still showing an unconnected pad pair on the candidate is dropped whole; its partial copper is not worth the dangling ends |
+| errors | every kicad-cli error whose items include a track or via of a net being imported takes that net out, one net at a time, **cheapest first** - a violation names two nets and dropping +3V3 to save GND costs twenty-one pad pairs to save two |
+| final | any error left on the candidate refuses the whole import and the board is not written |
+
+Imported copper is **not locked**. `copper.py`'s copper is, and that is what
+keeps the router off it; the router's own copper is regenerable and the point
+of the `autorouted` group is that step 1 can find it again.
+
+### What never gets imported
+
+- Anything on a net that was not already open before the run. The stage only
+  ever adds copper, so a net the scripted copper finished is untouchable.
+- The USB pair. `NO_ROUTE` holds `/MCU/USB_DP` and `/MCU/USB_DM`: ADR 0003
+  wants them via-free and length-matched, `copper.py` draws them that way and
+  locks them. The two pad pairs kicad-cli still counts on them are U302's own
+  I/O pins - pads 3/4 on D+ and 1/6 on D-, which the ESD device's die joins
+  and copper does not. No router can close those and none should try.
+- `unconnected-(SW401-PadMP)`: two mounting pads of the encoder that KiCad
+  lumps into one invented net. There is nothing to route between them.
+- Zones. The stage imports tracks and vias only; the pour is `copper.py`'s.
+
+### Where it came out
+
+101 unconnected pad pairs before, **13 after**, over 8 nets, with 0 errors
+and 0 schematic parity issues on the repo board. 41 nets routed, 1331 tracks
+and 115 vias imported (193 vias on the board in all).
+
+| net | pairs | why it is still open |
+|-----|-------|----------------------|
+| NTC | 3 | QFN pad 19, and pads 18 and 20 either side of it both carry a fan-out via. `QFN_VIA_PADS` is zero-sum: taking those two vias out closes NTC and ENC_B and opens LCD_BL and VCAP1 instead, for the same total |
+| ENC_SW | 3 | QFN pad 43, boxed in by the locked stubs of pads 41, 42 and 44 (ENC_B, LCD_BL, BOOT0). The router reports it `boxed_in_static` after 5157 iterations and names only pre-existing copper as the blocker |
+| ENC_B | 2 | QFN pad 41, the same west-face jam as ENC_SW |
+| +5V, LCD_RST | 1 each | the router produced no copper for them at all on the winning attempt. Both were routed before the USB band went in; they are the price of it |
+| /MCU/USB_DP, /MCU/USB_DM | 1 each | U302's own I/O pins, joined by the die - see above |
+| unconnected-(SW401-PadMP) | 1 | the encoder's two mounting pads - see above |
+
+**The USB band costs three of those thirteen.** Without it the board closes
+at 10 open pad pairs, but eleven B.Cu tracks cross under the pair (+3V3,
++5V, VBUS, ENC_A, LCD_RST and SWDIO, twice each bar VBUS) and the reference
+ADR 0003 asks for is cut eleven times. With it, 0 crossings and three more
+pad pairs for Jan's hand route. `USB_KEEP = 0` in `copper.py` turns the band
+off and gives the other trade back.
+
+Levers tried on NTC and ENC_SW, and what each cost. All of these were
+measured before the USB band went in, so compare them against 10, not 13:
+
+| lever | result |
+|-------|--------|
+| net ordering | mps and bus agree and win, inside_out and original both lose by 4 to 7 pad pairs. The tool is not reproducible across board files whose only difference is the serialisation order, which is why all four are run and the best kept |
+| `--rip-existing-nets` on the blockers, named exactly | refused: the tool protects a whole NET as soon as any of its copper is KiCad-locked, and `copper.py` locks a fan-out stub on nearly every net at the QFN. Unlocking the router's own copper between passes (the stage does this) is the only rip that works |
+| `QFN_VIA_PADS = ()` | closes NTC, opens LCD_BL and VCAP1: 12 open, 40 nets |
+| `QFN_VIA_PADS = ("42", "44")` | closes NTC and ENC_B, opens VCAP1, and lets a +3V3 via land 0.18 mm from a GND track: 12 open, 41 nets |
+| a User.2 band round the crystal ground guard | the router treats any User.2 polygon as a hard block whatever its size, and a 0.05 mm band closes the west corridor: 12 open |
+| GND at 0.20 mm clearance via `--net-clearances` | same, 12 open - and the flag REPLACES the whole cross-class map, so the file has to carry the Power and HighCurrent nets too or they route at 0.15 |
+
+The committed `QFN_VIA_PADS = ("18", "20", "42", "44")` is what wins. Each
+lever was tried on NTC and ENC_SW and none improved the total; the honest
+remainder is the three pad pairs of each, and the fix is a hand route in
+pcbnew or a placement change that gives the QFN's west face somewhere to go.
+`SWCLK` and `DECAY_SLOW` also appeared and disappeared from the remainder
+between attempts, which is the same ordering noise.
+
+### What the renders show
+
+`tools/pcb/render.sh` after the stage; `top.png`, `bottom.png` and
+`both.png` are the three to look at.
+
+- **The bottom pour survives.** The router's B.Cu copper is a knot round the
+  MCU and two long diagonals up to the driver block; the rest of the 110 x
+  70 mm is solid. GND is complete on the finished board.
+- **`/Driver/CLAMP` is 55.56 mm**, of which about 50 is the router's: the
+  `D202 -> Q202` clamp tap that `copper.py` could not draw (Q201's 11 mm DPAK
+  tab is in the way) went the long way round, down the right-hand side of the
+  board and back west. The flyback loop itself is scripted, locked and still
+  20.26 mm, so this is the bypass FET's gate-side tap and not the switching
+  loop - but it is the longest unnecessary thing on the board and the obvious
+  candidate for a hand route or for a `copper.py` path that ducks under the
+  DPAK.
+- **The encoder runs are long** (ENC_A 87.61 mm): inherent, the encoder is
+  front-right and the MCU is centre-left, and "What is still rough" item 4
+  already says so.
+- **The QFN fan-out is tidy.** No via landed in the first ring, the escapes
+  leave radially as designed, and the leftover stubs on the west face are the
+  three nets below.
+- **Nothing crosses the crystal island but GND**, and nothing at all is in an
+  M3 ring.
+- **Nothing crosses under the USB pair on B.Cu.** It did on the first run -
+  a +3V3 track straight under D-, which is exactly the broken reference ADR
+  0003 component breakdown 3 forbids - so `copper.py` now draws a User.2 band
+  along every segment of the pair (`USB_KEEP`, 0.15 mm off the centre line)
+  and `autoroute.py` checks it afterwards. The band costs almost nothing on
+  F.Cu, because the locked pair is already there.
+
+### How to redo it
+
+    python3 tools/pcb/autoroute.py --strip     # board back to scripted-only
+    python3 tools/pcb/autoroute.py             # route it again
+
+A re-run does the strip itself, so the second line alone is enough. Changing
+`copper.py` or `place.py` means re-running those first, because the stage
+starts from what is on the board:
+
+    python3 tools/pcb/place.py --copper --silk --route
+
+Artefacts for one run land in `$PCB_SCRATCH/autoroute/<label>/<ordering>/`:
+`route-1.log` / `route-2.log` / `route-m1.log` and their JSON summaries,
+`stage1.kicad_pcb`, `routed.kicad_pcb`, and `candidate.kicad_pcb` with the
+DRC report that graded it. None of it is ever committed.
 
 ## Silkscreen
 
@@ -650,7 +852,10 @@ The board title is `GRAVER CTRL r0.1` at 57.00, 67.30 and `2026-09` at
 ## Routability test
 
 `tools/pcb/routability.sh [label]` is a **placement test, not the routing
-step**. It copies the board and the project into a scratch directory outside
+step** - `autoroute.py` is the routing step, see "Routing the rest". Run this
+one to compare two placements; it is a single strict autoroute with no
+passes, no mop-up and no import, so its open-net count is a lower bound on
+what the placement can do, not what the board ends up with. It copies the board and the project into a scratch directory outside
 the repo, autoroutes the copy at the committed design rules with the router
 forbidden to relax them (`--escalation off --strict-sizes` on both routing
 steps), copies the pristine `.kicad_pro` back over whatever the router wrote,
