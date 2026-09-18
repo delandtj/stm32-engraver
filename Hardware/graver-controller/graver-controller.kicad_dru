@@ -1,0 +1,10 @@
+(version 1)
+# ADR 0003 decision 5: KiCad's net class widths are defaults, not limits,
+# so these rules make DRC catch a power net routed at the signal width.
+# Necking down at small pads is allowed to half the class width.
+(rule "HighCurrent tracks"
+  (condition "A.NetClass == 'HighCurrent'")
+  (constraint track_width (min 0.5mm)))
+(rule "Power tracks"
+  (condition "A.NetClass == 'Power'")
+  (constraint track_width (min 0.3mm)))
