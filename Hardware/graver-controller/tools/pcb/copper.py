@@ -1971,6 +1971,43 @@ def power_escape(cop, spec, net, width, lengths=(0.85, 1.0, 1.2, 1.5, 1.8,
     return None
 
 
+# SEVENTH PASS. Pad 9 to C306 is 2.50 mm pad to pad and it cannot be drawn on
+# F.Cu at any width, because pad 9 is BOXED IN by four things this script drew
+# first and by the placement:
+#
+#   - C309, NRST's cap, sits directly south of it (pad box x 46.775..47.725,
+#     top edge y = 48.775), so a southward stub stops at y = 48.425;
+#   - pads 8 (GND) and 10 (unconnected) are 0.5 mm either side, so the corridor
+#     out of the pad is 0.75 mm wide between their copper;
+#   - PEDAL_TIP's radial stub runs south down x = 48.250 to y = 48.587 and
+#     PEDAL_RING's down x = 48.750 to y = 48.438, so the slot between C309's
+#     pad and the first of them is 0.525 mm - a 0.30 mm VDDA track needs
+#     0.35 mm to the pad plus 0.45 mm to the stub, i.e. 0.80 mm, and even a
+#     0.20 mm one needs 0.70 mm;
+#   - going round the SOUTH of the pedal stubs means crossing x = 48.250 at
+#     y >= 49.037, and every route to there from pad 9 runs into C309's pad.
+#
+# So the room is in the third dimension, which is also what the router found in
+# the sixth pass's p8 run (6.74 mm, 2 vias). The two ways to do it on one layer
+# were both measured and both cost more than they buy: shortening the two pedal
+# stubs to clear a 0.30 mm lane at y = 48.425 leaves them 0.10 mm of copper
+# past their own pad edge, which is no escape at all for two real signals; and
+# moving C309 south far enough (0.80 mm, not "a few tenths") puts C309 pad 2
+# 0.19 mm from C405's pad and takes NRST's own first-ring trace into the
+# crystal ground guard at x = 46.200.
+#
+# 2.95 mm over two layers, every segment at W_RAIL_MIN, and the vias are placed
+# in the one window that exists: (47.250, 48.225) clears pads 8 and 10 by
+# 0.513 mm where 0.50 is needed, C309's pad by 0.550 and NRST's own diagonal by
+# 0.646 where 0.625 is needed. That window is 0.048 mm tall in y, which is why
+# power_escape's 0.85 mm ladder rung missed it by 0.06 mm.
+VDDA_LAYERED = [
+    ("F.Cu", ["U301.9", (47.250, 48.225)]),
+    ("B.Cu", [(47.250, 48.225), (48.250, 49.225)]),
+    ("F.Cu", [(48.250, 49.225), "C306.1"]),
+]
+
+
 def step5_vdda(cop, xr):
     print("\n--- 5. VDDA / VSSA")
     for a, b in (("FB301.2", "C307.1"), ("FB301.2", "C306.1")):
@@ -1995,9 +2032,12 @@ def step5_vdda(cop, xr):
     # net cannot be legal at all.
     run = None
     for w in (W_RAIL_MIN, W_FINE):
+        # Both attempts are quiet: VDDA_LAYERED below is the answer when they
+        # fail, so a "no clear path" line here would be a report of something
+        # that is not left undrawn.
         run = cop.trace("VDDA pin 9 to C306", "%s.9" % QFN, "C306.1", w,
                         stubs=(0.55, 0.7, 0.9, QFN_STUB, QFN_STUB + 0.3, 0.0),
-                        quiet=(w != W_FINE))
+                        quiet=True)
         if run is not None:
             break
     if run is not None:
@@ -2006,9 +2046,21 @@ def step5_vdda(cop, xr):
               "radial escape now that the island is off this side" % (total, w))
         return total
     # No lane to C306 at any width on this pose (C309, NRST's cap, sits on the
-    # only one). Then at least get OFF the pad at the floor width and put a via
-    # at the end of it, so what the router picks up is a legal piece of copper
-    # and not the pad itself.
+    # only one). SEVENTH PASS: change layer rather than hand the 2 mm gap to
+    # the router, which closed it in one run of six and left it open in five.
+    # See VDDA_LAYERED above for why one layer cannot do it and what the two
+    # single-layer alternatives cost.
+    got = layered(cop, "VDDA pin 9 to C306", "/MCU/VDDA", W_RAIL_MIN,
+                  VDDA_LAYERED)
+    if got:
+        total, nv = got
+        print("  pin 9 -> C306 has no F.Cu lane at %.2f mm or %.2f mm - pad 9 "
+              "is boxed in by C309's pad, pads 8/10 and the two pedal stubs. "
+              "%.2f mm over two layers with %d via(s) instead, every segment "
+              "at the %.2f mm floor (straight line %.2f mm)"
+              % (W_RAIL_MIN, W_FINE, total, nv, W_RAIL_MIN,
+                 dist(cop.pad("%s.9" % QFN), cop.pad("C306.1"))))
+        return total
     got = power_escape(cop, "%s.9" % QFN, "/MCU/VDDA", W_RAIL_MIN)
     if got:
         p, v = got
@@ -2335,6 +2387,48 @@ SIGNAL_EXPLICIT = [
 ]
 
 
+# Explicit signal paths that have to change layer, same shape as POWER_LAYERED:
+# a list of (layer, waypoints) runs, and the point two consecutive runs share
+# gets a via.
+#
+# SEVENTH PASS, and PB2 is the only entry. Pad 20's fanned escape ends at
+# (52.338, 43.450) with a via of its own already there, and R303 pad 1 - PB2's
+# series resistor on the way to the LCD - is 6.22 mm away at (54.175, 37.500).
+# Every F.Cu way north out of that escape is closed, and by this script's own
+# copper rather than by congestion:
+#
+#   - VCAP1's explicit path runs east along y = 42.250 from pad 22 to
+#     x = 53.500 and then north, so the escape is SOUTH of a wall that spans
+#     the whole x 49.4..53.5 band. Crossing it means going round its corner,
+#     i.e. east of x = 53.850 (0.35 mm of air for a 0.20 mm track against a
+#     0.20 mm one);
+#   - the only slot north of there is the 0.80 mm gap between C302 pad 2
+#     (right edge 53.225) and C207 pad 1 (left edge 54.025), and VCAP1's own
+#     lane at x = 53.500 already has it: what is left on its east side reaches
+#     x = 53.775, and PB2 would need x >= 53.850. Short by 0.075 mm;
+#   - the next slot east, between C207's two pads, is VIN_SENSE's x = 55.250
+#     lane, and east of C207 again means crossing VIN_SENSE's y = 44.850
+#     trunk or NTC's diagonal from pad 19's escape to C207 pad 1.
+#
+# So PB2 drops to B.Cu at the via its escape already carries - no new via at
+# that end - crosses under the C207 / C104 column on the bottom layer and comes
+# back up in the 1.05 mm gap between R303 pad 1 (bottom edge 37.975) and C104
+# pad 1 (top edge 39.025), where a 0.6/0.3 via clears both by 0.525 mm and
+# VCAP1's x = 53.500 lane by 0.675 mm. 5.71 mm of B.Cu, one new via, and a
+# 1.00 mm F.Cu stub straight north into the pad.
+#
+# The B.Cu leg is drawn diagonal-then-vertical on purpose: the mirror image
+# (vertical at x = 52.338 first) would put its slot in the pour directly under
+# C302 pad 2, the MCU's own VDD decoupling ground, where this one runs under
+# C207 pad 1 and C104 pad 1 - two signal pads whose return path nothing needs.
+SIGNAL_LAYERED = [
+    ("PB2 pad 20 escape to R303", "Net-(U301-PB2)", W_FINE, [
+        ("B.Cu", ["ESCAPE.20", (54.175, 41.613), (54.175, 38.500)]),
+        ("F.Cu", [(54.175, 38.500), "R303.1"]),
+    ]),
+]
+
+
 def _way(cop, q):
     """One SIGNAL_EXPLICIT waypoint -> (x, y)."""
     if isinstance(q, str) and q.startswith("ESCAPE."):
@@ -2362,6 +2456,19 @@ def step6c_signals(cop):
         ok += 1
         print("  %-38s %6.2f mm at %.2f mm on F.Cu (straight line %.2f mm)"
               % (label, path_len(out), w, dist(out[0], out[-1])))
+    # The layered ones last: they cross under copper the F.Cu paths above have
+    # just claimed, so they have to know where it ended up.
+    for label, net, w, runs in SIGNAL_LAYERED:
+        got = layered(cop, label, net, w, runs)
+        if got is None:
+            continue
+        ok += 1
+        a = _way(cop, runs[0][1][0])
+        b = _way(cop, runs[-1][1][-1])
+        print("  %-38s %6.2f mm at %.2f mm over %d layer(s), %d via(s) "
+              "(straight line %.2f mm)"
+              % (label, got[0], w, len({r[0] for r in runs}), got[1],
+                 dist(a, b)))
     # A QFN pad whose explicit path did not come out keeps the plain radial
     # stub step 2 skipped for it, or the router has nothing to pick up.
     for num in QFN_EXPLICIT_PADS:
@@ -2375,7 +2482,7 @@ def step6c_signals(cop):
             num, "kept a %.2f mm radial stub" % s if s is not None
             else "NO copper on the pad at all"))
     print("  %d of %d explicit signal paths drawn"
-          % (ok, len(SIGNAL_EXPLICIT)))
+          % (ok, len(SIGNAL_EXPLICIT) + len(SIGNAL_LAYERED)))
     return ok
 
 
@@ -2510,8 +2617,9 @@ def layered(cop, label, net, width, runs):
     """Draw one multi-layer explicit path, or report it and draw nothing."""
     built, vias = [], []
     for i, (layer, pts) in enumerate(runs):
-        out = [cop.resolve(q) for q in pts]
-        ign = tuple(q for q in pts if isinstance(q, str))
+        out = [_way(cop, q) for q in pts]
+        ign = tuple(q for q in pts
+                    if isinstance(q, str) and not q.startswith("ESCAPE."))
         why = cop.path_clear(out, width, layer, net, ign)
         if why:
             cop.fails.append("%s (%s run %d): %s" % (label, layer, i + 1, why))
@@ -2659,6 +2767,106 @@ def step7_power(cop):
     return ok
 
 
+# =========================================================== escapes =====
+# Dictated escapes: a short piece of copper off a pad that is BOXED IN, with a
+# via at its far end, so that what the router picks up is a track end in open
+# copper instead of a pad it cannot reach. Same idea as power_escape and as
+# every QFN escape, but with the direction chosen rather than searched, because
+# in both cases here the one corridor out is known and a search would take the
+# wrong one first.
+#
+# --- NRST off C309 ----------------------------------------------------------
+# SEVENTH PASS, and it is VDDA_LAYERED's bill. NRST's four pads are U301 pad 7
+# and C309 pad 1 (one piece of copper, joined by the first-ring trace), SW302's
+# two halves at y = 19.125 and J302 pad 4 at the rear edge, so the cluster at
+# the MCU's south-west corner has to reach y = 19 somehow. In the sixth pass
+# the router did it by dropping to B.Cu at (46.800, 49.850), south-west of
+# C309 - the one direction that is neither the crystal island nor the pin row -
+# and running down to (46.800, 52.300).
+#
+# Adding VDDA's two vias at (47.250, 48.225) and (48.250, 49.225) put
+# /MCU/VDDA into the ring of LOCKED copper round that cluster, and the p10 run
+# is what that costs: NRST failed on all three orderings AND on the mop-up
+# (`ROUTE FAILED - no rippable blockers found ... the box also includes
+# PROTECTED net(s) ... '/MCU/VDDA' (locked) ... within 3mm of the failing
+# endpoint`), and because the mop-up ran at --track-width 0.20 it also ripped
+# VBUS and re-laid it at 0.20 mm, which the size gate then dropped whole. One
+# boxed-in cluster, six pad pairs.
+#
+# So the corridor is scripted instead of hoped for: 0.74 mm of 0.25 mm F.Cu
+# south-west out of C309 pad 1 and a 0.6/0.3 via at (46.850, 49.800), which
+# clears the crystal ground guard at x = 46.200 by 0.650 mm where 0.600 is
+# needed and C309 pad 2 by 0.525 where 0.450 is. It is drawn in step 7c, before
+# the ground stitching, so C309 pad 2's own stub has to find another direction
+# rather than this one.
+#
+# --- +5V off C202 -----------------------------------------------------------
+# The one +5V pad pair the router has never closed is
+# C201.1 <-> D105.1, 39.93 mm across the board, and the reason it gives is not
+# congestion: "the failing endpoint is boxed in by copper copper.py LOCKED".
+# That is exactly right, and it is measurable. C201 is the gate driver's supply
+# cap and its only two ways out of the block are
+#
+#   - NORTH, up the empty column at x = 51.275 between J302 pad 5 (right edge
+#     48.010) and the driver, and
+#   - WEST, along the 1.05 mm lane at y = 24.500 between C201's own pads and
+#     R202's,
+#
+# because south of it GATE_IN's pulldown leg runs east along y = 26.500 from
+# x = 49.175 to 51.812, GATE_IN's main lane is a wall at x = 49.900 from
+# y = 26.225 to 36.210, and the two ground stitching vias at (50.487, 28.000)
+# and (51.087, 28.950) close the 2.1 mm slot east of that lane.
+#
+# The trunk itself is NOT scripted, and the corridor search says why. On F.Cu
+# the shortest route that clears at 0.50 mm is 111.6 mm - up the rear, along
+# y = 4.5 past the USB receptacle and all the way down the LEFT edge at x = 7 -
+# because the x = 23.5 lane between the receptacle and the buck only takes
+# 0.30 mm, at which the shortest route is still 94.96 mm and goes diagonally
+# across the rear right, walling J302's four signal pads and SW301's +3V3 from
+# the south. Either one is 2.4-2.8x the straight line and costs more corridors
+# than the pad pair it closes. On B.Cu the direct 40 mm diagonal crosses UNDER
+# the USB pair at (41.89, 33.74), which ADR 0003 component breakdown 3 forbids
+# and the User.2 bands enforce; the pair's F.Cu run from J301 to the MCU is one
+# unbroken wall from (28.250, 7.245) to (45.250, 40.562), so the only legal
+# crossings are north of J301 (y < 6) or south of the MCU, and both of those
+# are the long way round again.
+#
+# So what this step draws is the ESCAPE and not the trunk: 2.50 mm of 0.50 mm
+# F.Cu north out of C202 - the northernmost +5V pad, tied to C201 by the
+# scripted bypass leg - and a 0.6/0.3 via at the end of it, in open copper
+# 2.0 mm clear of anything. The endpoint the router reports as boxed in is then
+# a track END with a via on it, in the same position as every QFN escape, and
+# the 40 mm crossing is the router's to make the way it makes VIN's 194 mm and
+# VBUS's 68 mm. It stops at y = 19.000 on purpose: the reserved VIN corridor is
+# y 14..17 and +3V3's own rear branch comes up x = 48.000.
+ESCAPES = [
+    ("NRST escape off C309, south-west", "NRST", W_SIG,
+     ["C309.1", (47.250, 49.400), (46.850, 49.800)], True),
+    ("+5V escape out of the driver's supply block", "+5V", W_RAIL,
+     ["C202.1", (51.275, 19.000)], True),
+]
+
+
+def step7c_escapes(cop):
+    print("\n--- 7c. escapes out of the boxed-in pads")
+    for label, net, w, pts, want_via in ESCAPES:
+        out = [cop.resolve(q) for q in pts]
+        ign = tuple(q for q in pts if isinstance(q, str))
+        why = cop.path_clear(out, w, "F.Cu", net, ign)
+        if why:
+            cop.fails.append("%s: %s" % (label, why))
+            continue
+        vwhy = cop.via_clear(out[-1], net, ign) if want_via else None
+        cop.add_path(out, w, "F.Cu", net)
+        cop.lengths[label] = path_len(out)
+        if want_via and vwhy is None:
+            cop.add_via(out[-1], net)
+        print("  %-42s %5.2f mm at %.2f mm, ends (%.3f, %.3f)%s"
+              % (label, path_len(out), w, out[-1][0], out[-1][1],
+                 " + via" if want_via and vwhy is None else
+                 " (no room for a via: %s)" % vwhy if want_via else ""))
+
+
 # =========================================================== RC filters ===
 RC = [
     ("16", "R212.2", W_SIG), ("16", "C205.1", W_SIG),      # I_SENSE
@@ -2667,7 +2875,10 @@ RC = [
     ("11", "C405.1", W_SIG), ("12", "C404.1", W_SIG),      # pedal
     ("40", "C401.1", W_SIG), ("41", "C402.1", W_SIG),
     ("43", "C403.1", W_SIG),                               # encoder debounce
-    ("44", "R301.1", W_SIG), ("20", "R303.1", W_SIG),
+    ("44", "R301.1", W_SIG),
+    # ("20", "R303.1") was here and RC_MAX skipped it on every run: pad 20 to
+    # R303 pad 1 is 7.45 mm and there is no F.Cu lane at any length. It is
+    # SIGNAL_LAYERED's PB2 entry now, drawn in step 6c.
     ("31", "R307.1", W_SIG),
 ]
 RC_CHAIN = [("R402.2", "C401.1"), ("R403.2", "C402.1"), ("R404.2", "C403.1"),
@@ -3194,6 +3405,10 @@ def main():
     step6c_signals(cop)          # GATE_IN, VCAP1, VIN_SENSE
     step3_decoupling(cop)
     step7_power(cop)
+    # After the power block, so the flyback loop, the VIN chain and the
+    # sense-side ground all keep the lanes they need, and before the filters
+    # and the rails, which have alternatives where a rail escape has none.
+    step7c_escapes(cop)
     step8_filters(cop)
     # The rails go after every local trace and before the ground stitching:
     # a 0.5 mm trunk laid early would close escapes the signals need, and a
