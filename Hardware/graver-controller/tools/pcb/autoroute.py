@@ -65,6 +65,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 
 import pcbnew
 
@@ -111,12 +112,29 @@ GND_WIDTH = 0.4
 #   MP / NC  auto-named "unconnected-*" nets: two pads that share an
 #            invented net name and nothing to route between them.
 NO_ROUTE = ("/MCU/USB_DP", "/MCU/USB_DM")
+# The ESD device whose two duplicate-pin links copper.py draws. Its own
+# pad-to-pad copper is on the pair's nets but is not part of the pair's run -
+# see usb_reference_check.
+USB_DIE_BRIDGE = "U302"
 
-# The router's net orderings. All of them are tried and the best-scoring
-# attempt is the one that gets imported: the tool's result is not stable
-# across board files whose only difference is the serialisation order, and
-# the spread between its good and its bad day is the whole remainder.
-ORDERINGS = ("mps", "inside_out", "bus", "original")
+# The router's net orderings, and how many attempts one stage makes.
+#
+# KiCadRoutingTools is NOT reproducible. Part positions are identical run to
+# run but the .kicad_pcb serialisation order is not (KiCad regenerates item
+# UUIDs and writes footprints in a UUID-dependent order), the net ordering
+# ties break on it, and two runs of the same stage on the same placement have
+# come out 13 and 20 open pad pairs apart. So the stage routes the same input
+# ATTEMPTS times and imports the best of them; all of the attempts are
+# printed, with their score, so the spread is visible rather than hidden.
+#
+# The attempts use different net orderings while the pool lasts, because a
+# different ordering is a bigger perturbation than the serialisation noise,
+# and repeat the pool after that. Three is the useful number here: mps and
+# bus have both won, inside_out and original have never won by more than the
+# noise, and a fourth attempt costs ~4 minutes for about one pad pair.
+ORDERINGS = ("mps", "bus", "inside_out", "original")
+ATTEMPTS = 3
+ROUTE_SUMMARY = "route-summary.txt"
 
 # Nets routed in a pass of their own, before everything else. These are the
 # ones the QFN fan-out boxes in: they have one way out each and lose it to
@@ -561,12 +579,27 @@ def usb_reference_check(board, items):
     near it: at the MCU's 0.5 mm pitch the pair's last millimetre has pads 32
     and 34's escapes either side of it by construction, and no proximity rule
     can tell those apart from a broken reference.
+
+    `USB_DIE_BRIDGE` is excluded, and only that. copper.py draws a 1.35 mm
+    link across U302 between each of the ESD device's two duplicate I/O pins
+    (see the README) so that kicad-cli stops counting them as unconnected.
+    Those links are on the pair's nets but they are not the pair's RUN - the
+    37.88 mm ADR 0003 asks to keep over unbroken ground is the copper between
+    J301, U302 and the MCU, and the band copper.py lays along it covers all
+    of that. A B.Cu track passing under the ESD device's own pad-to-pad link
+    is 0.35 mm of reference under a 2.3 mm hop between two pads of one part;
+    banding it as well only pushes the router off SWDIO and VBUS for nothing.
     """
+    keep = board.FindFootprintByReference(USB_DIE_BRIDGE)
+    box = keep.GetBoundingBox() if keep else None
     pair = []
     for t in board.GetTracks():
         if isinstance(t, pcbnew.PCB_VIA):
             continue
         if netname_of(t) in NO_ROUTE and t.GetLayerName() == "F.Cu":
+            if box is not None and (box.Contains(t.GetStart())
+                                    and box.Contains(t.GetEnd())):
+                continue
             pair.append(((tomm(t.GetStart().x), tomm(t.GetStart().y)),
                          (tomm(t.GetEnd().x), tomm(t.GetEnd().y))))
     bad = []
@@ -861,8 +894,8 @@ def main():
         a["open"] = sum(unconnected_nets(a["drc"]).values())
         return a
 
-    def attempt(name):
-        wd = os.path.join(work, name)
+    def attempt(tag, name):
+        wd = os.path.join(work, tag)
         os.makedirs(wd, exist_ok=True)
         out = os.path.join(wd, "routed.kicad_pcb")
         if not reuse:
@@ -894,20 +927,42 @@ def main():
             a = b
         return finalize(a)
 
-    print("\n--- routing a copy in %s" % work)
-    best = None
-    for name in ([ordering] if ordering else ORDERINGS):
-        print("\n  == ordering %s ==" % name)
-        a = attempt(name)
+    # The same input, routed ATTEMPTS times, and the best of them imported.
+    # The tool is not deterministic (see ORDERINGS above), so one run is a
+    # sample and not a result: the scoring order is errors, then open pad
+    # pairs, then VIAS, then how many nets were taken.
+    plan = ([ordering] if ordering else
+            [ORDERINGS[i % len(ORDERINGS)] for i in range(ATTEMPTS)])
+    print("\n--- routing a copy in %s, %d attempt(s): %s"
+          % (work, len(plan), ", ".join(plan)))
+    best, table = None, []
+    for i, name in enumerate(plan):
+        tag = name if plan.count(name) == 1 else "%s-%d" % (name, i + 1)
+        print("\n  == attempt %d of %d, ordering %s =="
+              % (i + 1, len(plan), name))
+        a = attempt(tag, name)
         if a is None:
             print("  the router produced no output")
+            table.append((tag, None, None, None, None))
             continue
-        print("  ordering %-11s -> %d error(s), %d unconnected pad pair(s), "
-              "%d net(s) imported"
-              % (name, len(a["errs"]), a["open"], len(a["take"])))
-        key = (len(a["errs"]), a["open"], -len(a["take"]))
+        nvias = len([x for x in a["made"] if isinstance(x, pcbnew.PCB_VIA)])
+        a["vias"] = nvias
+        print("  attempt %-13s -> %d error(s), %d unconnected pad pair(s), "
+              "%d via(s), %d net(s) imported"
+              % (tag, len(a["errs"]), a["open"], nvias, len(a["take"])))
+        table.append((tag, len(a["errs"]), a["open"], nvias, len(a["take"])))
+        key = (len(a["errs"]), a["open"], nvias, -len(a["take"]))
         if best is None or key < best[0]:
             best = (key, a)
+    print("\n  attempt        errors  open  vias  nets")
+    for tag, e, o, v, n in table:
+        if e is None:
+            print("  %-14s %s" % (tag, "no output"))
+        else:
+            print("  %-14s %6d %5d %5d %5d%s"
+                  % (tag, e, o, v, n,
+                     "   <- imported" if best and best[1]["wd"].endswith(tag)
+                     else ""))
     if best is None:
         restore_pro(pro_before)
         return 1
@@ -940,6 +995,44 @@ def main():
     for n in sorted(take, key=lambda n: -rl.get(n, 0.0))[:10]:
         print("    %-34s %7.2f mm  %2d via(s)"
               % (n, rl.get(n, 0.0), rv.get(n, 0)))
+
+    # The chosen scratch copy's summary, so a run can be compared with the
+    # last one without re-reading the whole log. Nothing in $PCB_SCRATCH is
+    # ever committed; this file is the only thing that survives it.
+    os.makedirs(OUT, exist_ok=True)
+    summary = os.path.join(OUT, ROUTE_SUMMARY)
+    with open(summary, "w") as fh:
+        fh.write("route stage %s\n" % time.strftime("%Y-%m-%d %H:%M"))
+        fh.write("open before: %d pad pair(s) over %d net(s)\n"
+                 % (sum(open0.values()), len(open0)))
+        if reuse:
+            fh.write("mode: --reuse - the copies were re-graded and NOT "
+                     "re-routed, so the mop-up passes did not run and these "
+                     "attempt scores are not comparable with a full run\n")
+        fh.write("attempts (the router is not deterministic; the best is "
+                 "imported, scored on errors, then open, then vias)\n")
+        fh.write("  %-14s %6s %5s %5s %5s\n"
+                 % ("attempt", "errors", "open", "vias", "nets"))
+        for tag, e, o, v, n in table:
+            if e is None:
+                fh.write("  %-14s no output\n" % tag)
+            else:
+                fh.write("  %-14s %6d %5d %5d %5d%s\n"
+                         % (tag, e, o, v, n,
+                            "   <- imported" if a["wd"].endswith(tag) else ""))
+        fh.write("chosen copy: %s\n" % a["wd"])
+        fh.write("  errors      %d\n" % len(errs))
+        fh.write("  open        %d pad pair(s)\n" % a["open"])
+        fh.write("  vias        %d imported\n" % nvi)
+        fh.write("  tracks      %d imported\n" % ntr)
+        fh.write("  nets        %d of %d in scope\n" % (len(take), len(scope)))
+        if nothing:
+            fh.write("  no copper at all for: %s\n" % ", ".join(nothing))
+        fh.write("longest nets in the imported copper\n")
+        for n in sorted(take, key=lambda n: -rl.get(n, 0.0))[:10]:
+            fh.write("  %-34s %7.2f mm  %2d via(s)\n"
+                     % (n, rl.get(n, 0.0), rv.get(n, 0)))
+    print("\nwrote %s" % summary)
 
     if not do_import:
         print("\n--no-import: stopping before the repo board is touched")

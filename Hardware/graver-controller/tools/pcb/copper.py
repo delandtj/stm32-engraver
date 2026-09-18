@@ -65,6 +65,7 @@ NET_CLEARANCE = {
     "VIN": 0.4, "/Driver/COIL_NEG": 0.4, "/Driver/CLAMP": 0.4,
     "/Driver/SHUNT_HI": 0.4,
 }
+MAX_CLEARANCE = max([CLEARANCE_DEFAULT] + list(NET_CLEARANCE.values()))
 VIA_D, VIA_DRILL = 0.6, 0.3
 HOLE_TO_HOLE = 0.5
 HOLE_CLEARANCE = 0.25
@@ -124,15 +125,54 @@ QFN_GND_PINS = ("8", "23", "35", "47")
 # which pin-row pads the crystal island stands in front of and draws their
 # escapes, and step 2 skips exactly those. In the second pass this was the
 # hand-written list ("11", "12") plus pad 7 failing silently.
-# Pads that also get a VIA at the end of a longer stub, so the net can leave
-# on B.Cu. At 0.5 mm pitch a 0.6 mm via needs to sit at least 1.43 mm out of
-# the pad centre to keep 0.15 mm from a neighbouring 1.15 mm stub's end cap,
-# and two vias need 0.75 mm of copper and 0.80 mm of hole-to-hole between
-# them - so at most every SECOND pad of a row, and the pads in between keep
-# a top-only escape. These four are the nets a strict autoroute of the
-# it7 + copper board left open on the east and west rows.
-QFN_VIA_PADS = ("18", "20", "42", "44")
-QFN_VIA_RADII = (1.55, 1.75, 1.95, 2.20, 2.50)
+# --- the escape fan ---------------------------------------------------------
+# A via that sits in the FIRST ring is zero-sum and worse than that: at 0.5 mm
+# pitch a 0.6 mm via 1.55 mm out of its pad denies BOTH its neighbours any
+# radial escape past about 1.15 mm, because a 0.20 mm track 0.5 mm to the side
+# clears it by 0.50 mm where it needs 0.55. That is exactly what boxed NTC in
+# (pad 19, between the fanout vias of 18 and 20) and ENC_SW (pad 43, between
+# 42 and 44), and the router reported both `boxed_in_static` against copper
+# this script had already locked.
+#
+# So the rows that carry more signals than the first ring has lanes are FANNED
+# instead: each escape leaves its pad radially, turns 45 degrees at QFN_FAN_R
+# and lands on a lane of its own in a second, WIDER ring, where the pitch is
+# 0.70 mm (east) or 0.90 mm (west) instead of 0.50. A 0.6 mm via then clears a
+# neighbouring lane's 0.20 mm track by 0.15 mm at 0.70 mm pitch, two vias on
+# lanes 1.4 mm apart clear each other's holes by 0.6 mm, and every used pad
+# keeps a straight top-layer lane of its own out to the second ring.
+#
+# `fan` is the lateral step in mm, signed +y for a row whose pads face east or
+# west and +x for one facing north or south. The entries of one row must be
+# MONOTONIC in the lane they start from, or two escapes cross. `reach` is
+# where the escape ends, from the pad centre; `via` drops a via there.
+#
+# Where the free lanes come from: pads 3, 4, 10, 13, 14, 26, 30, 38, 39, 45
+# and 46 are unconnected on this design and get no copper at all, so their
+# lanes are the room the fan expands into. The east row fans towards pads 13
+# and 14, the west row towards 38/39 one way and 45/46 the other. The west
+# row stops at y = 45.75 and not 46.25: C304, pad 48's own 100 nF, sits on
+# that lane.
+QFN_FAN_R = 1.35              # radius at which the 45-degree turn starts
+QFN_ESCAPE = {
+    # east row, faces +x, 0.70 mm lane pitch
+    "21": (0.00, 2.60, False),    # LCD_DC
+    "20": (0.20, 2.90, True),     # Net-(U301-PB2)
+    "19": (0.40, 2.60, False),    # NTC        - the pad the old vias boxed in
+    "18": (0.60, 2.90, True),     # VIN_SENSE
+    "17": (0.80, 2.60, False),    # LCD_MOSI
+    "16": (1.00, 2.60, False),    # I_SENSE
+    "15": (1.20, 2.90, False),    # LCD_SCK
+    # west row, faces -x, 0.90 mm lane pitch
+    "40": (-0.60, 2.60, False),   # ENC_A
+    "41": (-0.20, 2.60, False),   # ENC_B      - jammed behind 42's old via
+    "42": (0.20, 2.90, True),     # LCD_BL
+    "43": (0.60, 2.60, False),    # ENC_SW     - the pad 42 and 44 boxed in
+    "44": (1.00, 2.90, True),     # Net-(U301-BOOT0)
+}
+QFN_VIA_PADS = tuple(n for n, (_f, _r, v) in QFN_ESCAPE.items() if v)
+# Fallback reaches, tried shortest-first when the tabulated one does not clear.
+QFN_REACH_BACK = (0.30, 0.60, 0.90, 1.20)
 
 # Pads whose destination is a first-ring part ON TOP: no via, a real trace.
 # (mcu pad, target pad, width) - the router never sees these nets near the QFN.
@@ -289,6 +329,19 @@ def oct_route(a, b, mode):
 OCT_MODES = ("dh", "hd", "vd", "hv", "vh")
 
 
+def all_octilinear(pts):
+    """Is every leg of this path H, V or exactly 45 degrees?
+
+    `oct_route`'s 'hd' and 'vd' modes only come out at 45 degrees when the
+    axis they run along is the LONGER one - 'hd' from (49.0, 34.2) to
+    (42.0, 12.4) ends on a 7 x 21.8 slant. Those candidates are kept, because
+    on a crowded board a slant that clears beats nothing at all, but they sort
+    behind every octilinear candidate so they are only ever a last resort.
+    `add_path` still says so in the notes when one is drawn.
+    """
+    return all(octilinear(pts[i], pts[i + 1]) for i in range(len(pts) - 1))
+
+
 def path_len(pts):
     return sum(dist(pts[i], pts[i + 1]) for i in range(len(pts) - 1))
 
@@ -307,6 +360,7 @@ class Copper:
         self.fails = []
         self.notes = []
         self.lengths = {}         # trace label -> mm of copper drawn
+        self.qfn_end = {}         # QFN pad number -> (escape end, direction)
         self._index_pads()
         self.keepouts = []        # (kind, geometry, allowed nets)
         for hx, hy in HOLES.values():
@@ -331,20 +385,30 @@ class Copper:
                                   tomm(pad.GetDrillSize().x) / 2.0 if hole else 0.0,
                                   loc(pad.GetPosition()), ref, pad.GetNumber()))
 
-    def pad(self, spec):
+    def findpad(self, spec):
+        """"REF.NUM", or "REF.NUM#i" for a footprint with duplicate numbers.
+
+        SW401's two mounting lugs are both pad MP and SW301's two switch
+        halves are both pad 2, so a pad number is not a key on this board.
+        """
         ref, num = spec.split(".", 1)
-        p = self.fps[ref].FindPadByNumber(num)
-        if p is None:
+        idx = 0
+        if "#" in num:
+            num, i = num.split("#", 1)
+            idx = int(i)
+        pads = [p for p in self.fps[ref].Pads() if p.GetNumber() == num]
+        if len(pads) <= idx:
             raise KeyError(spec)
-        return loc(p.GetPosition())
+        return pads[idx]
+
+    def pad(self, spec):
+        return loc(self.findpad(spec).GetPosition())
 
     def padnet(self, spec):
-        ref, num = spec.split(".", 1)
-        return self.fps[ref].FindPadByNumber(num).GetNetname()
+        return self.findpad(spec).GetNetname()
 
     def padbox(self, spec):
-        ref, num = spec.split(".", 1)
-        bb = self.fps[ref].FindPadByNumber(num).GetBoundingBox()
+        bb = self.findpad(spec).GetBoundingBox()
         return (tomm(bb.GetLeft()) - ORIGIN[0], tomm(bb.GetTop()) - ORIGIN[1],
                 tomm(bb.GetRight()) - ORIGIN[0], tomm(bb.GetBottom()) - ORIGIN[1])
 
@@ -366,6 +430,7 @@ class Copper:
         """Worst violation of segment a-b, or None when it clears."""
         if dist(a, b) < 1e-9:
             return None
+        ignore_pads = tuple(s.split("#", 1)[0] for s in ignore_pads)
         # board edge
         for p in (a, b):
             if not (EDGE_KEEP + hw <= p[0] <= BOARD_W - EDGE_KEEP - hw and
@@ -382,7 +447,17 @@ class Copper:
             else:
                 if seg_rect_dist(a, b, g) < hw:
                     return "crystal keepout"
+        # Everything below is a distance from this segment, so nothing whose
+        # own box is further than the widest clearance can matter. The reject
+        # is two comparisons against a box and it is what makes the rail
+        # trees affordable - they run tens of thousands of candidates each
+        # against ~1100 pieces of geometry.
+        mg = hw + MAX_CLEARANCE + 0.55
+        lox, hix = min(a[0], b[0]) - mg, max(a[0], b[0]) + mg
+        loy, hiy = min(a[1], b[1]) - mg, max(a[1], b[1]) + mg
         for r, pnet, lay, hole, hr, ctr, ref, num in self.pads:
+            if r[2] < lox or r[0] > hix or r[3] < loy or r[1] > hiy:
+                continue
             need = clearance(net, pnet)
             if need == 0.0:
                 continue
@@ -397,6 +472,9 @@ class Copper:
         for (sa, sb, shw, slay, snet) in self.segs:
             if slay != layer:
                 continue
+            if (max(sa[0], sb[0]) < lox or min(sa[0], sb[0]) > hix or
+                    max(sa[1], sb[1]) < loy or min(sa[1], sb[1]) > hiy):
+                continue
             need = clearance(net, snet)
             if need == 0.0:
                 continue
@@ -404,6 +482,8 @@ class Copper:
             if d < hw + shw + need:
                 return "track of %s %.3f < %.3f" % (snet, d, hw + shw + need)
         for (p, rad, dr, vnet) in self.vias:
+            if not (lox <= p[0] <= hix and loy <= p[1] <= hiy):
+                continue
             need = clearance(net, vnet)
             if need == 0.0:
                 continue
@@ -423,6 +503,7 @@ class Copper:
 
     def via_clear(self, p, net, ignore_pads=()):
         rad, dr = VIA_D / 2.0, VIA_DRILL / 2.0
+        ignore_pads = tuple(s.split("#", 1)[0] for s in ignore_pads)
         if not (EDGE_KEEP + rad <= p[0] <= BOARD_W - EDGE_KEEP - rad and
                 EDGE_KEEP + rad <= p[1] <= BOARD_H - EDGE_KEEP - rad):
             return "board edge"
@@ -433,7 +514,11 @@ class Copper:
                     return "M3 keepout"
             elif point_rect_dist(p, g) < rad:
                 return "crystal keepout (no vias)"
+        mg = rad + MAX_CLEARANCE + HOLE_TO_HOLE + 1.6
         for r, pnet, lay, hole, hr, ctr, ref, num in self.pads:
+            if (r[2] < p[0] - mg or r[0] > p[0] + mg or
+                    r[3] < p[1] - mg or r[1] > p[1] + mg):
+                continue
             if "%s.%s" % (ref, num) in ignore_pads:
                 continue
             need = clearance(net, pnet)
@@ -445,6 +530,10 @@ class Copper:
             if hole and need > 0.0 and dist(p, ctr) < dr + hr + HOLE_CLEARANCE:
                 return "hole clearance %s.%s" % (ref, num)
         for (sa, sb, shw, slay, snet) in self.segs:
+            if (max(sa[0], sb[0]) < p[0] - mg or min(sa[0], sb[0]) > p[0] + mg
+                    or max(sa[1], sb[1]) < p[1] - mg
+                    or min(sa[1], sb[1]) > p[1] + mg):
+                continue
             need = clearance(net, snet)
             if need == 0.0:
                 continue
@@ -505,7 +594,8 @@ class Copper:
 
     # ------------------------------------------------- routing primitives -
     def trace(self, label, a_spec, b_spec, width, layer="F.Cu",
-              stub=None, stubs=(0.0,), modes=OCT_MODES, quiet=False):
+              stub=None, stubs=(0.0,), modes=OCT_MODES, quiet=False,
+              ign_extra=(), adir=None, detours=None, dry=False):
         """Route pad a to pad b octilinearly, trying stub lengths and modes.
 
         `stub` forces one radial stub length out of a; `stubs` is the list to
@@ -516,8 +606,10 @@ class Copper:
         b = self.resolve(b_spec)
         net = (self.padnet(a_spec) if isinstance(a_spec, str)
                else self.padnet(b_spec))
-        ign = tuple(s for s in (a_spec, b_spec) if isinstance(s, str))
-        d = self.outward(a_spec) if isinstance(a_spec, str) else (0.0, 0.0)
+        ign = tuple(s for s in (a_spec, b_spec)
+                    if isinstance(s, str)) + tuple(ign_extra)
+        d = (adir if adir is not None else
+             (self.outward(a_spec) if isinstance(a_spec, str) else (0.0, 0.0)))
         cand = []
         for s in ((stub,) if stub is not None else stubs):
             p0 = (a[0] + d[0] * s, a[1] + d[1] * s)
@@ -528,7 +620,8 @@ class Copper:
                 for p in pts[1:]:
                     if dist(p, out[-1]) > 1e-9:
                         out.append(p)
-                cand.append((path_len(out), len(out), out))
+                cand.append((0 if all_octilinear(out) else 1,
+                             path_len(out), len(out), out))
         # Three-segment detours: step sideways off the stub, then go across.
         # Enough obstacle avoidance for a board where the hard cases are
         # "a pad is in the way", without pretending to be a router.
@@ -536,9 +629,10 @@ class Copper:
             perp = (-d[1], d[0])
             for s in ((stub,) if stub is not None else stubs):
                 p0 = (a[0] + d[0] * s, a[1] + d[1] * s)
-                for o in (0.4, -0.4, 0.7, -0.7, 1.0, -1.0, 1.4, -1.4,
-                          1.8, -1.8, 2.2, -2.2, 2.8, -2.8, 3.5, -3.5,
-                          4.5, -4.5, 6.0, -6.0, 8.0, -8.0):
+                for o in (detours if detours is not None else
+                          (0.4, -0.4, 0.7, -0.7, 1.0, -1.0, 1.4, -1.4,
+                           1.8, -1.8, 2.2, -2.2, 2.8, -2.8, 3.5, -3.5,
+                           4.5, -4.5, 6.0, -6.0, 8.0, -8.0)):
                     p1 = (p0[0] + perp[0] * o, p0[1] + perp[1] * o)
                     for m in modes:
                         pts = [a, p0] + oct_route(p1, b, m)[0:]
@@ -546,12 +640,15 @@ class Copper:
                         for p in pts[1:]:
                             if dist(p, out[-1]) > 1e-9:
                                 out.append(p)
-                        cand.append((path_len(out) + 2.0, len(out), out))
-        cand.sort(key=lambda c: (round(c[0], 2), c[1]))
+                        cand.append((0 if all_octilinear(out) else 1,
+                                     path_len(out) + 2.0, len(out), out))
+        cand.sort(key=lambda c: (c[0], round(c[1], 2), c[2]))
         why = None
-        for _l, _n, pts in cand:
+        for _o, _l, _n, pts in cand:
             why = self.path_clear(pts, width, layer, net, ign)
             if why is None:
+                if dry:
+                    return pts
                 self.add_path(pts, width, layer, net)
                 self.lengths[label] = path_len(pts)
                 return pts
@@ -740,6 +837,70 @@ def step1_zones(cop):
 
 
 # ========================================================== QFN fanout ====
+def escape_path(cop, spec, fan, reach):
+    """Radial stub, a 45-degree step of `fan` sideways, then radial to `reach`.
+
+    Returns the point list, or None when `reach` is too short to hold the fan.
+    """
+    a = cop.pad(spec)
+    d = cop.outward(spec)
+    t = (0.0, 1.0) if abs(d[1]) < 0.5 else (1.0, 0.0)   # the lane axis
+    pts, end = [a], 0.0
+    if abs(fan) > 1e-6:
+        if reach < QFN_FAN_R + abs(fan) + 0.1:
+            return None
+        p0 = (a[0] + d[0] * QFN_FAN_R, a[1] + d[1] * QFN_FAN_R)
+        p1 = (p0[0] + d[0] * abs(fan) + t[0] * fan,
+              p0[1] + d[1] * abs(fan) + t[1] * fan)
+        pts += [p0, p1]
+        end = QFN_FAN_R + abs(fan)
+    if reach > end + 1e-6:
+        pts.append((pts[-1][0] + d[0] * (reach - end),
+                    pts[-1][1] + d[1] * (reach - end)))
+    return [(round(p[0], 3), round(p[1], 3)) for p in pts]
+
+
+def qfn_escape(cop, spec, net, fan, reach, want_via):
+    """Draw one fanned escape, backing off the reach and then the fan.
+
+    Every candidate is clearance-checked in full before anything is drawn, and
+    the run says which variant it settled for. Returns (fan, reach, via) as
+    built, or None when even a plain radial stub is impossible.
+    """
+    tries = []
+    for back in (0.0,) + QFN_REACH_BACK:
+        r = round(reach - back, 3)
+        if r < QFN_FAN_R + abs(fan) + 0.1:
+            continue
+        tries.append((fan, r, want_via))
+        if want_via:
+            tries.append((fan, r, False))
+    for f, r, v in tries:
+        pts = escape_path(cop, spec, f, r)
+        if pts is None:
+            continue
+        if cop.path_clear(pts, W_FINE, "F.Cu", net, (spec,)) is not None:
+            continue
+        if v and cop.via_clear(pts[-1], net, (spec,)) is not None:
+            continue
+        cop.add_path(pts, W_FINE, "F.Cu", net)
+        if v:
+            cop.add_via(pts[-1], net)
+        return (f, r, v)
+    return None
+
+
+def plain_stub(cop, spec, net):
+    """The old escape: a radial stub, longest of the ladder that clears."""
+    a, d = cop.pad(spec), cop.outward(spec)
+    for s in (QFN_STUB, QFN_STUB - 0.15, QFN_STUB + 0.2, QFN_STUB + 0.45):
+        b = (round(a[0] + d[0] * s, 3), round(a[1] + d[1] * s, 3))
+        if cop.path_clear([a, b], W_FINE, "F.Cu", net, (spec,)) is None:
+            cop.add_path([a, b], W_FINE, "F.Cu", net)
+            return s
+    return None
+
+
 def step2_fanout(cop):
     print("\n--- 2. QFN fanout for %s" % QFN)
     fp = cop.fps[QFN]
@@ -784,41 +945,54 @@ def step2_fanout(cop):
     done |= {"5", "6"}          # crystal, drawn in step 4
     done |= {"9"}               # VDDA, drawn in step 5
     done |= {"32", "33"}        # USB pair, drawn in step 6
-    stubbed, vias, shadow = [], [], []
+    # The fanned escapes go first, in order of |fan|, biggest first: the pad
+    # that has to travel furthest sideways is the one with the least choice
+    # about where its diagonal runs, and a plain 1.15 mm stub cannot get in
+    # its way because the fan only starts at QFN_FAN_R = 1.35.
+    order = [p.GetNumber() for p in fp.Pads()]
+    fanned = sorted((n for n in QFN_ESCAPE if n in order and n not in done),
+                    key=lambda n: -abs(QFN_ESCAPE[n][0]))
+    stubbed, vias, shadow, escapes, backed = [], [], [], [], []
+    for num in fanned:
+        spec = "%s.%s" % (QFN, num)
+        net = fp.FindPadByNumber(num).GetNetname()
+        if not net or net.startswith("unconnected-"):
+            continue
+        fan, reach, want_via = QFN_ESCAPE[num]
+        got = qfn_escape(cop, spec, net, fan, reach, want_via)
+        if got is None:
+            s = plain_stub(cop, spec, net)
+            if s is None:
+                cop.fails.append("no room for any escape on %s (%s)"
+                                 % (spec, net))
+                continue
+            backed.append("%s fell back to a %.2f mm radial stub" % (num, s))
+            stubbed.append((num, net, s))
+            continue
+        f, r, v = got
+        if (f, r, v) != (fan, reach, want_via):
+            backed.append("%s asked for fan %+.2f reach %.2f via %s, got "
+                          "%+.2f / %.2f / %s" % (num, fan, reach, want_via,
+                                                 f, r, v))
+        escapes.append((num, net, f, r, v))
+        stubbed.append((num, net, r))
+        if v:
+            vias.append((num, net, r))
+        else:
+            # Where step 8's filter link has to carry on from, so it does not
+            # re-leave the pad radially into the lane it was fanned away from.
+            cop.qfn_end[num] = (escape_path(cop, spec, f, r)[-1],
+                                cop.outward(spec))
+    # Everything else keeps the plain radial stub.
     for pad in fp.Pads():
         num = pad.GetNumber()
-        if not num or num in done:
+        if not num or num in done or num in QFN_ESCAPE:
             continue
         net = pad.GetNetname()
         if not net or net.startswith("unconnected-"):
             continue
         spec = "%s.%s" % (QFN, num)
-        a = cop.pad(spec)
-        d = cop.outward(spec)
-        placed = None
-        if num in QFN_VIA_PADS:
-            for r in QFN_VIA_RADII:
-                b = (round(a[0] + d[0] * r, 3), round(a[1] + d[1] * r, 3))
-                if cop.path_clear([a, b], W_FINE, "F.Cu", net, (spec,)):
-                    continue
-                if cop.via_clear(b, net, (spec,)):
-                    continue
-                cop.add_path([a, b], W_FINE, "F.Cu", net)
-                cop.add_via(b, net)
-                placed = r
-                vias.append((num, net, r))
-                break
-            if placed is not None:
-                stubbed.append((num, net, placed))
-                continue
-            cop.notes.append("no room for a fanout via on %s (%s), stub only"
-                             % (spec, net))
-        for s in (QFN_STUB, QFN_STUB - 0.15, QFN_STUB + 0.2, QFN_STUB + 0.45):
-            b = (round(a[0] + d[0] * s, 3), round(a[1] + d[1] * s, 3))
-            if cop.path_clear([a, b], W_FINE, "F.Cu", net, (spec,)) is None:
-                cop.add_path([a, b], W_FINE, "F.Cu", net)
-                placed = s
-                break
+        placed = plain_stub(cop, spec, net)
         if placed is None:
             # No radial escape at all. That happens only on the island's side
             # of the part, so try the channel lane / same-net jumper there.
@@ -830,37 +1004,58 @@ def step2_fanout(cop):
                                  % (spec, net))
         else:
             stubbed.append((num, net, placed))
+    plain = [s for n, _t, s in stubbed if n not in QFN_ESCAPE]
     print("  radial stubs %.2f mm wide on %d pads (%.2f-%.2f mm out of the pad "
           "centre, %.2f-%.2f mm of new copper past the pad edge)"
-          % (W_FINE, len(stubbed), min(s for _n, _t, s in stubbed),
-             max(s for _n, _t, s in stubbed),
-             min(s for _n, _t, s in stubbed) - 0.44,
-             max(s for _n, _t, s in stubbed) - 0.44))
+          % (W_FINE, len(plain), min(plain), max(plain),
+             min(plain) - 0.44, max(plain) - 0.44))
     print("  no via in the first ring: a %.1f mm via needs %.2f mm to a "
           "neighbouring %.2f mm stub and the pitch is 0.50 mm, so every "
           "escape leaves the pad radially on F.Cu and the bottom layer stays "
           "a whole ground plane under the part."
           % (VIA_D, VIA_D / 2 + CLEARANCE_DEFAULT + W_FINE / 2, W_FINE))
+    if escapes:
+        print("  escape fan on %d pads - radial to %.2f mm, 45 degrees "
+              "sideways, then a lane of its own in the second ring:"
+              % (len(escapes), QFN_FAN_R))
+        for num, net, f, r, v in sorted(escapes, key=lambda e: int(e[0])):
+            end = escape_path(cop, "%s.%s" % (QFN, num), f, r)[-1]
+            print("    pad %-3s %-18s fan %+5.2f  reach %.2f  ends (%.2f, "
+                  "%.2f)%s" % (num, net.rsplit("/", 1)[-1], f, r, end[0],
+                               end[1], "  + via" if v else ""))
     if vias:
-        print("  fanout vias %.1f/%.1f on pads %s (%.2f-%.2f mm out of the pad "
-              "centre), so these nets can leave on B.Cu without fighting for "
-              "the top-side second ring"
+        print("  fanout vias %.1f/%.1f on pads %s, all of them in the second "
+              "ring %.2f-%.2f mm out of the pad centre, where the lane pitch "
+              "is 0.70-0.90 mm instead of 0.50 and a via blocks no neighbour"
               % (VIA_D, VIA_DRILL,
                  ", ".join("%s=%s" % (n, t.rsplit("/", 1)[-1])
                            for n, t, _r in vias),
                  min(r for _n, _t, r in vias), max(r for _n, _t, r in vias)))
+    if backed:
+        for line in backed:
+            cop.notes.append("QFN escape: " + line)
     if shadow:
         print("  pads the crystal island shadows, given real copper instead "
               "of a radial stub:")
         for line in shadow:
             print("    " + line)
-    # First-ring traces (no via, destination is a part on top).
+    # First-ring traces (no via, destination is a part on top). A pad whose
+    # first-ring trace cannot be drawn gets the plain radial stub it would
+    # have had otherwise - without it the pad is left bare and the router has
+    # nothing at all to pick up (pad 22, VCAP1, was in exactly that state).
     ring_ok = 0
     for num, tgt, w in FIRST_RING:
         if cop.trace("QFN first ring %s->%s" % (num, tgt),
                      "%s.%s" % (QFN, num), tgt, w,
                      stubs=(0.7, 0.9, 1.1, 1.4, 1.7, 2.0)):
             ring_ok += 1
+        else:
+            spec = "%s.%s" % (QFN, num)
+            s = plain_stub(cop, spec, fp.FindPadByNumber(num).GetNetname())
+            if s is not None:
+                stubbed.append((num, "", s))
+                cop.notes.append("first ring %s->%s failed; pad %s kept a "
+                                 "%.2f mm radial stub" % (num, tgt, num, s))
     print("  first-ring traces (no via): %d of %d" % (ring_ok, len(FIRST_RING)))
     return stubbed
 
@@ -1349,6 +1544,92 @@ def step6_usb(cop):
     return res
 
 
+# ================================================= same-net pad bridges ===
+# Two footprints carry pad pairs that are ONE node on the schematic and two
+# separate pieces of copper on the board. kicad-cli counts each as an
+# unconnected pad pair and no router can close them, because there is no
+# ratsnest route to find - the parts join them internally.
+#
+#   U302 (USBLC6-2SC6) brings D+ out on pins 3 AND 4 and D- on pins 1 AND 6;
+#   the die joins each pair. The bridge is a stub off the signal, not a
+#   detour in it - the run still goes J301 -> pin 3 -> die -> pin 4 -> MCU -
+#   so it costs the pair no length. It is drawn straight across the package,
+#   which is where the two pads face each other, and it clears pins 2 and 5
+#   (GND and VBUS, 0.95 mm away in x) by 0.55 mm.
+#
+#   SW401's two mounting lugs both carry the pad number MP, so KiCad invents
+#   the net unconnected-(SW401-PadMP) for them. Nothing else is on it and the
+#   schematic has no node for it, so a short link between the two lugs is the
+#   only thing that can close it. It runs straight down x = 88, under the
+#   encoder's body, 7.5 mm clear of every other pad of the part.
+#
+# (label, ref, pad a, pad b, width, inset) - `inset` is how far inside each
+# pad's own copper the link starts, None to start at the pad centre (which is
+# what a THT lug with a 0.2 mm annular ring needs).
+BRIDGES = [
+    ("U302 D+ across the die", "U302", "3", "4", USB_W, 0.2),
+    ("U302 D- across the die", "U302", "1", "6", USB_W, 0.2),
+    ("SW401 mounting lugs", "SW401", "MP", "MP", W_SIG, None),
+]
+
+
+def _pads_numbered(cop, ref, num):
+    return [p for p in cop.fps[ref].Pads() if p.GetNumber() == num]
+
+
+def _step_in(box, ctr, u, inset):
+    """Walk from a pad's centre towards `u` until just inside its own copper."""
+    if inset is None:
+        return ctr
+    t = 1e9
+    for lo, hi, c, d in ((box[0], box[2], ctr[0], u[0]),
+                         (box[1], box[3], ctr[1], u[1])):
+        if abs(d) < 1e-9:
+            continue
+        t = min(t, (hi - c) / d if d > 0 else (lo - c) / d)
+    t = max(0.0, t - inset)
+    return (round(ctr[0] + u[0] * t, 3), round(ctr[1] + u[1] * t, 3))
+
+
+def step6b_bridges(cop):
+    print("\n--- 6b. same-net pad bridges (the netlist asks, no router can)")
+    n = 0
+    for label, ref, na, nb, w, inset in BRIDGES:
+        if ref not in cop.fps:
+            cop.fails.append("%s: no %s on the board" % (label, ref))
+            continue
+        pa = _pads_numbered(cop, ref, na)
+        pb = _pads_numbered(cop, ref, nb) if nb != na else pa[1:]
+        if not pa or not pb:
+            cop.fails.append("%s: %s has no pad %s/%s" % (label, ref, na, nb))
+            continue
+        a, b = loc(pa[0].GetPosition()), loc(pb[0].GetPosition())
+        net = pa[0].GetNetname()
+        d = dist(a, b)
+        u = ((b[0] - a[0]) / d, (b[1] - a[1]) / d)
+        boxa = (tomm(pa[0].GetBoundingBox().GetLeft()) - ORIGIN[0],
+                tomm(pa[0].GetBoundingBox().GetTop()) - ORIGIN[1],
+                tomm(pa[0].GetBoundingBox().GetRight()) - ORIGIN[0],
+                tomm(pa[0].GetBoundingBox().GetBottom()) - ORIGIN[1])
+        boxb = (tomm(pb[0].GetBoundingBox().GetLeft()) - ORIGIN[0],
+                tomm(pb[0].GetBoundingBox().GetTop()) - ORIGIN[1],
+                tomm(pb[0].GetBoundingBox().GetRight()) - ORIGIN[0],
+                tomm(pb[0].GetBoundingBox().GetBottom()) - ORIGIN[1])
+        p0 = _step_in(boxa, a, u, inset)
+        p1 = _step_in(boxb, b, (-u[0], -u[1]), inset)
+        ign = tuple("%s.%s" % (ref, x) for x in {na, nb})
+        why = cop.path_clear([p0, p1], w, "F.Cu", net, ign)
+        if why:
+            cop.fails.append("%s: %s" % (label, why))
+            continue
+        cop.add_path([p0, p1], w, "F.Cu", net)
+        cop.lengths[label] = path_len([p0, p1])
+        n += 1
+        print("  %-26s %s pads %s-%s, %.2f mm of %.2f mm F.Cu on %s"
+              % (label, ref, na, nb, path_len([p0, p1]), w, net))
+    return n
+
+
 # ============================================================= power =====
 POWER = [
     # VIN chain, in the power block
@@ -1360,12 +1641,13 @@ POWER = [
     # flyback loop, 1.0 mm, under the terminal
     ("COIL_NEG terminal to SS110", "J201.2", "D201.2", 1.0),
     ("CLAMP SS110 to SMBJ24A", "D201.1", "D202.1", 1.0),
-    ("CLAMP to bypass FET", "D202.1", "Q202.2", 0.5),
     ("VIN SMBJ24A to C102", "D202.2", "C102.1", 1.0),
     ("VIN C102 to C103", "C102.1", "C103.1", 1.0),
     ("VIN terminal pin 1 to C102", "J201.1", "C102.1", 1.0),
     ("VIN C103 to bypass FET source", "C103.1", "Q202.3", 0.5),
     # gate drive
+    # D202.1 -> Q202.2 is NOT here: it is POWER_LAYERED below, because the
+    # only way east out of the clamp diode crosses the COIL_NEG trunk.
     ("GATE driver out to R201", "U201.5", "R201.1", 0.4),
     ("GATE R201 to FET gate", "R201.2", "Q201.1", 0.4),
     ("GATE pulldown at the FET", "R203.1", "Q201.1", 0.25),
@@ -1436,6 +1718,66 @@ POWER_EXPLICIT = [
 ]
 
 
+# Paths that have to change layer, as a list of (layer, waypoints) runs; the
+# point two consecutive runs share gets a via. Everything is still checked in
+# full before anything is drawn.
+#
+# CLAMP's tap to the bypass FET is the one path on this board that cannot stay
+# on top. D202 (the SMBJ24A) sits with VIN on its east pad, and the only two
+# ways east out of D202's west pad are blocked by copper this script drew
+# first and by ADR geometry:
+#   - the band between D202 and Q201's DPAK tab (y 20.65..22.60) runs into the
+#     1.0 mm COIL_NEG trunk at x = 67, which drops from the SS110 into the
+#     FET tab and is a wall from y = 15 to y = 22.6. The slot east of it is
+#     0.40 mm wide and HighCurrent needs 0.40 mm of air on each side alone;
+#   - the corridor north of the terminal (y ~ 13) is crossed by the 1.0 mm
+#     VIN leg from J201 pin 1 to C102.
+# Left to the router, this tap came out 50 mm, down the right-hand edge of the
+# board and back west. It is 3.75 mm of B.Cu between two vias instead: the
+# slot that costs the pour sits SOUTH of the flyback loop (y 14..20), not
+# under it, so the loop's return path is untouched and the scripted loop
+# itself is still 20.26 mm.
+POWER_LAYERED = [
+    ("CLAMP D202 to the bypass FET", "/Driver/CLAMP", 0.5, [
+        ("F.Cu", ["D202.1", (64.85, 21.6)]),
+        ("B.Cu", [(64.85, 21.6), (68.60, 21.6)]),
+        # 71.65 and no further east: Q202's gate pad is at x = 72.325 and
+        # CLAMP is a HighCurrent net, so a 0.5 mm track needs 0.65 mm of air
+        # from its centre line.
+        ("F.Cu", [(68.60, 21.6), (71.65, 21.6), (71.65, 23.95), "Q202.2"]),
+    ]),
+]
+
+
+def layered(cop, label, net, width, runs):
+    """Draw one multi-layer explicit path, or report it and draw nothing."""
+    built, vias = [], []
+    for i, (layer, pts) in enumerate(runs):
+        out = [cop.resolve(q) for q in pts]
+        ign = tuple(q for q in pts if isinstance(q, str))
+        why = cop.path_clear(out, width, layer, net, ign)
+        if why:
+            cop.fails.append("%s (%s run %d): %s" % (label, layer, i + 1, why))
+            return None
+        built.append((layer, out, ign))
+        if i:
+            vias.append(out[0])
+    for p in vias:
+        why = cop.via_clear(p, net)
+        if why:
+            cop.fails.append("%s: via at (%.2f, %.2f) blocked: %s"
+                             % (label, p[0], p[1], why))
+            return None
+    total = 0.0
+    for layer, out, _ign in built:
+        cop.add_path(out, width, layer, net)
+        total += path_len(out)
+    for p in vias:
+        cop.add_via(p, net)
+    cop.lengths[label] = total
+    return total, len(vias)
+
+
 def zroute(cop, a, b, width, net, ign, axis="h", step=0.05, reach=7.0):
     """One-turn or two-turn path from a to b with the middle line SCANNED.
 
@@ -1497,11 +1839,18 @@ def step7_power(cop):
             cop.add_path(out, w, "F.Cu", net)
             cop.lengths[label] = path_len(out)
             ok += 1
+    for label, net, w, runs in POWER_LAYERED:
+        got = layered(cop, label, net, w, runs)
+        if got:
+            ok += 1
+            print("  %s: %.2f mm over %d run(s) on %d layer(s), %d via(s)"
+                  % (label, got[0], len(runs),
+                     len({r[0] for r in runs}), got[1]))
     for label, a, b, w in POWER:
         if cop.trace(label, a, b, w, stubs=(0.0, 0.6, 0.9, 1.3, 1.8, 2.4)):
             ok += 1
     print("  %d of %d power/driver traces drawn"
-          % (ok, len(POWER) + len(POWER_EXPLICIT)))
+          % (ok, len(POWER) + len(POWER_EXPLICIT) + len(POWER_LAYERED)))
     # single-point ground at the shunt
     # The trunk first, then a TREE: each remaining sense pad is wired to
     # whichever pad is already on the trunk and nearest to it, not all of them
@@ -1583,13 +1932,25 @@ def step8_filters(cop):
     print("\n--- 8. the RC filters at the MCU pins")
     ok, skip = 0, []
     for num, tgt, w in RC:
-        a, b = cop.pad("%s.%s" % (QFN, num)), cop.pad(tgt)
+        spec = "%s.%s" % (QFN, num)
+        a, b = cop.pad(spec), cop.pad(tgt)
         if dist(a, b) > RC_MAX:
             skip.append("%s->%s %.1f mm" % (num, tgt, dist(a, b)))
             continue
-        if cop.trace("filter %s->%s" % (num, tgt), "%s.%s" % (QFN, num), tgt, w,
-                     stubs=(QFN_STUB, QFN_STUB + 0.3, QFN_STUB + 0.7,
-                            QFN_STUB + 1.2)):
+        # A pad with a fanned escape is already 2.6-2.9 mm out of the part in
+        # a lane of its own; the filter link carries on from THERE, not from
+        # the pad, or it re-leaves the pad radially and runs into the
+        # neighbouring lane it was fanned away from.
+        if num in cop.qfn_end:
+            end, d = cop.qfn_end[num]
+            got = cop.trace("filter %s->%s" % (num, tgt), end, tgt, w,
+                            stubs=(0.0, 0.4, 0.8, 1.2), adir=d,
+                            ign_extra=(spec,))
+        else:
+            got = cop.trace("filter %s->%s" % (num, tgt), spec, tgt, w,
+                            stubs=(QFN_STUB, QFN_STUB + 0.3, QFN_STUB + 0.7,
+                                   QFN_STUB + 1.2))
+        if got:
             ok += 1
     for a, b in RC_CHAIN:
         if dist(cop.pad(a), cop.pad(b)) > RC_MAX:
@@ -1604,8 +1965,246 @@ def step8_filters(cop):
     return ok
 
 
+# ========================================================== rail trees ====
+# The router has no notion of a power rail: it takes the pad pairs of +3V3 in
+# whatever order its net ordering hands them and joins each to the nearest
+# copper it has already laid, which came out as 229 mm of wandering and a ring
+# round the MCU. This draws the rail as a TREE instead - repeatedly the
+# SHORTEST hop between two pieces of copper of that net that are not yet one
+# piece - which is a Kruskal minimum spanning tree over the pads, with the
+# pads a hop has already joined collapsed into one node after every hop. That
+# is the same shape the sense-side ground uses and for the same reason.
+#
+# Every hop is clearance-checked like any other scripted trace and tried at
+# each width in turn, widest first; a hop that cannot be drawn at any width is
+# left to the router rather than forced. The QFN's own pads are excluded as
+# endpoints - at 0.5 mm pitch no rail width fits, and all four of them are
+# already on their first-ring cap - and so is anything already joined.
+RAILS = [
+    # (net, widths to try, pads never used as an endpoint)
+    ("+3V3", (W_RAIL, 0.35, W_SIG), (QFN,)),
+    ("+5V", (W_RAIL, 0.35, W_SIG), ()),
+]
+RAIL_VIA_BUDGET = {"+3V3": 8, "+5V": 0}
+RAIL_LEN_BUDGET = {"+3V3": 120.0}
+# No scripted rail hop longer than this. Past it the hop is a board-crossing
+# run with a dozen ways round, which is a routing decision and not a trunk -
+# J302's +3V3 pin is 60 mm from the LDO and the SWD header is the last thing
+# that should dictate where the rail goes.
+RAIL_MAX_HOP = 26.0
+# Copper-to-straight-line ratios the two sweeps accept, in order.
+RAIL_SLACK = (1.35, 2.5)
+
+
+def _net_pads(cop, net, skip_refs):
+    """Every pad of `net`, as specs, with #i where a number repeats."""
+    out = []
+    for ref, fp in sorted(cop.fps.items()):
+        if ref in skip_refs:
+            continue
+        seen = collections.Counter()
+        for p in fp.Pads():
+            num = p.GetNumber()
+            if not num:
+                continue
+            seen[num] += 1
+            if p.GetNetname() != net:
+                continue
+            total = len([q for q in fp.Pads() if q.GetNumber() == num])
+            out.append("%s.%s" % (ref, num) if total == 1
+                       else "%s.%s#%d" % (ref, num, seen[num] - 1))
+    return out
+
+
+def _joined(cop, net, specs):
+    """Union-find over the scripted copper: which of `specs` are one piece.
+
+    The graph is every scripted segment of that net, keyed by its rounded
+    endpoints; a segment endpoint that lands inside a pad's copper puts the
+    pad on that piece. Layer is not part of the key, which is right here
+    because every rail hop this script draws is on F.Cu and the one path that
+    changes layer (CLAMP) puts a via at exactly the shared point.
+    """
+    def key(p):
+        return (round(p[0], 3), round(p[1], 3))
+    adj = collections.defaultdict(set)
+    for (a, b, hw, lay, snet) in cop.segs:
+        if snet != net:
+            continue
+        adj[key(a)].add(key(b))
+        adj[key(b)].add(key(a))
+    comp = {n: n for n in adj}
+
+    def cfind(x):
+        while comp[x] != x:
+            comp[x] = comp[comp[x]]
+            x = comp[x]
+        return x
+    for n in list(adj):
+        for m in adj[n]:
+            a, b = cfind(n), cfind(m)
+            if a != b:
+                comp[a] = b
+    own = {s: {n for n in adj
+               if point_rect_dist(n, cop.padbox(s)) <= 0.05} for s in specs}
+    parent = {s: s for s in specs}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    roots = collections.defaultdict(list)
+    for s in specs:
+        for n in own[s]:
+            roots[cfind(n)].append(s)
+    for members in roots.values():
+        for s in members[1:]:
+            ra, rb = find(members[0]), find(s)
+            if ra != rb:
+                parent[ra] = rb
+    # every corner of this net's scripted copper that is on a piece a pad
+    # owns, as a tap point: island representative -> list of (x, y)
+    taps = collections.defaultdict(list)
+    for n in adj:
+        r = cfind(n)
+        if r in roots:
+            taps[find(roots[r][0])].append(n)
+    return find, taps
+
+
+def rail_tree(cop, net, widths, skip_refs):
+    """Kruskal with a clearance check in place of the usual cycle test."""
+    specs = _net_pads(cop, net, skip_refs)
+    if len(specs) < 2:
+        return 0, [], 0.0
+    pairs = sorted((dist(cop.pad(a), cop.pad(b)), a, b)
+                   for i, a in enumerate(specs) for b in specs[i + 1:])
+    drawn, length, hops = 0, 0.0, []
+
+    def hop(a, b, dry):
+        for w in widths:
+            got = cop.trace("%s tree %s->%s" % (net, a, b), a, b, w,
+                            stubs=(0.0, 0.7, 1.4, 2.2), quiet=True, dry=dry,
+                            detours=(0.5, -0.5, 1.0, -1.0, 1.8, -1.8,
+                                     2.8, -2.8, 4.5, -4.5))
+            if got:
+                return got, w
+        return None, None
+
+    # Two sweeps. The first only takes a hop whose real copper is close to
+    # the straight line between the two pads, so a pair that happens to be
+    # nearest but has to go round the MCU does not become the trunk; the
+    # second takes whatever is left. Plain Kruskal picks the shortest
+    # RATSNEST and then pays whatever the copper costs, which is the router's
+    # mistake with a tidier name.
+    for slack in RAIL_SLACK:
+        tried = set()
+        while True:
+            find, taps = _joined(cop, net, specs)
+            # Pad to pad, and pad to any CORNER of a piece of this net's
+            # copper that already reaches a pad. The second kind is what the
+            # router does naturally and what a trunk with branches is: R404's
+            # 3V3 does not have to walk to another pad, it taps the run going
+            # past it. Pad to pad alone the same tree stopped at 16 hops and
+            # 6 islands; with the taps it is 18 hops and 4, which is two more
+            # pad pairs closed for 22.5 mm of copper.
+            cands = []
+            for d, a, b in pairs:
+                if d <= RAIL_MAX_HOP and find(a) != find(b):
+                    cands.append((d, a, b))
+            for a in specs:
+                pa, ia = cop.pad(a), find(a)
+                for isl, pts in taps.items():
+                    if isl == ia:
+                        continue
+                    for q in pts:
+                        d = dist(pa, q)
+                        if d <= RAIL_MAX_HOP:
+                            cands.append((d, a, q))
+            cands.sort(key=lambda c: (round(c[0], 3), str(c[1]), str(c[2])))
+            nxt = None
+            for d, a, b in cands:
+                if (a, b) in tried:
+                    continue
+                nxt = (d, a, b)
+                break
+            if nxt is None:
+                break
+            d, a, b = nxt
+            tried.add((a, b))
+            got, _w = hop(a, b, True)
+            if got is None or path_len(got) > d * slack + 2.0:
+                continue
+            got, w = hop(a, b, False)
+            if got is None:
+                continue
+            drawn += 1
+            length += path_len(got)
+            hops.append((a, "(%.2f, %.2f)" % b if not isinstance(b, str)
+                         else b, d, path_len(got), w))
+    # what is left is a set of islands, not a list of pad pairs
+    allpads = _net_pads(cop, net, ())
+    find, _taps = _joined(cop, net, allpads)
+    islands = collections.defaultdict(list)
+    for s in allpads:
+        islands[find(s)].append(s)
+    return drawn, sorted(islands.values(), key=len, reverse=True), length, hops
+
+
+def step7b_rails(cop):
+    print("\n--- 7b. power rails as trees, not rings")
+    for net, widths, skip in RAILS:
+        n, islands, hopped, hops = rail_tree(cop, net, widths, skip)
+        segs = [s for s in cop.segs if s[4] == net]
+        total = sum(dist(s[0], s[1]) for s in segs)
+        vias = len([v for v in cop.vias if v[3] == net])
+        pads = _net_pads(cop, net, ())
+        mst = _mst_len(cop, pads)
+        lb = RAIL_LEN_BUDGET.get(net)
+        vb = RAIL_VIA_BUDGET.get(net)
+        print("  %-5s %2d tree hop(s) drawn (%.2f mm); %d island(s) left for "
+              "the router" % (net, n, hopped, len(islands)))
+        for a, b, d, made, w in hops:
+            print("        %-11s -> %-11s %5.2f mm straight, %5.2f mm of "
+                  "%.2f mm copper" % (a, b, d, made, w))
+        for isl in islands:
+            print("        island: %s" % ", ".join(sorted(isl)))
+        print("        %6.2f mm of scripted copper on this net in all, %d "
+              "via(s); the straight-line tree over its %d pads is %.2f mm"
+              % (total, vias, len(pads), mst))
+        if lb is not None:
+            print("        length budget %.0f mm: %s" %
+                  (lb, "PASS, %.2f mm" % total if total <= lb else
+                   "OVER at %.2f mm" % total))
+            if mst > lb:
+                print("        (the minimum spanning tree over the %d pads is "
+                      "%.2f mm of straight lines, so no routing of this net "
+                      "can come in under %.0f mm - read the %.2f against %.2f, "
+                      "not against %.0f)"
+                      % (len(pads), mst, lb, total, mst, lb))
+        if vb is not None:
+            print("        via budget %d: %d - %s"
+                  % (vb, vias, "PASS" if vias <= vb else "OVER"))
+
+
+def _mst_len(cop, specs):
+    """Straight-line minimum spanning tree over a set of pads, mm."""
+    if len(specs) < 2:
+        return 0.0
+    pts = [cop.pad(s) for s in specs]
+    inside, out = {0}, set(range(1, len(pts)))
+    total = 0.0
+    while out:
+        d, j = min((min(dist(pts[i], pts[k]) for i in inside), k) for k in out)
+        total += d
+        inside.add(j)
+        out.discard(j)
+    return total
+
+
 # ============================================================ metrics =====
-FLYBACK_LOOP = ("COIL_NEG terminal to SS110", "CLAMP SS110 to SMBJ24A",
+FLYBACK_LOOP =("COIL_NEG terminal to SS110", "CLAMP SS110 to SMBJ24A",
                 "VIN SMBJ24A to C102", "VIN terminal pin 1 to C102")
 BUCK_CIN_LOOP = ("buck CIN 1 (1206)", "buck CIN 2 (1206)")
 
@@ -1797,9 +2396,14 @@ def main():
     step2_fanout(cop)
     step5_vdda(cop, xr)
     usb = step6_usb(cop)
+    step6b_bridges(cop)
     step3_decoupling(cop)
     step7_power(cop)
     step8_filters(cop)
+    # The rails go after every local trace and before the ground stitching:
+    # a 0.5 mm trunk laid early would close escapes the signals need, and a
+    # stitching via laid early would close the trunk's own corridors.
+    step7b_rails(cop)
     step3b_stitch(cop)
 
     make_group(board, cop.made)

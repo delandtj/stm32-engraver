@@ -34,10 +34,11 @@ Verify independently with:
     kicad-cli pcb drc --schematic-parity --severity-all graver-controller.kicad_pcb
 
 Expected after `place.py` alone: 0 schematic parity issues, ~250 unconnected
-items, and silkscreen warnings. After `copper.py`: 0 errors, 0 parity, 101
+items, and silkscreen warnings. After `copper.py`: 0 errors, 0 parity, 78
 unconnected items. After `silk.py`: no silkscreen warnings at all. After
-`autoroute.py`: 0 errors, 0 parity, 13 unconnected items. See "Known DRC
-output" below.
+`autoroute.py`: 0 errors, 0 parity, and the remainder in "Where it came out"
+below - the router is not deterministic, so that number moves between runs.
+See "Known DRC output" below.
 
 ## What it does
 
@@ -169,16 +170,19 @@ placement, scripted copper, scripted silk and the router's copper:
 |------|--------------------|--------------------|-----|
 | schematic parity | 0 | 0 | clean |
 | errors | 0 | 0 | clean |
-| unconnected_items | 101 | 13 | see "Routing the rest" for the eight nets |
+| unconnected_items | 78 | 6 | see "Routing the rest" for the four nets, named pad by pad |
 | silk_overlap | 0 | 0 | was 92 before `silk.py` |
 | silk_over_copper | 0 | 0 | was 92 |
 | silk_edge_clearance | 0 | 0 | was 17 |
 | lib_footprint_mismatch | 4 | 4 | J101, J201, J301, J402 - `silk.py` trims their library silkscreen back to the board outline, see "Silkscreen" below |
-| track_dangling | 18 | 9 | QFN fanout stubs whose net the router never reached |
-| via_dangling | 7 | 3 | fanout and stitching vias the router never reached |
+| track_dangling | 18 | 9 | QFN escape stubs whose net the router never reached |
+| via_dangling | 7 | 8 | escape and stitching vias the router never reached. One more than before: the escape fan's four vias sit 2.90 mm out instead of 1.55, so the ones the router does not pick up are further from anything |
 
-226 warnings before the silk pass, 29 after, 16 once the router's copper is
-in: the 12 remaining deliberate dangling ends plus the 4 trimmed connectors.
+226 warnings before the silk pass, 29 after, 21 once the router's copper is
+in: the 17 remaining deliberate dangling ends plus the 4 trimmed connectors.
+The router is not deterministic, so the two right-hand columns move between
+runs - the numbers here are from the run `output/pcb/route-summary.txt`
+records.
 
 The assembly view instead gets its labels from F.Fab: `place.py` hides every
 footprint's **Value** field (it was the "100nF 100V" text that buried
@@ -209,15 +213,17 @@ restores it afterwards, and prints which of the two happened.
 | 1 | GND pour on B.Cu over the whole outline | 0.25 mm clearance, 0.20 mm min width, thermal reliefs on THT, solid on SMD |
 | 1 | four ground-free rule areas at the M3 holes | 6 mm diameter, both layers, no pour; User.2 copies for `--keepout` |
 | 1 | crystal keepout over Y301/C310/C311 | rule area = no vias both layers; User.2 copy = no router tracks; the pour is kept (ADR: ground guard, no signal under it) |
-| 2 | U301 QFN fanout | 0.20 mm radial stubs on 21 pads, 0.56-1.11 mm of new copper past each pad edge; 4 vias 0.6/0.3 at 1.55 mm on pads 18/20/42/44; a 0.97 mm same-net jumper on pad 1 and a 6.56 mm channel lane + via on pad 2, the two the island shadows |
+| 2 | U301 QFN fanout | 0.20 mm radial stubs on the pads that do not need more; a 12-pad **escape fan** on the east and west rows (45 degrees at 1.35 mm, own lane at 0.70/0.90 mm pitch, reach 2.6-2.9 mm) with the 4 vias 0.6/0.3 out at 2.90 mm on pads 18/20/42/44; a 0.97 mm same-net jumper on pad 1 and a 6.56 mm channel lane + via on pad 2, the two the island shadows |
 | 2 | U301 GND pins 8/23/35/47 | 0.20 mm, 0.64 mm into the EP copper |
 | 2 | U301 EP | 4 vias 0.6/0.3 inside the pad |
 | 3 | decoupling | 13 pin-to-cap traces on F.Cu; 61 of 63 SMD ground pads get their own via into the pour |
 | 3 | U101 PowerPAD | 4 thermal vias 0.6/0.3 |
-| 4 | crystal | OSC_IN 6.33 mm, OSC_OUT 7.23 mm (both including the load-cap tap), F.Cu only, 0 vias; F.Cu ground guard bracket, 3 of 3 legs + 2 stitching vias |
+| 4 | crystal | OSC_IN 6.47 mm, OSC_OUT 7.24 mm (both including the load-cap tap), F.Cu only, 0 vias; F.Cu ground guard bracket, 3 of 3 legs + 2 stitching vias |
 | 5 | VDDA | FB301 -> C306/C307 at 0.40 mm; pin 9 -> C306 is now a 2.5 mm radial escape, left to the router on this pose (see below) |
 | 6 | USB | D+ 37.88 mm, D- 37.88 mm, skew 0.00 mm, **0 vias on either net**; 17 User.2 bands 0.15 mm off the centre line so the router cannot cross under the pair on B.Cu |
-| 7 | power | VIN chain 0.8 mm, flyback loop 1.0 mm, gate 0.4 mm, shunt 1.0 mm, Kelvin taps 0.2 mm off the shunt pad's own copper edge, buck, +5 V/+3V3 0.5 mm; sense-side ground tree 0.20/0.25 mm |
+| 6b | same-net pad bridges | U302's two duplicate I/O pin pairs (1-6 D-, 3-4 D+, 1.35 mm each) and SW401's two MP lugs (11.20 mm) - three pad pairs no router can close |
+| 7 | power | VIN chain 0.8 mm, flyback loop 1.0 mm, gate 0.4 mm, shunt 1.0 mm, Kelvin taps 0.2 mm off the shunt pad's own copper edge, buck, +5 V/+3V3 0.5 mm; sense-side ground tree 0.20/0.25 mm; CLAMP's tap to the bypass FET 12.66 mm over two layers |
+| 7b | power rails as trees | +3V3 as a Kruskal tree with taps into the trunk, 0.5/0.35/0.25 mm |
 | 8 | ADC filters | the RC parts at the MCU pins, 0.25 mm, only where the part is within 6.5 mm |
 
 ### Budgets, and how they came out
@@ -226,17 +232,28 @@ restores it afterwards, and prints which of the two happened.
 |--------|--------|----------|
 | USB pair <= 40 mm, 0 vias, <= 1 mm skew | ADR 0003 component breakdown 3 | 37.88 / 37.88 mm, 0 vias, 0.00 mm skew - PASS with 2.1 mm of margin. The U302 -> MCU legs are octilinear now instead of L-shaped, which is worth 4.7 mm each and is what absorbed the MCU moving 4 mm back from the receptacle to make room for the Kelvin taps |
 | USB coupled 0.2 mm / 0.15 mm | ADR + Jan 2026-09-18 | 0.15 mm gap on the long connector segment; 0.30 mm on the two U302 -> MCU lanes, which U302's own 1.9 mm pin pitch forces |
-| flyback loop closed within ~15 mm | ADR decision 4 | 20.26 mm of real copper over its four legs, parts inside a 10 x 12 mm block under the terminal |
+| flyback loop closed within ~15 mm | ADR decision 4 | 21.38 mm of real copper over its four legs (20.26 before the octilinear preference below, which is worth 1.12 mm over the four and is the right trade), parts inside a 10 x 12 mm block under the terminal |
 | buck CIN within 3 mm of the VIN pin | ADR component breakdown 2 | 2.88 / 2.74 mm pad to pad, 6.95 mm of copper |
 | crystal keepout clean | ADR decision 8 | clean: only OSC_IN, OSC_OUT and the ground guard are inside it (VDDA no longer needs to be) |
 | shunt is the single ground tie of the sense side | ADR decision 4 | CHECKED, row per pad, and the run exits non-zero on a FAIL: C204.2, R211.2, R216.2, C206.2 and U202.4 each reach R204 pad 2 over scripted F.Cu with no via of their own, and R204 pad 2 carries the 2-via cluster that is the sense side's only path into the pour. C203.2 and C205.2 are deliberately NOT in that set - see below |
 | VIN 0 vias | this brief | the long VIN link is NOT scripted - see below |
-| flyback loop perimeter | ADR | 20.26 mm; buck CIN 6.95 mm; OSC_IN 6.33 mm, OSC_OUT 7.23 mm |
+| flyback loop perimeter | ADR | 21.38 mm; buck CIN 6.95 mm; OSC_IN 6.47 mm, OSC_OUT 7.24 mm |
 | Kelvin traces from the shunt PADS to the op-amp | ADR component breakdown 4 | 1.15 mm and 1.23 mm of bare laminate between R204's sense pad and each tap's own pad, 0.20 mm traces drawn from the pad EDGE, not from the 1.0 mm power trace |
+| +3V3 <= 120 mm total, <= 8 vias | this brief | **0 vias - PASS. 120 mm is not reachable and the run says so**: the straight-line minimum spanning tree over the net's 29 pads is 182.95 mm, which is the floor for any routing of it. The scripted tree is 240.22 mm of copper over 18 hops and leaves 3 pad pairs; read it against 182.95, not against 120. The lever if Jan wants it shorter is placement - J302's +3V3 pin is 60 mm from the LDO and SW301's two halves are at the rear edge |
+| +5V no via | this brief | 0 vias. The block U101 -> L101 -> ORing diodes -> U102 is scripted at 0.5 mm; the one pad pair left open is U201's supply on the far side of the board, 41 mm away, which is over `RAIL_MAX_HOP` and a routing decision, not a trunk |
+| CLAMP tap to the bypass FET | this brief | 12.66 mm, 8.91 mm of it on F.Cu, 2 vias - see "The one path that changes layer". Was ~50 mm of the router's copper down the right-hand edge and back |
+| flyback loop unchanged by the CLAMP tap | ADR decision 4 | 21.38 mm, same four legs; the B.Cu slot the tap costs is at y 21.6, SOUTH of the loop (y 14..20), not under it |
 
 ### How the geometry is made
 
 Explicit straight and 45-degree segments computed from real pad positions.
+Every candidate is now sorted **octilinear first**: `oct_route`'s 'hd' and
+'vd' modes only come out at 45 degrees when the axis they run along is the
+longer one, so they used to emit slants like (49.0, 34.2) -> (42.0, 12.4).
+Those candidates are still kept as a last resort - on a crowded board a slant
+that clears beats nothing - but they sort behind every octilinear one. That
+took the run's "non-octilinear segment" notes from 35 to 0 and cost 1.12 mm
+on the flyback loop and 0.14 mm on OSC_IN.
 Every candidate path - two-segment octilinear, then three-segment detours at
 22 perpendicular offsets - is clearance-checked against every pad, every
 piece of copper already drawn, the board edge and the keepouts BEFORE it is
@@ -379,23 +396,120 @@ two diagonals automatically 0.354 mm apart - the 0.2 mm / 0.15 mm pair.
 `place.py` puts R305 (CC1) east of the pair and R306 (CC2) west of it, one on
 each side, so neither pull-down crosses it.
 
-### Fanout vias are zero-sum at 0.5 mm pitch
+### The QFN escape fan, and why the vias moved out of the first ring
 
-`QFN_VIA_PADS` in `copper.py` is the list of pads that get a via at the end
-of a longer stub. The geometry is hard: at 0.5 mm pitch a 0.6 mm via has to
-sit **1.43 mm or more** out of the pad centre to keep 0.15 mm from a
-neighbouring 1.15 mm stub's end cap, two vias need 0.75 mm of copper and
-0.80 mm of hole-to-hole between them - so at most every second pad of a row -
-and the via then denies BOTH its neighbours any radial escape past about
-1.15 mm, because a 0.25 mm trace 0.5 mm to the side of it clears by 0.50 mm
-where it needs 0.575 mm.
+A via in the FIRST ring is not zero-sum, it is negative. At 0.5 mm pitch a
+0.6 mm via 1.55 mm out of its pad denies **both** its neighbours any radial
+escape past about 1.15 mm: a 0.20 mm track 0.5 mm to the side clears the via
+by 0.50 mm where it needs 0.55. That is exactly what NTC (pad 19, between the
+fanout vias of 18 and 20) and ENC_SW (pad 43, between 42 and 44) were stuck
+behind, and the router said so - it reported both `boxed_in_static` and named
+only copper `copper.py` had already locked as the blocker.
 
-Measured, that is a wash. Adding vias on pads 18/20/42/44 closed VIN_SENSE,
-Net-(U301-PB2), LCD_BL and Net-(U301-BOOT0), and opened ENC_SW, LED_STAT,
-LCD_DC and PEDAL_RING: still 7 open nets, 9 unconnected items instead of 10.
-The four are kept because the count is marginally better and because the two
-ADC nets among them are the ones a via harms least, but **more of them will
-not help**. What is left is second-ring congestion, not fanout.
+So the two rows that carry more signals than the first ring has lanes are
+**fanned**. `QFN_ESCAPE` in `copper.py` gives a pad three numbers:
+
+| field | what it means |
+|-------|---------------|
+| `fan` | the lateral step in mm, signed +y for a row facing east or west and +x for one facing north or south. The entries of one row must be monotonic in the lane they start from, or two escapes cross |
+| `reach` | where the escape ends, from the pad centre - 2.60 or 2.90 mm |
+| `via` | drop a 0.6/0.3 via there |
+
+Each escape leaves its pad radially, turns 45 degrees at `QFN_FAN_R` =
+1.35 mm and lands on a lane of its own in a second, wider ring:
+
+- **east row** (pads 15-21), lane pitch **0.70 mm**, fanned towards the lanes
+  of pads 13 and 14;
+- **west row** (pads 40-44), lane pitch **0.90 mm**, fanned into the lanes of
+  pads 38/39 one way and 45/46 the other. It stops at y = 45.75 and not
+  46.25 because C304, pad 48's own 100 nF, sits on that lane.
+
+The room comes from the pads that are unconnected on this design - 3, 4, 10,
+13, 14, 26, 30, 38, 39, 45, 46 - which get no copper at all and so leave their
+lanes free. The script works that out from the netlist; there is no list.
+
+At 0.70 mm pitch a via clears a neighbouring lane's 0.20 mm track by 0.15 mm,
+and two vias on lanes 1.4 mm apart clear each other's holes by 0.6 mm, so the
+four vias (18 VIN_SENSE, 20 PB2, 42 LCD_BL, 44 BOOT0 - the same four nets as
+before) now sit 2.90 mm out where they block nobody. Every used pad on both
+rows keeps a straight top-layer lane of its own from the pad to the second
+ring. The escape is drawn biggest-fan-first and every variant is
+clearance-checked before it is committed; if the tabulated one does not
+clear, the run backs the reach off in 0.30 mm steps, then drops the via, then
+falls back to the old plain radial stub, and says in the notes which it took.
+
+A pad whose `FIRST_RING` trace cannot be drawn now keeps the plain radial
+stub it would otherwise have had. Without that, pad 22 (VCAP1) was left with
+no copper at all and the router had nothing to pick up.
+
+### Three pad pairs the netlist asks for and no router can close
+
+`BRIDGES` in `copper.py`. Two footprints carry pad pairs that are one node on
+the schematic and two separate pieces of copper on the board, so kicad-cli
+counts each as an unconnected pad pair for ever and there is no ratsnest
+route for a router to find.
+
+| what | why | drawn |
+|------|-----|-------|
+| U302 pins 1-6 (D-) and 3-4 (D+) | the USBLC6-2SC6 brings each data line out on two pins and joins them on the die | 1.35 mm straight across the package, 0.20 mm, starting 0.2 mm inside each pad; it clears pins 2 and 5 by 0.55 mm |
+| SW401's two MP lugs | both mounting lugs carry the pad number `MP`, so KiCad invents the net `unconnected-(SW401-PadMP)` for them. Nothing else is on it | 11.20 mm straight down x = 88 under the encoder's body, 0.25 mm, 7.5 mm clear of every other pad of the part |
+
+The U302 bridges cost the USB pair **no length**: the run is still
+J301 -> pin 3 -> die -> pin 4 -> MCU and the bridge is a stub off it, not a
+detour in it. Both budgets are still 37.88 / 37.88 mm with 0 vias.
+
+Because a pad number is not a key on this board any more, `copper.py` takes
+`REF.NUM#i` as a pad spec (`SW301.2#0`, `SW301.2#1`).
+
+### The one path that changes layer
+
+`POWER_LAYERED`, and CLAMP's tap to the bypass FET is the only entry in it.
+D202 (the SMBJ24A) sits with VIN on its east pad, and both ways east out of
+its west pad are blocked by copper this script drew first:
+
+- the band between D202 and Q201's DPAK tab (y 20.65..22.60) runs into the
+  1.0 mm COIL_NEG trunk at x = 67, which drops from the SS110 into the FET
+  tab and is a wall from y = 15 to y = 22.6. The slot east of that trunk is
+  0.40 mm wide and a HighCurrent net needs 0.40 mm of air on each side alone;
+- the corridor north of the terminal (y ~ 13) is crossed by the 1.0 mm VIN
+  leg from J201 pin 1 to C102.
+
+Left to the router this tap came out about 50 mm, down the right-hand edge of
+the board and back west. It is now **8.91 mm of F.Cu, 3.75 mm of B.Cu and two
+vias** - 12.66 mm in all. The slot it costs the pour is at y = 21.6, south of
+the flyback loop rather than under it, so the loop's return path is untouched
+and the scripted loop is still 21.38 mm.
+
+### Power rails are trees, not rings
+
+`RAILS` in `copper.py`. The router has no notion of a rail: it takes the pad
+pairs of +3V3 in whatever order its net ordering hands them and joins each to
+the nearest copper it has already laid, which came out as 229 mm and a ring
+round the MCU. `rail_tree` draws the rail as a tree instead - repeatedly the
+shortest hop between two pieces of that net's copper that are not yet one
+piece, which is Kruskal with a clearance check in place of the cycle test.
+
+Two things make it a trunk with branches rather than a chain of pads:
+
+- a hop may end on any **corner of a piece of that net's copper that already
+  reaches a pad**, not only on another pad. That is what a tap is: R404's
+  +3V3 does not walk to another pad, it joins the run going past it. Pad to
+  pad alone the same tree stopped at 16 hops and 6 islands; with the taps it
+  is 18 hops and 4 - two more pad pairs closed for 22.5 mm of copper;
+- two sweeps. The first only takes a hop whose real copper is within 1.35x
+  the straight line between its ends, so a pair that happens to be nearest
+  but has to go round the MCU does not become the trunk; the second takes
+  what is left at 2.5x. Nothing longer than `RAIL_MAX_HOP` (26 mm) is
+  scripted at all - past that it is a board-crossing run with a dozen ways
+  round, which is a routing decision.
+
+The QFN's own +3V3 pads are never hop endpoints (at 0.5 mm pitch no rail
+width fits, and all four are already on their first-ring cap), and every hop
+is clearance-checked and tried at 0.50, then 0.35, then 0.25 mm.
+
+The run prints every hop with its straight-line distance beside the copper it
+actually took, the islands it could not join, and the net's minimum spanning
+tree as the floor to read the total against.
 
 ### Nothing routed by the tool is imported without a kicad-cli grade
 
@@ -408,9 +522,10 @@ taken.
 
 ### What is left for the router, and the exact command
 
-After `copper.py` the board has 101 unconnected pad pairs over 49 nets -
-the GPIO, SPI, UI and long power links ADR 0003 decision 8 hands to
-KiCadRoutingTools. Run it on a **copy**, never on the repo:
+After `copper.py` the board has 78 unconnected pad pairs over 46 nets (it was
+101 over 49 before the escape fan, the pad bridges, the CLAMP crossing and
+the rail trees) - the GPIO, SPI, UI and long power links ADR 0003 decision 8
+hands to KiCadRoutingTools. Run it on a **copy**, never on the repo:
 
     tools/pcb/routability.sh after
 
@@ -470,8 +585,27 @@ inside the git repository.
 
 Options: `--strip`, `--no-import` (route and grade, touch nothing),
 `--reuse` (grade and import the copy already routed), `--ordering NAME` (one
-ordering instead of all four), `--first A,B,...`, `--nets ...`,
-`--label NAME`, `--rip`, `--no-drc`.
+attempt with that ordering instead of the three), `--first A,B,...`,
+`--nets ...`, `--label NAME`, `--rip`, `--no-drc`.
+
+**KiCadRoutingTools is not deterministic.** Part positions are identical run
+to run but the `.kicad_pcb` serialisation order is not - KiCad regenerates
+item UUIDs and writes footprints in a UUID-dependent order - the net ordering
+ties break on it, and two runs of this stage on the same placement have come
+out 13 and 20 open pad pairs apart. So the stage routes the same input
+`ATTEMPTS` = **3** times and imports the best of them, and prints all three
+with their scores so the spread is visible rather than hidden. The attempts
+take different net orderings while the pool lasts (`ORDERINGS` = mps, bus,
+inside_out, original) because a different ordering is a bigger perturbation
+than the serialisation noise, and repeat the pool after that. Three is the
+useful number: mps and bus have both won, the other two have never won by
+more than the noise, and a fourth attempt costs about four minutes for about
+one pad pair.
+
+The chosen copy's summary is written to `output/pcb/route-summary.txt` - the
+attempt table, open / vias / errors / tracks / nets, the nets the router
+produced nothing for, and the longest ten. Nothing in `$PCB_SCRATCH` is ever
+committed, so that file is the only thing that survives a run.
 
 ### What the stage does
 
@@ -489,9 +623,10 @@ ordering instead of all four), `--first A,B,...`, `--nets ...`,
    - up to two mop-up passes for whatever is still short, with
      `--rip-existing-nets '*'`.
 
-   The whole chain is run once per entry in `ORDERINGS` (mps, inside_out,
-   bus, original) and the best-scoring attempt is the one that gets imported.
-4. **Grades** - see below.
+   The whole chain is run `ATTEMPTS` times and the best-scoring attempt is
+   the one that gets imported. The score is errors, then open pad pairs, then
+   **vias**, then how many nets were taken.
+4. **Grades** - see below - and writes `output/pcb/route-summary.txt`.
 5. **Imports** the surviving nets' tracks and vias into the repo board, not
    locked (they are the router's and regenerable) but grouped `autorouted`,
    and refills the zones with pcbnew's `ZONE_FILLER` so the pour closes round
@@ -549,53 +684,68 @@ of the `autorouted` group is that step 1 can find it again.
   ever adds copper, so a net the scripted copper finished is untouchable.
 - The USB pair. `NO_ROUTE` holds `/MCU/USB_DP` and `/MCU/USB_DM`: ADR 0003
   wants them via-free and length-matched, `copper.py` draws them that way and
-  locks them. The two pad pairs kicad-cli still counts on them are U302's own
-  I/O pins - pads 3/4 on D+ and 1/6 on D-, which the ESD device's die joins
-  and copper does not. No router can close those and none should try.
-- `unconnected-(SW401-PadMP)`: two mounting pads of the encoder that KiCad
-  lumps into one invented net. There is nothing to route between them.
+  locks them. U302's own duplicate I/O pins used to show up here as two open
+  pad pairs; `copper.py` bridges them now - see "Three pad pairs the netlist
+  asks for and no router can close".
+- Any auto-named `unconnected-*` net. `unconnected-(SW401-PadMP)` used to be
+  one of the remainder; `copper.py` links the two lugs now, and the stage
+  still never hands the router a net of that kind.
 - Zones. The stage imports tracks and vias only; the pour is `copper.py`'s.
 
 ### Where it came out
 
-101 unconnected pad pairs before, **13 after**, over 8 nets, with 0 errors
-and 0 schematic parity issues on the repo board. 41 nets routed, 1331 tracks
-and 115 vias imported (193 vias on the board in all).
+78 unconnected pad pairs before, **6 after**, over 4 nets, with 0 errors and
+0 schematic parity issues on the repo board. 42 nets routed, 1583 tracks and
+133 vias imported (213 vias on the board in all).
 
-| net | pairs | why it is still open |
-|-----|-------|----------------------|
-| NTC | 3 | QFN pad 19, and pads 18 and 20 either side of it both carry a fan-out via. `QFN_VIA_PADS` is zero-sum: taking those two vias out closes NTC and ENC_B and opens LCD_BL and VCAP1 instead, for the same total |
-| ENC_SW | 3 | QFN pad 43, boxed in by the locked stubs of pads 41, 42 and 44 (ENC_B, LCD_BL, BOOT0). The router reports it `boxed_in_static` after 5157 iterations and names only pre-existing copper as the blocker |
-| ENC_B | 2 | QFN pad 41, the same west-face jam as ENC_SW |
-| +5V, LCD_RST | 1 each | the router produced no copper for them at all on the winning attempt. Both were routed before the USB band went in; they are the price of it |
-| /MCU/USB_DP, /MCU/USB_DM | 1 each | U302's own I/O pins, joined by the die - see above |
-| unconnected-(SW401-PadMP) | 1 | the encoder's two mounting pads - see above |
+The three attempts of the run this was written from, and the spread that
+makes three attempts worth paying for:
 
-**The USB band costs three of those thirteen.** Without it the board closes
-at 10 open pad pairs, but eleven B.Cu tracks cross under the pair (+3V3,
-+5V, VBUS, ENC_A, LCD_RST and SWDIO, twice each bar VBUS) and the reference
-ADR 0003 asks for is cut eleven times. With it, 0 crossings and three more
-pad pairs for Jan's hand route. `USB_KEEP = 0` in `copper.py` turns the band
-off and gives the other trade back.
+| attempt | ordering | errors | open | vias | nets |
+|---------|----------|--------|------|------|------|
+| 1 | mps | 0 | 11 | 119 | 39 |
+| 2 | bus | 0 | 11 | 119 | 39 |
+| 3 | inside_out | 0 | **6** | 133 | 42 | <- imported |
+
+`inside_out` used to be one of the two orderings that always lost; on this
+input it wins by five pad pairs and three nets. That is the whole argument
+for sampling the tool rather than trusting one run of it.
+
+Named exactly, from `kicad-cli`'s own item descriptions:
+
+| net | pairs | the two ends, and why |
+|-----|-------|-----------------------|
+| VIN_SENSE | 3 | the escape stub off pad 18 to R103 pad 1; C104 pad 1 to that stub; R102 pad 2 to R103 pad 1. The escape and its second-ring via are drawn and clear - what the router could not finish is the filter itself, R102/R103/C104 at x 53..56 sharing that stretch of edge with NTC's own filter parts. It routed some of the net and the "complete" gate dropped it whole rather than import dangling ends |
+| +5V | 1 | between two scripted pieces (a 2.04 mm and a 6.00 mm run): U201's supply, 41 mm from the LDO across the board. The router produced no copper for it at all on the winning attempt, and `RAIL_MAX_HOP` keeps `copper.py` out of a hop that long on purpose |
+| GATE_IN | 1 | pad 29's 1.15 mm radial stub to R202's own 1.00 mm stub at the driver. No copper produced on the winning attempt |
+| Net-(U301-VCAP1) | 1 | pad 22's radial stub to C308 pad 1 - the one trace `copper.py` cannot draw either, because FB301's VDDA pad is 0.04 mm into it. The cap is 2 mm from the pad; this is a hand route of about 3 mm, or a 0.5 mm nudge of FB301 |
+
+NTC, ENC_SW, ENC_B and LCD_RST - four of the eight nets in the old remainder
+- are closed by the escape fan, and U302's two pin pairs and the encoder's
+two lugs are closed by `copper.py`.
+
+**The USB band is free now.** It used to cost three pad pairs (10 open
+without it, 13 with); on this board the router finds its way round it and
+`usb_reference_check` reports no crossing at all.
+`USB_KEEP = 0` in `copper.py` still turns the band off.
 
 Levers tried on NTC and ENC_SW, and what each cost. All of these were
 measured before the USB band went in, so compare them against 10, not 13:
 
 | lever | result |
 |-------|--------|
-| net ordering | mps and bus agree and win, inside_out and original both lose by 4 to 7 pad pairs. The tool is not reproducible across board files whose only difference is the serialisation order, which is why all four are run and the best kept |
-| `--rip-existing-nets` on the blockers, named exactly | refused: the tool protects a whole NET as soon as any of its copper is KiCad-locked, and `copper.py` locks a fan-out stub on nearly every net at the QFN. Unlocking the router's own copper between passes (the stage does this) is the only rip that works |
+| net ordering | mps and bus agree and win, inside_out and original both lose by 4 to 7 pad pairs. The tool is not reproducible across board files whose only difference is the serialisation order, which is why several attempts are run and the best kept |
+| `--rip-existing-nets` on the blockers, named exactly | refused: the tool protects a whole NET as soon as any of its copper is KiCad-locked, and `copper.py` locks an escape on nearly every net at the QFN. Unlocking the router's own copper between passes (the stage does this) is the only rip that works |
 | `QFN_VIA_PADS = ()` | closes NTC, opens LCD_BL and VCAP1: 12 open, 40 nets |
 | `QFN_VIA_PADS = ("42", "44")` | closes NTC and ENC_B, opens VCAP1, and lets a +3V3 via land 0.18 mm from a GND track: 12 open, 41 nets |
 | a User.2 band round the crystal ground guard | the router treats any User.2 polygon as a hard block whatever its size, and a 0.05 mm band closes the west corridor: 12 open |
 | GND at 0.20 mm clearance via `--net-clearances` | same, 12 open - and the flag REPLACES the whole cross-class map, so the file has to carry the Power and HighCurrent nets too or they route at 0.15 |
+| **the escape fan** (the one that worked) | none of the above moved NTC or ENC_SW because all of them keep asking WHICH pads get a first-ring via. Fanning the two rows to 0.70 / 0.90 mm lane pitch and putting the same four vias out at 2.90 mm takes the question away: 78 open pad pairs after `copper.py` instead of 101, with NTC, ENC_SW and ENC_B each holding a clear straight lane of their own |
 
-The committed `QFN_VIA_PADS = ("18", "20", "42", "44")` is what wins. Each
-lever was tried on NTC and ENC_SW and none improved the total; the honest
-remainder is the three pad pairs of each, and the fix is a hand route in
-pcbnew or a placement change that gives the QFN's west face somewhere to go.
-`SWCLK` and `DECAY_SLOW` also appeared and disappeared from the remainder
-between attempts, which is the same ordering noise.
+`QFN_VIA_PADS` is no longer a hand-written tuple - it is derived from
+`QFN_ESCAPE`, so a pad's via and the lane it sits in cannot disagree.
+`SWCLK` and `DECAY_SLOW` appear and disappear from the remainder between
+attempts, which is the ordering noise the three attempts are there to sample.
 
 ### What the renders show
 
@@ -603,30 +753,37 @@ between attempts, which is the same ordering noise.
 `both.png` are the three to look at.
 
 - **The bottom pour survives.** The router's B.Cu copper is a knot round the
-  MCU and two long diagonals up to the driver block; the rest of the 110 x
-  70 mm is solid. GND is complete on the finished board.
-- **`/Driver/CLAMP` is 55.56 mm**, of which about 50 is the router's: the
-  `D202 -> Q202` clamp tap that `copper.py` could not draw (Q201's 11 mm DPAK
-  tab is in the way) went the long way round, down the right-hand side of the
-  board and back west. The flyback loop itself is scripted, locked and still
-  20.26 mm, so this is the bypass FET's gate-side tap and not the switching
-  loop - but it is the longest unnecessary thing on the board and the obvious
-  candidate for a hand route or for a `copper.py` path that ducks under the
-  DPAK.
-- **The encoder runs are long** (ENC_A 87.61 mm): inherent, the encoder is
-  front-right and the MCU is centre-left, and "What is still rough" item 4
-  already says so.
-- **The QFN fan-out is tidy.** No via landed in the first ring, the escapes
-  leave radially as designed, and the leftover stubs on the west face are the
-  three nets below.
+  MCU and a few long runs out to the driver block and the front edge; the
+  left third, the right third and both long edges are solid, and GND is
+  complete on the finished board (it is not in the remainder). The knot is
+  bigger than it was - 133 imported vias against 115 - because the board is
+  14 pad pairs more finished.
+- **The `D202 -> Q202` clamp tap is fixed.** It was about 50 mm of the
+  router's copper down the right-hand side of the board and back west; it is
+  now a scripted 12.66 mm over two vias, and the flyback loop is untouched at
+  21.38 mm. `/Driver/CLAMP` is 57.86 mm and 4 vias in all, but the rest of
+  that is D203 at x 75 and R205 at x 80, which are 14 and 20 mm away by
+  placement and not a detour.
+- **The QFN escape fan is tidy and it is the thing to look at in
+  `cu-qfn.png`.** Both fanned rows leave their pads radially, turn once, and
+  run out to a second ring where the lanes are 0.70-0.90 mm apart; the four
+  vias sit in that ring and none of them is in front of a neighbour.
 - **Nothing crosses the crystal island but GND**, and nothing at all is in an
   M3 ring.
-- **Nothing crosses under the USB pair on B.Cu.** It did on the first run -
-  a +3V3 track straight under D-, which is exactly the broken reference ADR
-  0003 component breakdown 3 forbids - so `copper.py` now draws a User.2 band
-  along every segment of the pair (`USB_KEEP`, 0.15 mm off the centre line)
-  and `autoroute.py` checks it afterwards. The band costs almost nothing on
-  F.Cu, because the locked pair is already there.
+- **Nothing crosses under the USB pair on B.Cu.** It did on the first run of
+  the second pass - a +3V3 track straight under D-, which is exactly the
+  broken reference ADR 0003 component breakdown 3 forbids - so `copper.py`
+  draws a User.2 band along every segment of the pair (`USB_KEEP`, 0.15 mm
+  off the centre line) and `autoroute.py` checks it afterwards.
+- **What is still ugly:** `+3V3` is 277.92 mm (2 vias), up from the router's
+  229 mm. The scripted tree buys the topology and the via count, and pays for
+  it in copper - 240.22 mm of it is scripted and the floor is the 182.95 mm
+  MST. `ENC_B` at 106.40 mm / 4 vias and `NRST` at 87.84 mm / 6 vias are the
+  two runs the router took the long way round: both are now closed where they
+  used to be open, and both are slow nets, but they are the next candidates
+  for a hand route. The right-hand third of the board (x 78..100, y 30..50)
+  is still empty and most of these long runs walk round it rather than
+  through it.
 
 ### How to redo it
 
@@ -949,7 +1106,7 @@ pair, I_SENSE, shunt, gate). The committed `.kicad_pcb` carries none of them.
 
 ## What is still rough
 
-Honest list, worst first. Items -3..-1 are copper; the rest are placement
+Honest list, worst first. Items -4..-1 are copper; the rest are placement
 and the numbers in them are from the second pass.
 
 -3. **The crystal island: done.** It sits in the corner at the low pin
@@ -969,23 +1126,41 @@ and the numbers in them are from the second pass.
     carries no measurement current, only the comparator's high-impedance
     input after the series resistor.
 
--1. **Twelve local traces still could not be drawn** (was 29 in the second
-    pass, and the numbers below are from the current run's "COULD NOT DRAW"
-    list). The sense-side ground is no longer among them - all five rows of
-    the new checked table pass - and neither is the op-amp's feedback network
-    or the crystal guard's west leg. What is left, with the blocker:
+-4. **+3V3 is 277.92 mm long and 120 mm was asked for.** The brief's budget
+    is below the floor: the straight-line minimum spanning tree over the
+    net's 29 pads is 182.95 mm, so nothing can route it under that. The
+    scripted tree is 240.22 mm with **0 vias** and the router adds 37.7 mm
+    and 2 vias for the three hops left; the router alone did it in 229 mm,
+    with a ring round the MCU and more vias. So the tree costs about 49 mm
+    and buys the topology, the via count and a trunk that does not move
+    between runs. If Jan wants the length back, the levers are placement,
+    not routing: J302's +3V3 pin is 60 mm from the LDO, SW301's two halves
+    are at the rear edge, and R304/R104 are front-right - four satellites
+    that between them are most of the 183 mm floor.
+
+-1. **Ten local traces still could not be drawn** (29 in the second pass, 12
+    before the escape fan and the CLAMP crossing; the numbers below are from
+    the current run's "COULD NOT DRAW" list). The sense-side ground is not
+    among them - all five rows of the checked table pass - and neither is the
+    op-amp's feedback network, the crystal guard's west leg, the CLAMP tap or
+    NTC's filter cap. What is left, with the blocker:
 
     | trace | blocked by | verdict |
     |-------|-----------|---------|
-    | pin 22 -> C308 (VCAP1) | FB301's VDDA pad, 0.04 mm | router; both are first-ring parts on the same 2 mm of edge |
+    | pin 22 -> C308 (VCAP1) | FB301's VDDA pad, 0.04 mm | router; both are first-ring parts on the same 2 mm of edge. The pad keeps a 1.15 mm radial stub now instead of no copper at all |
     | pin 9 -> C306 (VDDA) | C309's pad | router, 2.5 mm. The island's courtyard pushes the NRST cap 1.0 mm east onto pin 9's own slot, and the corridor between C309's pad and pad 11's stub is 0.53 mm where 0.85 is needed. Both parts are inside their 3 mm criteria, so this is a 2.5 mm job for the router, not a trap |
-    | D202 -> Q202 (CLAMP) | Q201's drain tab | router; the 0.5 mm clamp tap has to go round an 11 mm DPAK |
     | R213 -> U202 pin 5 | R307's pad | router; 14 mm, see -2 |
     | U202 pin 7 -> R214 (OC_TRIP) | R215's pad, 0.16 mm | router; R214/R215/R216 are stacked at 2 mm pitch off three adjacent op-amp pins and their pads interleave |
-    | C109 -> R109 (FB feed-forward) | the buck's own SW pad | router |
+    | C109 -> R109 (FB feed-forward) | R110's ground pad | router |
     | R105 -> U101 pin 3, R105 -> C105 (EN/UVLO) | U102's +5V pad, R106's own pad | router; the EN/UVLO divider ended up on the far side of the LDO from the buck. Placement lever, not copper: it is the one part of the buck block that is still resolved rather than placed |
     | D103 -> J301 A4 (VBUS) | D105's +5V pad | router by design: 28 mm from the ORing diode to the receptacle, across the rear half |
-    | pin 19 -> C207, pin 11 -> C405, pin 12 -> C404 | VIN_SENSE's fanout via, C306's VDDA pad | router; all three parts are in the second ring behind a first-ring cap |
+    | pin 11 -> C405, pin 12 -> C404 | C306's VDDA pad | router; both parts are in the second ring behind a first-ring cap |
+
+    `pin 19 -> C207` (NTC's filter cap) came off this list with the escape
+    fan: it was blocked by VIN_SENSE's old first-ring via, and it is drawn
+    now. A filter link that starts on a pad with a fanned escape carries on
+    from the **escape end** rather than re-leaving the pad radially, or it
+    runs straight back into the lane it was fanned away from.
 
     The buck's FB divider no longer folds back over the part (`R109` used to
     be chained off `R110` and landed across the SW node, which ADR 0003
@@ -1034,9 +1209,13 @@ and the numbers in them are from the second pass.
    left, and the encoder (weight 1) cannot pull it back. On a 2-layer board
    that space is routing room rather than waste, but if Jan wants it used the
    lever is `MCU_LINKS` weights or moving the encoder left.
-4. **ENC_SW is 66 mm, ENC_A/B 52-54 mm, DECAY_SLOW ~50 mm.** Inherent: the
-   encoder is front-right by ADR decision and the MCU is centre-left, and
-   Q203 sits with the bypass circuitry it switches. None is speed-critical.
+4. **ENC_SW is 66 mm of ratsnest, ENC_A/B 52-54 mm, DECAY_SLOW ~50 mm.**
+   Inherent: the encoder is front-right by ADR decision and the MCU is
+   centre-left, and Q203 sits with the bypass circuitry it switches. None is
+   speed-critical. Routed, the router paid more than that for two of them -
+   ENC_B came out 106.40 mm and NRST 87.84 mm against a 52 and a 54 mm
+   ratsnest - so those two are the first candidates for a hand route now that
+   they are closed rather than open.
 5. **U202.7 -> PB12 (OC_TRIP) is ~20 mm**, not the "short track" the ADR asks
    for. The op-amp has to be within 10 mm of the shunt (it is, 1.5 mm) and the
    shunt is ~20 mm from the MCU, so the two rules fight. Keep it away from the
