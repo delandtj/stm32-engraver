@@ -68,11 +68,18 @@ first-article bring-up alone with an ST-LINK, the class never sees a probe.
    sense side of R204 (the 1 ohm shunt) joins the pour only at the shunt, and the
    flyback loop (FET drain, TVS, diode, bulk cap, terminal) is routed as a tight top-side
    loop over solid bottom ground, away from the ADC inputs.
-5. **Design rules**: JLC 2-layer capability with margin. Track 0.25 mm min (0.2 mm allowed
-   inside the QFN fan-out), clearance 0.2 mm, via 0.3 mm drill / 0.6 mm pad, power and
-   flyback tracks 1.0 mm, coil and VIN tracks 0.8 mm. Solder mask expansion 0.05 mm.
-   Silkscreen 0.15 mm lines, 1.0 mm text minimum, every connector labelled with its
-   function and pin 1.
+5. **Design rules**: JLC 2-layer capability with margin (JLC floor 0.127 mm track and
+   gap). Board minimums: track 0.2 mm, clearance 0.15 mm, via 0.3 mm drill / 0.6 mm pad,
+   no smaller via anywhere. Signal tracks are 0.2 mm at the 0.5 mm pitch parts (QFN48,
+   USB-C) and 0.25 mm elsewhere where there is room; power and flyback tracks 1.0 mm,
+   coil and VIN tracks 0.8 mm, 3V3 and 5 V distribution 0.4-0.5 mm. Amended 2026-09-17
+   after the autorouter trial: the first draft (0.25 mm track, 0.2 mm clearance, 0.2 mm
+   only inside the QFN fan-out) cannot escape the QFN48 or the USB-C, whose pads sit
+   0.2 mm apart, and the router has no per-area rules. These numbers go into the
+   `.kicad_pro` (board constraints and net classes) during project prep, and every
+   routed result is graded with `kicad-cli pcb drc` against that committed file. Solder
+   mask expansion 0.05 mm. Silkscreen 0.15 mm lines, 1.0 mm text minimum, every
+   connector labelled with its function and pin 1.
 6. **Production package**: JLC Gerber set from kicad-cli, BOM with LCSC column and CPL
    with rotation corrections, 3D STEP of the assembled board for the enclosure, a PDF
    assembly drawing, and a per-board test sheet. Order: 10 assembled + 2 spare assembled,
@@ -82,6 +89,14 @@ first-article bring-up alone with an ST-LINK, the class never sees a probe.
    bench-rig test order (`docs/bench-rig.md`) plus the checks in "The mechanical work"
    below; firmware flashed over the SWD header with the ST-LINK; the remaining boards
    flashed the same way by Jan, with USB DFU as the field update path.
+8. **Layout method** (added 2026-09-17 after a trial on the MCU block): placement and
+   the critical copper are scripted with the pcbnew Python API and locked: crystal and
+   its keepout, 3V3 / 5 V distribution, flyback loop, shunt Kelvin traces, buck, USB
+   pair. The remaining GPIO, SPI and UI nets go to the KiCadRoutingTools autorouter
+   (github.com/drandyhaas/KiCadRoutingTools), which leaves locked and existing copper
+   alone. The router runs on a copy of the project, never on the committed files, and
+   its own pass messages are ignored; see the risk below. Jan reviews in pcbnew before
+   anything is ordered.
 
 ---
 
@@ -110,8 +125,11 @@ Blocks as they appear on the board, each with what it must satisfy in layout.
    and MCU, ground guard, no signal under it. BOOT0 and NRST tactile switches on the rear
    half, reachable through holes in the printed rear wall. SWD 1x5 header along the rear
    edge, inside the box. PA10 pull-up as drawn. USB-C on the rear edge with the USBLC6
-   between connector and MCU, D+/D- as a 90 ohm pair, length matched within 1 mm, kept
-   away from the driver.
+   between connector and MCU, D+/D- as a coupled pair (0.2 mm tracks, 0.15 mm gap) over
+   unbroken bottom ground, 40 mm or shorter, no vias, length matched within 1 mm, kept
+   away from the driver. A true 90 ohm pair is not reachable on 1.6 mm 2-layer FR4 and
+   is not needed: the F411 is full-speed (12 Mbit/s) only and the run is a few
+   centimetres.
 4. **Solenoid driver** (`driver.kicad_sch`): UCC27517 gate driver within 5 mm of the
    FET gate, its 1 uF bypass at its pins; IRLR3410 DPAK with the drain tab as a small
    copper island; SS110 + SMBJ24A + SI2309 bypass forming a loop of minimum area with the
@@ -143,17 +161,21 @@ Blocks as they appear on the board, each with what it must satisfy in layout.
 
 ### Data Flow / Interaction
 
-    front  +-----------------------------------------------------------+
-           |  [J3 ribbon 7p]           [encoder]                (M3)   |
-           |   display in the cover      SW401                          |
-           |                                                            |
-           |  LDO 3V3   [   STM32F411   ]   analog: shunt amp, VIN div, |
-           |  buck 5V   crystal, caps       NTC, pedal filter           |
-           |                                                            |
+    rear   +-----------------------------------------------------------+
+    y=0    |  [DC jack] [USB-C]   [4p 5.08 terminal]   [pedal jack TRS] |
            |  fuse P-FET TVS [470uF up]   gate drv FET TVS diode        |
-    rear   |  [DC jack] [USB-C]   [4p 5.08 terminal]   [pedal jack TRS] |
-           +-----------------------------------------------------------+
-                                110 x 70 mm, connectors on the rear edge
+           |                                                            |
+           |  buck 5V   crystal, caps       analog: shunt amp, VIN div, |
+           |  LDO 3V3   [   STM32F411   ]   NTC, pedal filter           |
+           |                                                            |
+           |   display in the cover      SW401                          |
+    front  |  [J3 ribbon 7p]           [encoder]                (M3)   |
+    y=70   +-----------------------------------------------------------+
+           x=0                  110 x 70 mm, top view                x=110
+
+Top view as KiCad shows it and as the user sees the console from their seat: front edge
+towards the user, rear edge with the connectors away from them, DC jack at the left.
+(The first draft drew this upside down, which mirrored left and right against the text.)
 
 Current paths: brick -> jack -> fuse -> P-FET -> bulk cap -> J201 pin 1 -> coil ->
 J201 pin 2 -> FET -> shunt -> power ground -> pour -> jack sleeve. The flyback path
@@ -228,6 +250,13 @@ Everything analog references the pour at one point next to the shunt.
 - **CPL rotation**: JLC's part orientation convention differs from KiCad's for QFN,
   SOT-23-6 and diodes. Mitigation: review the JLC assembly preview image for every
   polarised or asymmetric part before confirming.
+- **Autorouter rewrites the rules**: KiCadRoutingTools relaxes the minimums in the
+  sibling `.kicad_pro` to whatever it built and then grades itself against them; in the
+  trial it reported no violations on a board with 139 errors at the ADR rules. It also
+  has no notion of intent: it ran a signal under the crystal and put the oscillator nets
+  through vias. Mitigation: run it on a copy with `--escalation off --strict-sizes`,
+  lock the critical copper and draw keepouts first, grade only with `kicad-cli pcb drc`
+  against the committed `.kicad_pro`.
 - **Punch test result**: if 24 V is not enough, the power block changes. Mitigation:
   run the test before placing the power block, or reserve 20 x 25 mm next to it.
 
@@ -316,9 +345,10 @@ other eleven are opened; it is the reason for ordering 12 rather than 10.
 Component specs, in the order that lets unknowns land late:
 
 1. **Project prep**: retire the generator (README note, verify.sh reduced to ERC +
-   render), import the project footprints (encoder with 12.0 mm lugs, terminal with
-   1.6 mm drills, Neutrik with SN pin symbol), add mounting holes and outline to the
-   schematic as symbols, run ERC, update the PCB from the schematic.
+   render; done 2026-09-17), enter the design rules of Decision 5 in the `.kicad_pro`,
+   import the project footprints (encoder with 12.0 mm lugs, terminal with 1.6 mm
+   drills, Neutrik with SN pin symbol), add mounting holes and outline to the schematic
+   as symbols, run ERC, update the PCB from the schematic.
 2. **Outline and fixed parts**: 110 x 70 mm, M3 holes, rear-edge connectors placed on
    the edge line with their 3D models checked for clashes, display ribbon connector and
    encoder placed from the front, cover-plate cutouts derived from these positions and
