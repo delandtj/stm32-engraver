@@ -12,9 +12,12 @@ What it does
   3. draws the 110 x 70 mm outline with 2 mm corner radii
   4. places all 117 parts: explicit tables for the anchors, rules for the
      satellites (decoupling caps, RC filters, pull-ups)
-  5. checks courtyards, board containment, M3 keepouts and the ADR 0003
+  5. substitutes a 3D model of the right body size on the three footprints
+     whose library model file KiCad 10 does not ship (cosmetic, board only -
+     see MODEL_SUB), and names the three that have no stand-in either
+  6. checks courtyards, board containment, M3 keepouts and the ADR 0003
      distance criteria, and exits non-zero if any of them fail
-  6. prints a per-net ratsnest length (MST over the pads) to guide nudging
+  7. prints a per-net ratsnest length (MST over the pads) to guide nudging
 
 It does NOT route and it does NOT pour. See README.md.
 
@@ -1174,6 +1177,77 @@ def place_edge(fp, ref, field):
     return box
 
 
+# ------------------------------------------------- 3D model substitutes ----
+# Six footprints on this board name a .step file KiCad 10 does not ship, so
+# the part is missing from the 3D view, from `kicad-cli pcb render` and from a
+# STEP export. Three of them have a stand-in of the right body size in the
+# library and get it here. These are COSMETIC, and applied to the BOARD only:
+# the footprint libraries, the pads and the courtyards are untouched, the
+# footprint's own model entry is kept, and only its path is rewritten - so its
+# offset, rotation and scale come along unchanged.
+#
+# J301 (HRO TYPE-C-31-M-12), SW401 (Alps EC11E vertical H20mm) and J402
+# (Neutrik NMJ6HCD2) also have no model file anywhere in the KiCad 10 library,
+# and nothing in the library is the right shape to stand in for them, so they
+# stay invisible until manufacturer STEP files land in a project 3d/ folder.
+# See README, "3D models".
+MODEL_DIR = "${KICAD10_3DMODEL_DIR}"
+MODEL_SUB = {
+    # The footprint asks for EP5.6x5.6, which does not exist. EP5.15x5.15 is
+    # the same QFN-48 7 x 7 mm 0.5 mm-pitch body and differs only in how big
+    # the exposed pad under it is drawn.
+    "U301": MODEL_DIR + "/Package_DFN_QFN.3dshapes/"
+                        "QFN-48-1EP_7x7mm_P0.5mm_EP5.15x5.15mm.step",
+    # The XKB TS-1187A has no model. Its own F.Fab body is 5.8 x 4.8 mm, so
+    # the 6 x 6 x 5 mm 1TS009 tact switch is the nearest body in
+    # Button_Switch_SMD.3dshapes; the other candidate, SW_SPST_TS-1088, is a
+    # 3.9 x 3.0 mm part and a third too small.
+    "SW301": MODEL_DIR + "/Button_Switch_SMD.3dshapes/"
+                         "SW_Push_1TS009xxxx-xxxx-xxxx_6x6x5mm.step",
+    "SW302": MODEL_DIR + "/Button_Switch_SMD.3dshapes/"
+                         "SW_Push_1TS009xxxx-xxxx-xxxx_6x6x5mm.step",
+}
+MODEL_ROOT = "/usr/share/kicad/3dmodels"
+
+
+def _model_file(path):
+    return path.replace(MODEL_DIR, MODEL_ROOT)
+
+
+def substitute_models(fps):
+    """Point the model-less footprints that have one at a body of the right
+    size, and name the ones that do not."""
+    done, missing = [], []
+    for ref, fp in sorted(fps.items()):
+        want = MODEL_SUB.get(ref)
+        if want:
+            ms = fp.Models()
+            if len(ms):
+                m = ms[0]
+                had = m.m_Filename
+                m.m_Filename = want
+                m.m_Show = True
+                ms[0] = m
+            else:
+                m = pcbnew.FP_3DMODEL()
+                m.m_Filename = want
+                m.m_Show = True
+                ms.append(m)
+                had = "(none)"
+            done.append((ref, had, want))
+        for m in fp.Models():
+            if not os.path.exists(_model_file(m.m_Filename)):
+                missing.append((ref, m.m_Filename))
+    for ref, had, want in done:
+        print("  3D model %-6s %s -> %s"
+              % (ref, os.path.basename(had), os.path.basename(want)))
+    if missing:
+        print("  no model file on disk for %d footprint(s) - they render "
+              "empty and need a manufacturer STEP in a project 3d/ folder: %s"
+              % (len(missing), ", ".join(r for r, _f in missing)))
+    return done, missing
+
+
 def tidy_fab_text(fps):
     """Make the assembly view readable.
 
@@ -1823,6 +1897,8 @@ def main():
     field = place_all(board, fps)
 
     tidy_fab_text(fps)
+    print("\n3D models (cosmetic - renders and the STEP export only):")
+    substitute_models(fps)
     fail = check_all(fps, field)
     bad = criteria_table(fps)
     rn = ratsnest(board, fps)

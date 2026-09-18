@@ -183,9 +183,17 @@ FIRST_RING = [
     ("24", "C302.1", W_SIG),
     ("36", "C303.1", W_SIG),
     ("48", "C304.1", W_SIG),
-    ("22", "C308.1", W_SIG),         # VCAP1
+    # ("22", "C308.1") was here and never came out: C308 is 7.79 mm away in
+    # the SECOND ring and the two-segment search has to thread the C302 / C104
+    # row on the way. It is an explicit path now, see SIGNAL_EXPLICIT.
     ("7", "C309.1", W_SIG),          # NRST
 ]
+
+# Pads whose escape is an explicit path in SIGNAL_EXPLICIT (step 6c), so step 2
+# must not also give them a radial stub the path would then run along. Step 6c
+# falls back to the plain stub if its path cannot be drawn, so a pad here is
+# never left bare.
+QFN_EXPLICIT_PADS = ("22", "29")
 
 # Pads that get a fanout stub only; the router picks them up at the stub end.
 # Everything connected and not in FIRST_RING / QFN_GND_PINS / the crystal /
@@ -361,6 +369,8 @@ class Copper:
         self.notes = []
         self.lengths = {}         # trace label -> mm of copper drawn
         self.qfn_end = {}         # QFN pad number -> (escape end, direction)
+        self.qfn_all_end = {}     # same, but including the pads with a via -
+                                  # what step 6c's "ESCAPE.<pad>" resolves to
         self._index_pads()
         self.keepouts = []        # (kind, geometry, allowed nets)
         for hx, hy in HOLES.values():
@@ -942,6 +952,7 @@ def step2_fanout(cop):
     # take the escape space of its neighbour (it did in the first pass: the
     # VCAP1 trace closed pad 21's only way out).
     done = set(QFN_GND_PINS) | {QFN_EP} | {n for n, _t, _w in FIRST_RING}
+    done |= set(QFN_EXPLICIT_PADS)   # explicit paths, drawn in step 6c
     done |= {"5", "6"}          # crystal, drawn in step 4
     done |= {"9"}               # VDDA, drawn in step 5
     done |= {"32", "33"}        # USB pair, drawn in step 6
@@ -976,6 +987,8 @@ def step2_fanout(cop):
                                                  f, r, v))
         escapes.append((num, net, f, r, v))
         stubbed.append((num, net, r))
+        cop.qfn_all_end[num] = (escape_path(cop, spec, f, r)[-1],
+                                cop.outward(spec))
         if v:
             vias.append((num, net, r))
         else:
@@ -1628,6 +1641,147 @@ def step6b_bridges(cop):
         print("  %-26s %s pads %s-%s, %.2f mm of %.2f mm F.Cu on %s"
               % (label, ref, na, nb, path_len([p0, p1]), w, net))
     return n
+
+
+# ================================================== explicit signals =====
+# Three nets the two-segment search cannot do and the router did not finish.
+# Same shape as POWER_EXPLICIT: a waypoint is "REF.PAD", "ESCAPE.<QFN pad>"
+# (the far end of that pad's fanned escape, so the path follows the placement
+# rather than a hard-coded number) or a literal (x, y); consecutive points are
+# H, V or exactly 45 degrees apart and the whole polyline is clearance-checked
+# as one before anything is drawn. A path that fails falls back to the plain
+# radial stub for its QFN pad, so a pad is never left bare.
+#
+# They are drawn HERE - after the fanout, the crystal, VDDA, the USB pair and
+# the pad bridges, and BEFORE the decoupling, the power block, the filters and
+# the rails - because every lane below is one a later step would otherwise
+# take. The +3V3 tree in particular ran a 0.5 mm trunk straight across two of
+# them (x = 51.2 / y = 38.45), which is why VCAP1 and VIN_SENSE came out of
+# the third pass undrawable and then unroutable.
+SIGNAL_EXPLICIT = [
+    # --- GATE_IN: MCU pad 29 to the gate driver's input pulldown ------------
+    # The strike signal. It has to cross the 14 mm of board between the QFN's
+    # north row and the driver, and there are only two lanes:
+    #   x = 46.75, straight north out of the pad - which walls PA10's pull-up
+    #     (pad 31 -> R307, a 45-degree run to x = 49.0) off from its resistor
+    #     and blocks LCD_RST's way west to the LCD header;
+    #   x = 49.90, east of R307 - which only costs +3V3 the EAST approach to
+    #     R307 pad 2, and the rail tree can reach that pad from C303 in the
+    #     west instead.
+    # The second one is taken. The diagonal's line is pinned within 0.11 mm:
+    # x + y = 86.11 clears R307 pad 1's corner by 0.29 mm (needs 0.25) and
+    # pad 28's radial stub by 0.39 mm (needs 0.35), and PA10's own 45-degree
+    # run is parallel to it 0.67 mm away.
+    ("GATE_IN pad 29 to the driver", "GATE_IN", W_FINE, [
+        "U301.29", (46.750, 39.360), (49.900, 36.210), (49.900, 26.225),
+        "R202.1"]),
+    # --- VCAP1: MCU pad 22 to its 2.2 uF -----------------------------------
+    # C308 is in the second ring, 7.79 mm away, and the only way there is the
+    # 0.55 mm slot between C302 pad 2 and C104 pad 1 at x = 53.5, which takes
+    # a 0.20 mm track with 0.025 mm to spare on each side. 10.79 mm of copper
+    # for a 7.79 mm straight line; the lever if that is too much for the
+    # internal regulator is placement, not copper - C308 is a second-ring part
+    # behind a first-ring cap.
+    ("VCAP1 pad 22 to C308", "Net-(U301-VCAP1)", W_FINE, [
+        "U301.22", (53.500, 42.250), (53.500, 35.750), "C308.1"]),
+    # --- VIN_SENSE: the divider, its filter cap and the ADC pin -------------
+    # R102/R103 divide VIN down, C104 filters it and pad 18 reads it. All
+    # three pads sit in the x 54..56 column, so this is not a board crossing -
+    # it is three short hops that RC_MAX (6.5 mm) put just out of reach of the
+    # filter step (6.74, 6.86 and 7.93 mm) and that the router then routed
+    # only partly, so the "complete" gate dropped the whole net.
+    # The trunk runs east out of pad 18's escape to a lane at x = 55.25, which
+    # is the 0.65 mm slot between C207's two pads, and branches there: north
+    # over C104 and south to R103. NTC's own filter link (pad 19 -> C207) runs
+    # diagonally across this corner 1.26 mm away - the two nets come off
+    # adjacent QFN pads and their caps are the other way round, so on one
+    # layer they would have to cross.
+    ("VIN_SENSE pad 18 escape to the lane", "VIN_SENSE", W_SIG, [
+        "ESCAPE.18", (55.250, 44.850)]),
+    ("VIN_SENSE lane to C104", "VIN_SENSE", W_SIG, [
+        (55.250, 44.850), (55.250, 40.300), (54.450, 39.500), "C104.1"]),
+    ("VIN_SENSE lane to R103", "VIN_SENSE", W_SIG, [
+        (55.250, 44.850), (55.250, 46.175), "R103.1"]),
+    # I_SENSE was the fourth entry here and it is NOT any more. It measured
+    # well and it made the board worse; the two paths are kept in this comment
+    # because the next pass will otherwise try them again:
+    #
+    #   ("I_SENSE pad 16 escape to R212", "I_SENSE", W_SIG, [
+    #       "ESCAPE.16", (52.500, 46.250), (53.375, 47.125),
+    #       (53.375, 50.450), "R212.2"]),          #  5.80 mm, clears
+    #   ("I_SENSE R212 to its filter cap", "I_SENSE", W_SIG, [
+    #       "R212.2", (53.925, 52.300), "C205.1"]),  # 1.94 mm, clears
+    #
+    # Both draw, and they close the two I_SENSE pad pairs the router leaves
+    # open on every attempt. The lane is the 0.80 mm slot between FB301 pad 1
+    # and R217 pad 2, which is the only way through that corner and takes one
+    # 0.25 mm trace, not two - so it splits FB301 from R217 on the +3V3 tree
+    # and the tree goes from 7 open pairs to 8. That much was expected and
+    # would have been a fair trade. What was not: on the route run with these
+    # in, BOTH of the two orderings that win could no longer finish GND, so
+    # the completeness gate dropped GND whole and the board came out at
+    # **7 open pad pairs instead of 4** - I_SENSE closed, GND open in five
+    # places and SWDIO in one. Measured, not guessed: the run before and the
+    # run after differ by nothing but these two paths, and mps and bus agreed
+    # with each other in both.
+    # If this is tried again, the thing to fix first is that the corner has
+    # one lane and three nets want it (I_SENSE, +3V3's FB301 -> R217 hop, and
+    # whatever GND stitching runs there), which is a placement problem:
+    # R212 and C205 are second-ring parts 5-8 mm from pad 16.
+    # R102 pad 2 to R103 pad 1: the divider's own mid-point, 7.93 mm down the
+    # east side of R217 and R212, which both stand in the straight line.
+    # x = 57.25 and not 56.60, which is the shortest lane that clears: at
+    # 56.60 this trace sits 0.375 mm off R217 pad 1 and walls the +3V3 tree
+    # out of its EAST approach to that pad, which cost the rail an island.
+    # 57.25 leaves a 0.65 mm slot there, enough for the tree's 0.50 mm trunk,
+    # and costs this leg 0.54 mm.
+    ("VIN_SENSE R103 to R102", "VIN_SENSE", W_SIG, [
+        "R103.1", (57.250, 48.175), (57.250, 52.925), "R102.2"]),
+]
+
+
+def _way(cop, q):
+    """One SIGNAL_EXPLICIT waypoint -> (x, y)."""
+    if isinstance(q, str) and q.startswith("ESCAPE."):
+        num = q.split(".", 1)[1]
+        if num not in cop.qfn_all_end:
+            raise KeyError("QFN pad %s has no fanned escape to start from"
+                           % num)
+        return cop.qfn_all_end[num][0]
+    return cop.resolve(q)
+
+
+def step6c_signals(cop):
+    print("\n--- 6c. explicit signal paths")
+    ok = 0
+    for label, net, w, pts in SIGNAL_EXPLICIT:
+        out = [_way(cop, q) for q in pts]
+        ign = tuple(q for q in pts
+                    if isinstance(q, str) and not q.startswith("ESCAPE."))
+        why = cop.path_clear(out, w, "F.Cu", net, ign)
+        if why:
+            cop.fails.append("%s (explicit): %s" % (label, why))
+            continue
+        cop.add_path(out, w, "F.Cu", net)
+        cop.lengths[label] = path_len(out)
+        ok += 1
+        print("  %-38s %6.2f mm at %.2f mm on F.Cu (straight line %.2f mm)"
+              % (label, path_len(out), w, dist(out[0], out[-1])))
+    # A QFN pad whose explicit path did not come out keeps the plain radial
+    # stub step 2 skipped for it, or the router has nothing to pick up.
+    for num in QFN_EXPLICIT_PADS:
+        spec = "%s.%s" % (QFN, num)
+        if any(s[4] == cop.padnet(spec) for s in cop.segs
+               if dist(s[0], cop.pad(spec)) < 1e-6):
+            continue
+        net = cop.padnet(spec)
+        s = plain_stub(cop, spec, net)
+        cop.notes.append("explicit path off pad %s failed; %s" % (
+            num, "kept a %.2f mm radial stub" % s if s is not None
+            else "NO copper on the pad at all"))
+    print("  %d of %d explicit signal paths drawn"
+          % (ok, len(SIGNAL_EXPLICIT)))
+    return ok
 
 
 # ============================================================= power =====
@@ -2397,6 +2551,9 @@ def main():
     step5_vdda(cop, xr)
     usb = step6_usb(cop)
     step6b_bridges(cop)
+    # Before the decoupling, the power block, the filters and the rails: each
+    # of the three nets here needs a lane one of those steps would take.
+    step6c_signals(cop)          # GATE_IN, VCAP1, VIN_SENSE
     step3_decoupling(cop)
     step7_power(cop)
     step8_filters(cop)
