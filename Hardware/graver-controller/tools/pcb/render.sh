@@ -47,6 +47,10 @@ render() {
 render placement "F.Fab,F.Courtyard,Edge.Cuts"
 render copper "F.Cu,Edge.Cuts"
 render silk "F.Silkscreen,F.Cu,Edge.Cuts"
+# the scripted copper (copper.py): each layer on its own and both over F.Fab
+render top "F.Cu,User.2,Edge.Cuts"
+render bottom "B.Cu,User.2,Edge.Cuts"
+render both "B.Cu,F.Cu,F.Fab,Edge.Cuts"
 # the critical nets as straight lines, from the review-only copy place.py
 # writes alongside the board (User.1 is not in the committed .kicad_pcb)
 if [ -f "$out/critical.kicad_pcb" ]; then
@@ -66,3 +70,19 @@ zoom zoom-rear   0  0 110 30
 zoom zoom-mcu   30 20  40 35
 zoom zoom-power  0 12  36 50
 zoom zoom-driver 48 10  52 30
+
+# Crops off the copper views, for reviewing the scripted copper block by
+# block: stubs colliding, vias on pads, the guard ring crossing a trace.
+czoom() {   # name source x_mm y_mm w_mm h_mm
+    local name="$1" src="$2"
+    local geo
+    geo=$(python3 -c "print('%dx%d+%d+%d' % (
+        $5*$pxmm, $6*$pxmm, ($3+$margin)*$pxmm, ($4+$margin)*$pxmm))")
+    magick "$out/$src.png" -crop "$geo" +repage -resize 1600x "$out/$name.png"
+    echo "$out/$name.png"
+}
+czoom cu-qfn    top  38 30  20 22
+czoom cu-xtal   top  41 40  16 12
+czoom cu-usb    top  22  0  24 32
+czoom cu-driver top  48  8  32 26
+czoom cu-buck   top   2 38  36 26

@@ -132,8 +132,13 @@ ANCHORS = {
     # the two buttons must line up with holes in the printed rear wall, and
     # the CC resistors belong at the USB-C connector.
     "REAR": ((0.0, 0.0), [
-        ("R305",  25.0, 11.0,  90),   # CC1 5k1 at J301
-        ("R306",  27.0, 11.0,  90),   # CC2 5k1
+        # CC1's contact is at x=30.25 and CC2's at x=27.25, and the locked
+        # USB pair leaves the connector between them (x 28.25 / 28.75). Each
+        # pull-down therefore sits on ITS OWN side of the pair - CC1 east,
+        # CC2 west - and rotation 270 turns the CC pad towards the connector.
+        # With both at x=25/27 (first pass) CC1 had to cross the pair.
+        ("R305",  30.0, 10.6, 270),   # CC1 5k1, east of the pair
+        ("R306",  26.5, 10.6, 270),   # CC2 5k1, west of the pair
         # Buttons stacked rather than side by side: at 7.6 mm courtyard each
         # they do not both fit between J301 and J201, and they must stay out
         # of the VIN corridor along the rear half.
@@ -395,11 +400,21 @@ XTAL_CLEAR = 0.4          # extra courtyard air around the island. Small on
 # pads 1-4 and 9-12 to escape radially. Pads 1 and 3 of a 3225 sit on opposite
 # corners, 1.7 mm apart, so one OSC leg always pays that; keeping the body at
 # 3.9 mm out is what holds the far one under the 5 mm limit.
+# C310 is the OSC_IN load cap and C311 the OSC_OUT one, so C310 goes on the
+# OSC_IN pin's side of the island (pad 5) and C311 on pad 6's. With them the
+# other way round - and with the crystal flip the distance search prefers -
+# the two oscillator legs have to cross each other between the pin row and
+# the caps, which on one layer is not routable at all.
 XTAL_ISLAND = (
     ("Y301",   0.0, 3.8),
-    ("C310",  -1.7, 1.5),
-    ("C311",   1.7, 1.5),
+    ("C310",   1.7, 1.5),
+    ("C311",  -1.7, 1.5),
 )
+# Which way round the crystal goes is a ROUTING decision, not a distance one:
+# the flip has to put the crystal's own OSC_IN pad (pad 1) on the same side as
+# C310 and MCU pad 5. The search below still runs and prints both, so the cost
+# in worst-leg length is visible; None = let the search decide.
+XTAL_FORCE_FLIP = 0
                           # far enough back to clear the load caps
 XTAL_BIAS = -1.5          # slide the island along the edge, away from the
                           # VBAT decap on pad 1, which otherwise collides
@@ -1266,8 +1281,13 @@ def place_all(board, fps):
     # 4a. USBLC6 on the line from the connector to the MCU's USB pads
     j = pad_xy(fps, "J301.A6")
     u = pad_xy(fps, "U301.33")
+    # 180 degrees off the natural orientation: the USBLC6's pins 3/4 are one
+    # I/O pair and 1/6 the other, and this pose is the one that puts D+ on the
+    # LOW-x side at both rows. The MCU has D+ on pad 33 (low x) and the
+    # connector's run leaves from B6 (low x), so with the other pose the pair
+    # would have to cross itself once on each side of the diode.
     resolve(fps["U302"], snap((j[0] + u[0]) / 2), snap((j[1] + u[1]) / 2),
-            0 if abs(u[0] - j[0]) > abs(u[1] - j[1]) else 90,
+            180 if abs(u[0] - j[0]) > abs(u[1] - j[1]) else 270,
             field, "U302", group=grp("U302"))
     placed.add("U302")
 
@@ -1378,8 +1398,24 @@ def place_all(board, fps):
         field.rollback(mark)
         if best is None or d < best[0]:
             best = (d, flip, rows)
+    if XTAL_FORCE_FLIP is not None and best[1] != XTAL_FORCE_FLIP:
+        print("  crystal flip: search preferred %d deg (%.2f mm), forced to "
+              "%d deg so OSC_IN stays on pad 5's side"
+              % (best[1], best[0], XTAL_FORCE_FLIP))
+        for flip, rows in (("keep", None),):
+            pass
+        rows = []
+        for ref, po, oo in XTAL_ISLAND:
+            rows.append((ref,
+                         po * perp[0] + oo * out[0],
+                         po * perp[1] + oo * out[1],
+                         (xr + XTAL_FORCE_FLIP) % 360 if ref == XTAL
+                         else (90 if out[0] else 0)))
+        best = (best[0], XTAL_FORCE_FLIP, rows)
     place_group(fps, best[2], ox, oy, field, grp(XTAL), "Y301 island")
-    print("  crystal flip %d deg, worst OSC leg %.2f mm" % (best[1], best[0]))
+    print("  crystal flip %d deg, worst OSC leg %.2f mm"
+          % (best[1], max(measure(fps, "pad", "Y301.1", "U301.%s" % XTAL_OSC_PADS[0]),
+                          measure(fps, "pad", "Y301.3", "U301.%s" % XTAL_OSC_PADS[1]))))
     for ref, _p, _o in XTAL_ISLAND:
         placed.add(ref)
     # keep the island clear
@@ -1613,6 +1649,7 @@ def ratsnest_report(rn):
 # =============================================================== main =====
 def main():
     do_netlist = "--no-netlist" not in sys.argv
+    do_copper = "--copper" in sys.argv
     pro_before = None
     if os.path.exists(PRO):
         with open(PRO, "rb") as fh:
@@ -1657,6 +1694,12 @@ def main():
     if fail or bad:
         return 1
     print("\nall placement checks and ADR criteria pass")
+    if do_copper:
+        print("\n=== copper.py ===")
+        return subprocess.call([sys.executable,
+                                os.path.join(HERE, "copper.py")]
+                               + [a for a in sys.argv[1:]
+                                  if a in ("--no-drc", "--no-refill")])
     return 0
 
 

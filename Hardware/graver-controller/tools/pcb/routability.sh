@@ -58,24 +58,43 @@ cp "$proj/graver-controller.kicad_pro" "$WORK/pristine.kicad_pro"
 
 run() { ( cd "$KRT_DIR" && "$KRT_PY" "$@" ); }
 
-echo "--- pour GND on B.Cu"
-run py_router/route_planes.py "$WORK/p0.kicad_pcb" "$WORK/p1.kicad_pcb" \
-    --nets GND --plane-layers B.Cu --clearance 0.15 --zone-clearance 0.25 \
-    --via-size 0.6 --via-drill 0.3 >"$WORK/planes.log" 2>&1 || true
-cp "$WORK/pristine.kicad_pro" "$WORK/p1.kicad_pro"
+# Has copper.py already run on this board? Then the GND pour, the USB pair
+# and the keepouts are there and LOCKED, and the router must neither redo
+# them nor rewrite the fanout stubs it finds.
+scripted=no
+grep -q '"scripted-copper"' "$WORK/p0.kicad_pcb" && scripted=yes
+echo "scripted copper present: $scripted"
 
-echo "--- USB differential pair"
-run py_router/route_diff.py "$WORK/p1.kicad_pcb" "$WORK/p2.kicad_pcb" \
-    --nets "*USB_DP" "*USB_DM" --track-width 0.2 --diff-pair-gap 0.15 \
-    --clearance 0.15 --grid-step 0.05 --via-size 0.6 --via-drill 0.3 \
-    --escalation off --strict-sizes \
-    >"$WORK/diff.log" 2>&1 || true
-cp "$WORK/pristine.kicad_pro" "$WORK/p2.kicad_pro"
+extra=()
+if [ "$scripted" = yes ]; then
+    cp "$WORK/p0.kicad_pcb" "$WORK/p2.kicad_pcb"
+    cp "$WORK/pristine.kicad_pro" "$WORK/p2.kicad_pro"
+    # --keepout reads the User.2 polygons copper.py drew (M3 rings, crystal
+    # island); --keep-input-copper stops the cleanup passes rewriting the
+    # locked fanout stubs, whose far ends are dangling on purpose.
+    extra=(--keepout --keepout-layer User.2 --keep-input-copper)
+    echo "--- skipping the plane pour and the diff pair: both are scripted"
+else
+    echo "--- pour GND on B.Cu"
+    run py_router/route_planes.py "$WORK/p0.kicad_pcb" "$WORK/p1.kicad_pcb" \
+        --nets GND --plane-layers B.Cu --clearance 0.15 --zone-clearance 0.25 \
+        --via-size 0.6 --via-drill 0.3 >"$WORK/planes.log" 2>&1 || true
+    cp "$WORK/pristine.kicad_pro" "$WORK/p1.kicad_pro"
+
+    echo "--- USB differential pair"
+    run py_router/route_diff.py "$WORK/p1.kicad_pcb" "$WORK/p2.kicad_pcb" \
+        --nets "*USB_DP" "*USB_DM" --track-width 0.2 --diff-pair-gap 0.15 \
+        --clearance 0.15 --grid-step 0.05 --via-size 0.6 --via-drill 0.3 \
+        --escalation off --strict-sizes \
+        >"$WORK/diff.log" 2>&1 || true
+    cp "$WORK/pristine.kicad_pro" "$WORK/p2.kicad_pro"
+fi
 
 echo "--- everything else, strict"
 run py_router/route.py "$WORK/p2.kicad_pcb" "$WORK/p3.kicad_pcb" --nets "*" \
     --track-width 0.2 --clearance 0.15 --via-size 0.6 --via-drill 0.3 \
     --grid-step 0.05 --escalation off --strict-sizes --write-fill \
+    "${extra[@]}" \
     --power-nets GND +3V3 +5V VBUS /MCU/VDDA VIN /Driver/COIL_NEG \
         /Driver/CLAMP /Driver/SHUNT_HI \
     --power-nets-widths 0.4 0.5 0.5 0.5 0.4 0.8 0.8 0.8 0.8 \
