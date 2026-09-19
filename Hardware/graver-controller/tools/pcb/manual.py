@@ -50,10 +50,17 @@ STORE = os.path.join(HERE, "manual.json")
 
 ORIGIN = (50.0, 50.0)          # must match place.py / copper.py
 MANUAL_GROUP = "manual"
-# The groups every generated item on this board belongs to. Anything outside
+# The groups every GENERATED item on this board belongs to. Anything outside
 # them is a hand route.
-SCRIPTED_GROUPS = ("scripted-copper", "scripted-silk", "autorouted",
-                   MANUAL_GROUP)
+#
+# MANUAL_GROUP is deliberately NOT in this tuple, and that is the fix for a
+# bug the README already described the right behaviour for: a restore puts the
+# hand copper into `manual`, so if the export skipped that group as well then
+# the very next `--export-manual` would collect nothing, delete the store and
+# take every hand route off the board on the following restore. The group name
+# is what makes the next export find the same items again - it has to be
+# collected, not skipped.
+SCRIPTED_GROUPS = ("scripted-copper", "scripted-silk", "autorouted")
 
 LAYERS = {"F.Cu": pcbnew.F_Cu, "B.Cu": pcbnew.B_Cu}
 

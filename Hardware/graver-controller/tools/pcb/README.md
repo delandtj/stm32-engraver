@@ -7,25 +7,32 @@ the critical copper is data in `copper.py`, which draws it on top of that and
 locks it; the silkscreen is `silk.py`, which searches rather than tabulates.
 None of them routes the rest.
 
-## Where the board stands (seventh pass)
+## Where the board stands (eighth pass)
 
 Commit-independent, from `kicad-cli pcb drc --schematic-parity --severity-all`
 with `graver-controller.kicad_dru` beside the board:
 
-| | after `copper.py` + `silk.py` | after `autoroute.py` |
-|---|---|---|
-| errors (incl. `track_width`) | **0** | **0** |
-| schematic parity | **0** | **0** |
-| unconnected pad pairs | **71** | **10** |
-| of those, on GND | **0** | **2** |
-| vias on the board | 99 scripted | 219 |
+| | after `copper.py` + `silk.py` | after `autoroute.py` | the COMMITTED board |
+|---|---|---|---|
+| errors (incl. `track_width`) | **0** | **0** | **0** |
+| schematic parity | **0** | **0** | **0** |
+| unconnected pad pairs | **71** | **10** | **0** |
+| of those, on GND | **0** | **2** | **0** |
+| warnings | 25 | 16 | **12** |
+| vias on the board | 99 scripted | 219 | 248 |
 
-**The committed `graver-controller.kicad_pcb` is still the sixth pass's routed
-board (3 open: VDDA 2 mm, PB2 6 mm, +5V 40 mm; 0 on GND, 233 vias).** The
-seventh pass's scripted copper (VDDA and PB2 closed by script, escapes for
+**The committed `graver-controller.kicad_pcb` is the sixth pass's routed board
+with its last three pad pairs drawn by hand - it is CLOSED: 0 errors, 0
+parity, 0 unconnected, 12 warnings.** The three are `/MCU/VDDA` pin 9, the PB2
+link to R303 and the 40 mm +5V run, they are in a PCB group named `manual`,
+and `tools/pcb/manual.json` carries them across a regeneration. See "Closing
+the last three by hand" below for what each one is, what had to move to make
+room, and the one agreed crossing under the USB pair.
+
+The seventh pass's scripted copper (VDDA and PB2 closed by script, escapes for
 C202 and C309) is in `copper.py` but its route run came out worse (10 open,
 2 on GND), so that board was not committed; the next `--route` run starts
-from the new scripted copper. The table's right column describes that
+from the new scripted copper. The table's middle column describes that
 uncommitted run. Read "Where it came out" before anything else: three of
 the ten are an `autoroute.py` mop-up bug with a named one-file fix, two are
 the GND pour-island mechanism of "What is still rough" item -7, and one - +5V
@@ -37,6 +44,138 @@ script**, at 2.95 mm / 2 vias and 6.71 mm / 1 new via, every segment at its
 own `.kicad_dru` floor; no Power-class net enters a 0.25 mm pad anywhere; and
 every scripted budget below still passes.
 
+## Closing the last three by hand
+
+`tools/pcb/close_pairs.py`, eighth pass. It is **not** part of the pipeline
+and must not become one: `place.py` regenerates the board from the schematic
+and `autoroute.py` is not reproducible, so the committed routing is the best
+there has been and re-running either throws it away. The script works on
+`graver-controller.kicad_pcb` as it stands, draws the three remaining pad
+pairs, and puts every piece of copper it makes into the PCB group `manual` -
+the same group `manual.py` collects and restores.
+
+    python3 tools/pcb/close_pairs.py            # draw, refill, save, DRC
+    python3 tools/pcb/close_pairs.py --dry      # report only, write nothing
+    python3 tools/pcb/close_pairs.py --checks   # re-run the pipeline's checks
+    python3 tools/pcb/place.py --export-manual  # board -> manual.json
+
+It snapshots and restores `graver-controller.kicad_pro` around `SaveBoard` the
+same way `place.py` and `copper.py` do, and prints which of the two happened;
+`graver-controller.kicad_dru` is untouched. It needs `numpy` and `scipy` on
+top of the system `pcbnew` - the +5V path is searched on a two-layer grid and
+a pure-Python Dijkstra over it is minutes rather than a second. Nothing else
+in `tools/pcb` needs either.
+
+The clearance model is `copper.py`'s, with the one difference that matters:
+`copper.py` runs on an empty board and its `Copper.segs` IS what it has drawn,
+so here every track and via already on the board is loaded into the same lists
+before anything is checked. Pairwise net-class clearance out of the committed
+`.kicad_pro` as always, plus two rules of this brief's own: the flyback loop's
+copper gets **1.00 mm on both layers** (a B.Cu track under the loop cuts its
+return path as surely as an F.Cu one beside it does), and B.Cu is simply not
+available within **1.00 mm** of the USB pair, so the one crossing below is the
+only one that can exist.
+
+| pair | path | length | width | vias | layers |
+|------|------|--------|-------|------|--------|
+| `/MCU/VDDA` | U301 pad 9 -> C306 pad 1 | 3.40 mm (0.85 already there + 2.55 new) | 0.30 | 2 | F/B/F |
+| `Net-(U301-PB2)` | pad 20's escape via -> R303 pad 1 | 6.32 mm | 0.20 | 1 new | B/F |
+| `+5V` | U102's output copper -> C201 pad 1 | 63.26 mm (47.03 F.Cu + 16.23 B.Cu) | 0.30 | 10 | F/B |
+
+`manual.json` holds exactly those: 38 items, 25 tracks and 13 vias, 0.20 and
+0.30 mm tracks, 0.6/0.3 vias, on the three nets and nothing else. The round
+trip is verified - `manual.py --restore` followed by another export gives the
+same 38 items (the JSON's item ORDER follows the board's track order and moves,
+the set does not).
+
+### The +5V crossing under the USB pair, and why there is one
+
++5V has to get from the ORing diodes and the 5 V regulator on the west side
+(D105 at x 25, U102 at x 12) to the gate driver's supply cap C201 at
+(51, 23.5). The USB run is a wall between the two halves: from J301 at the
+rear edge it goes diagonally down to the MCU's north row, and **there is no
+F.Cu or B.Cu path at all from one side to the other that does not cross it**,
+anywhere on the board, on either layer. The search says so rather than the
+prose: with the pair's B.Cu shadow in place the two halves are in different
+connected components of the whole two-layer grid.
+
+So it crosses, once, and the shape is what keeps the cost to the reference to
+a minimum:
+
+- **0.30 mm wide** - the `.kicad_dru` Power floor and not a micron more;
+- **exactly perpendicular to the pair**, so the slot it opens in the pour is
+  the pair's own 0.35 mm plus two clearances rather than a millimetre-wide
+  trench;
+- **1.56 mm long**, between two vias that stand **0.601 mm** off the pair's
+  own copper (0.30 via radius + 0.20 clearance + 0.10 half width = 0.60);
+- **once**: every other piece of +5V B.Cu is at least 1.00 mm clear of the
+  pair, because that is what the search was given.
+
+It sits at (35.90, 21.90) -> (37.00, 20.80), on the long 45-degree diagonal
+between J301 and U302. `autoroute.py`'s `usb_reference_check` now carries a
+whitelist, `USB_CROSSING_OK` - `(net, layer, x, y, tolerance)` in the
+placement convention - and reports that crossing as "the one agreed crossing"
+while still failing on any other, a second one on the same net included.
+
+The rest of the +5V run is top-side: a long 45-degree diagonal from the buck
+corner up to the USB band, then east along y ~ 21 to C201. Its other 8 vias
+are 4 more crossings of other people's copper on a board that was already
+routed - each one is a hop under a net that was there first, not a detour.
+
+### What had to move, and why
+
+Three pieces of copper that were already on the board were in the way. All
+three are reported by the run, and none of them is in the `manual` group -
+the two router ones go back into `autorouted` so the next route run replaces
+them rather than inheriting them.
+
+| what | change | why |
+|------|--------|-----|
+| the 0.50 mm `+3V3` B.Cu trunk (41.55, 47.80)-(49.40, 47.80) | doglegged 0.40 mm north over its middle, both vias unmoved, 7.85 -> 8.18 mm | it passes **0.425 mm** under VDDA's only via window at (47.250, 48.225), where a via needs 0.750 |
+| `PEDAL_RING`'s scripted radial stub down x = 48.750 | shortened from 1.00 to 0.44 mm, back inside pad 12's own copper | the router leaves pad 12 eastward 0.012 mm below the pad centre, so 0.99 mm of that stub is dead copper and one of the board's `track_dangling` warnings - and it is the west wall of VDDA's second via |
+| `ENC_A`'s 4 B.Cu segments through the corridor between the MCU's east row and R303 | ripped and re-routed between the same two ends, 7.36 -> 18.45 mm and 2 vias | **topology, not clearance**: PB2 has to get from y = 43.45 to y = 37.50 and ENC_A from x = 57.65 to x = 49.90 through a corridor whose F.Cu is solid pads, so the two cross and one of them has to hop. With ENC_A where it was there is no path for PB2 at all, on either layer, anywhere on the board |
+
+`copper.py`'s own answers for the first two pairs were tried first and are
+what the hand routes follow; neither drops onto the committed board unchanged,
+because `copper.py` measured its windows on a board carrying only its own
+copper:
+
+- **`VDDA_LAYERED`** wants its second via at (48.250, 49.225), which is where
+  the router took PEDAL_TIP (x = 48.200, y 48.8..49.7). The crossing is made
+  0.75 mm further north instead - (47.250, 48.225) -> (48.900, 48.475) - which
+  is the only gap there is: PEDAL_TIP's own stub 0.650 mm west where 0.600 is
+  needed, the +3V3 F.Cu diagonal 0.849 mm east where 0.750 is needed, the
+  nudged +3V3 B.Cu trunk to the north, and C306 pad 1's copper 0.300 mm south
+  (`VDDA_LAYERED`'s own second via stands 0.275 mm off that pad).
+- **`SIGNAL_LAYERED`** is the ENC_A story above. What came out is shorter than
+  the tabulated one: 6.32 mm and 1 new via against 6.71 mm and 1.
+
+### The checks, re-run on the finished board
+
+All of the pipeline's own checks are functions of a **loaded board** and need
+no regeneration, which `close_pairs.py --checks` uses:
+
+| check | where | result |
+|-------|-------|--------|
+| `copper.keepout_clean` | M3 rings + crystal island | `+3V3`, `ENC_SW` - **pre-existing router copper**, identical on the board before this pass |
+| `copper.width_floor_table` | every net against the `.kicad_dru` | 8 of 8 PASS, min = the floor on all of them |
+| `copper.sense_ground_table` | ADR 0003 decision 4 | 5 of 5 PASS, one tie into the pour at R204.2 |
+| `copper.gnd_islands` | GND copper off the pour | 0 pieces |
+| `autoroute.usb_reference_check` | the `manual` group | 0 crossings that are not allowed, 1 that is |
+| `autoroute.parallel_check` | ADC beside switching | none |
+
+### `manual.py` collected the wrong set, and that is fixed
+
+`SCRIPTED_GROUPS` listed `manual` alongside `scripted-copper`, `scripted-silk`
+and `autorouted`, and `collect()` skips every group in it. So an export run
+after a restore found **nothing**, deleted `manual.json`, and the next restore
+would have taken every hand route off the board - the exact opposite of what
+this file is for and of what this README already said it did ("the group name
+is what makes the next export find the same items again"). `manual` is out of
+that tuple now. The store is still the source of truth in both directions;
+what changed is that copper already in the group is collected instead of
+ignored.
+
 ## Run it
 
     cd Hardware/graver-controller
@@ -47,6 +186,10 @@ every scripted budget below still passes.
     python3 tools/pcb/autoroute.py      # route the rest, grade it, import it
     python3 tools/pcb/manual.py --restore   # hand routes back on
     tools/pcb/render.sh                 # PNGs into output/pcb/
+
+`tools/pcb/close_pairs.py` is deliberately NOT in that list. It works on the
+committed board rather than regenerating one, and running the pipeline is what
+would throw its result away - see "Closing the last three by hand".
 
 or in one go:
 
@@ -237,6 +380,14 @@ records. **The sixth pass's board was 3 open with 0 on GND; this one is 10
 with 2 on GND, and the left-hand column is the one that got better.** See
 "Where it came out" for what each of the seven extra pairs is and which of
 them is a copper decision rather than router noise.
+
+On the **committed** board - the sixth pass's routing plus the three hand
+routes of "Closing the last three by hand" - the same command gives 0 errors,
+0 parity, **0 unconnected** and 12 warnings: `lib_footprint_mismatch` 4 (the
+trimmed connectors), `track_dangling` 2 and `via_dangling` 6. It was 15
+warnings before that pass. The three that went are PEDAL_RING's 1.00 mm dead
+stub, which is back inside its own pad; pad 9's 0.85 mm VDDA escape, which now
+ends on a via; and the PB2 escape via, which now carries a B.Cu run.
 
 **`kicad-cli` caps its report at 199 violations per type** and does not say so.
 That is not a detail here: the fifth pass's board was reported as having "199

@@ -151,6 +151,40 @@ NO_ROUTE = ("/MCU/USB_DP", "/MCU/USB_DM")
 # see usb_reference_check.
 USB_DIE_BRIDGE = "U302"
 
+# The ONE agreed crossing of the pair, and the only exception there is.
+#
+# +5V has to get from the ORing diodes in the power block (D105, x 25, y 54)
+# to the gate driver's supply cap (C201, x 51, y 23.5), and the USB run is a
+# wall between the two halves of the board: with the pair where it is there is
+# no F.Cu or B.Cu path at all from one to the other that does not cross it,
+# anywhere, on either layer. So `close_pairs.py` crosses it once, deliberately,
+# and the shape is what keeps the cost to the reference at a minimum: 0.30 mm
+# wide (the .kicad_dru Power floor, not a millimetre more), exactly
+# PERPENDICULAR to the pair, so the slot it opens in the pour is the pair's own
+# 0.35 mm plus two clearances, and 1.56 mm long between two vias that stand
+# 0.60 mm off the pair's own copper. Everything else on that net stays 1.00 mm
+# clear of the pair on B.Cu.
+#
+# An entry is (net, layer, x, y, tolerance): a crossing of that net, on that
+# layer, within `tolerance` mm of that point is the one that was agreed. Any
+# other crossing - a second one on the same net included - is still reported.
+# The point is in the placement convention, mm from the board's top-left
+# corner; everything the board hands back is in page mm, hence USB_ORIGIN.
+USB_ORIGIN = (50.0, 50.0)
+USB_CROSSING_OK = [
+    ("+5V", "B.Cu", 36.45, 21.35, 0.75),
+]
+
+
+def _usb_crossing_allowed(net, layer, x, y):
+    for (n, lay, cx, cy, tol) in USB_CROSSING_OK:
+        if n != net or lay != layer:
+            continue
+        if math.hypot(x - USB_ORIGIN[0] - cx,
+                      y - USB_ORIGIN[1] - cy) <= tol:
+            return True
+    return False
+
 # The router's net orderings, and how many attempts one stage makes.
 #
 # KiCadRoutingTools is NOT reproducible. Part positions are identical run to
@@ -707,7 +741,7 @@ def usb_reference_check(board, items):
                 continue
             pair.append(((tomm(t.GetStart().x), tomm(t.GetStart().y)),
                          (tomm(t.GetEnd().x), tomm(t.GetEnd().y))))
-    bad = []
+    bad, ok = [], []
     for it in items:
         if isinstance(it, pcbnew.PCB_VIA) or it.GetLayerName() != "B.Cu":
             continue
@@ -716,10 +750,17 @@ def usb_reference_check(board, items):
         for (p, q) in pair:
             x = seg_cross(p, q, a, b)
             if x:
+                net = netname_of(it)
+                if _usb_crossing_allowed(net, it.GetLayerName(), x[0], x[1]):
+                    ok.append("%s crosses the pair at (%.2f, %.2f) - the one "
+                              "agreed crossing, see USB_CROSSING_OK"
+                              % (net, x[0] - USB_ORIGIN[0],
+                                 x[1] - USB_ORIGIN[1]))
+                    break
                 bad.append("%s crosses the pair at (%.2f, %.2f)"
-                           % (netname_of(it), x[0], x[1]))
+                           % (net, x[0], x[1]))
                 break
-    return sorted(set(bad))
+    return sorted(set(bad)), sorted(set(ok))
 
 
 def seg_cross(p1, p2, p3, p4):
@@ -834,10 +875,12 @@ def report_board(board, imported_nets, items, do_drc):
               "allowed - the guard is GND and the pour is under it): %s"
               % (len(notes), "; ".join(notes[:4])))
 
-    usb = usb_reference_check(board, items)
+    usb, usb_ok = usb_reference_check(board, items)
     print("  imported B.Cu copper crossing under the USB pair (ADR: unbroken "
           "bottom ground): %s"
           % ("none" if not usb else "%d - %s" % (len(usb), "; ".join(usb[:6]))))
+    if usb_ok:
+        print("  the agreed crossing(s): %s" % "; ".join(usb_ok))
     bad += usb + wbad
 
     hits = parallel_check(board)

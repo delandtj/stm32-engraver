@@ -1,0 +1,537 @@
+{
+  "items": [
+    {
+      "end": [
+        54.088,
+        37.85
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "Net-(U301-PB2)",
+      "start": [
+        54.088,
+        38.55
+      ],
+      "width": 0.2
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "Net-(U301-PB2)",
+      "pos": [
+        54.088,
+        38.55
+      ],
+      "size": 0.6
+    },
+    {
+      "end": [
+        52.338,
+        41.65
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "Net-(U301-PB2)",
+      "start": [
+        52.338,
+        43.45
+      ],
+      "width": 0.2
+    },
+    {
+      "end": [
+        54.088,
+        39.9
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "Net-(U301-PB2)",
+      "start": [
+        52.338,
+        41.65
+      ],
+      "width": 0.2
+    },
+    {
+      "end": [
+        54.088,
+        38.55
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "Net-(U301-PB2)",
+      "start": [
+        54.088,
+        39.9
+      ],
+      "width": 0.2
+    },
+    {
+      "end": [
+        17.3,
+        43.6
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        17.3,
+        43.9
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        35.9,
+        21.9
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        32.8,
+        21.9
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        12.4,
+        53.0
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        12.4,
+        56.9
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        50.5,
+        23.6
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        50.2,
+        23.6
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        46.2,
+        24.2
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        42.8,
+        20.8
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        29.6,
+        31.3
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        17.3,
+        43.6
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        42.8,
+        20.8
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        40.5,
+        20.8
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        17.3,
+        48.1
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        12.4,
+        53.0
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        32.8,
+        21.9
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        32.8,
+        28.0
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        38.9,
+        20.8
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        37.0,
+        20.8
+      ],
+      "width": 0.3
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        37.0,
+        20.8
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        46.2,
+        24.2
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        17.3,
+        48.1
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        50.2,
+        23.6
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        38.9,
+        20.8
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        40.5,
+        20.8
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        32.8,
+        28.0
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        17.3,
+        43.9
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        29.6,
+        31.3
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        35.9,
+        21.9
+      ],
+      "size": 0.6
+    },
+    {
+      "end": [
+        40.5,
+        20.8
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        38.9,
+        20.8
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        50.2,
+        23.6
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        46.8,
+        23.6
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        46.8,
+        23.6
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        46.2,
+        24.2
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        32.8,
+        28.0
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        32.8,
+        28.1
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        17.3,
+        43.9
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        17.3,
+        48.1
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        32.8,
+        28.1
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        29.6,
+        31.3
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        37.0,
+        20.8
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        35.9,
+        21.9
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        49.0,
+        49.225
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "/MCU/VDDA",
+      "start": [
+        49.0,
+        48.575
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        49.0,
+        48.575
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "/MCU/VDDA",
+      "start": [
+        48.9,
+        48.475
+      ],
+      "width": 0.3
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "/MCU/VDDA",
+      "pos": [
+        48.9,
+        48.475
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "/MCU/VDDA",
+      "pos": [
+        47.25,
+        48.225
+      ],
+      "size": 0.6
+    },
+    {
+      "end": [
+        47.5,
+        48.475
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "/MCU/VDDA",
+      "start": [
+        47.25,
+        48.225
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        48.9,
+        48.475
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "/MCU/VDDA",
+      "start": [
+        47.5,
+        48.475
+      ],
+      "width": 0.3
+    }
+  ],
+  "note": "Hand-drawn copper, re-added by place.py as the last step of a pipeline run. Coordinates are mm from the board's top-left corner, which is page (50, 50)."
+}
