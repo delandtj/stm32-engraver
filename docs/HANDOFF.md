@@ -223,6 +223,111 @@ Key facts (details in the ADR):
   joint.
 - Pin map: in the ADR, verified against the datasheet.
 
+### Brick sizing (worked out 2026-10-01)
+
+**Buy 24 V, 2 A (48 W).** The box needs far less than that; the headroom is
+for sag, not for amps.
+
+| load at 24 V | current |
+|---|---|
+| coil while the FET is on, 141 ohm (ADR 0001) | 170 mA |
+| logic, realistic: MCU + display + backlight | ~35 mA |
+| logic, the buck's full design budget (0.5 A at 5 V, ~90%) | ~115 mA |
+| **worst-case peak, coil and logic together** | **~290 mA** |
+| average at the 35 % duty cap | ~95 mA |
+
+About 7 W worst case, and the coil only draws its 170 mA during the pulse.
+The on-board 1 A slow fuse is the board's own ceiling.
+
+1 A (24 W) would genuinely do it with 3x margin. 2 A costs about the same and
+buys three things:
+
+1. Headroom for the low-resistance-coil experiment (a 36 ohm coil on 24 V
+   pulls 0.67 A - see the 12 V note below).
+2. Inrush into the 470 uF bulk cap at power-on without the brick hiccuping.
+3. **No sag during the strike**, which is the one that affects how it feels.
+
+Point 3 is the real reason. A weak brick droops under the pulse, and droop
+weakens the hit directly: less voltage across the coil means slower current
+rise, which IS the strike. The firmware is watching too - it warns below
+18 V (VIN_WARN_MV) and refuses to fire below 15 V (VIN_MIN_FIRE_MV) - so a
+weedy supply would both soften the strikes and nag on screen. The 470 uF cap
+buffers the fast edge but cannot carry a long pulse: at 170 mA for 15 ms it
+would sag 5.4 V on its own, so the brick supplies the bulk of a long strike.
+Stiffness counts more than raw amps.
+
+Two limits:
+
+- **Do not exceed 36 V.** That is the electronics rating, and it is now the
+  only one - the old 30 V ceiling belonged to the DC jack, which is gone.
+- **A bigger brick does not make it hit harder.** Coil resistance sets the
+  current: 24 V into 141 ohm is 170 mA whether the supply can do 1 A or 10 A.
+  Extra capacity only stops it sagging. The levers for more punch are higher
+  voltage or a lower-resistance coil, not a bigger brick.
+
+### 12 V coils: what it would take (worked out 2026-10-01, nothing changed)
+
+Two different questions, often confused. Neither has been acted on.
+
+**(a) Running the BOARD from a 12 V brick.** Three blockers, one of them
+hardware:
+
+1. The buck never starts. The LM5164 EN/UVLO divider is 1M / 120k against a
+   1.5 V threshold, so it enables at about 14 V. At 12 V there is no 5 V
+   rail and the board is dead except on USB. Fix: R106 120k -> ~180k, which
+   moves the threshold to ~10 V. One 0402.
+2. `VIN_MIN_FIRE_MV = 15_000` refuses to fire. Note the firmware ALREADY has
+   `#[cfg(feature = "low-vin")]` setting it to 10_000, written for a 12 V
+   bench supply and marked "Never for the production board". The mechanism
+   exists; it needs promoting to a supported mode. `VIN_WARN_MV = 18_000`
+   needs rethinking with it.
+3. The I_SENSE readout saturates. The x11 amp (R210 10k / R211 1k) hits the
+   rail at 0.3 A. Fix: R210 -> 6.8k. The overcurrent trip is unaffected - it
+   reads the raw shunt.
+
+Nothing else cares: fuse, DMP6023LE (60 V), SMBJ36A, 470 uF 63 V, the LM5164
+itself (100 V, works from 6 V), IRLR3410 (100 V), UCC27517 (fed from 5 V),
+the LDO. All overrated at 24 V and absurdly so at 12 V.
+
+**Supporting EITHER supply is the same work, not more.** Set the enable
+threshold once at ~10 V and both bricks start the buck; set the sense gain
+once at ~x8 and both coil currents fit. The firmware already has the piece
+that makes it work - supply compensation holds volt-seconds constant
+(`t = t * V_NOMINAL_MV / vin`, V_NOMINAL_MV = 24_000), so at 12 V it doubles
+the on-time for the same strength setting. Cost: two resistor values plus
+making two constants runtime instead of compile-time. The only compromise is
+that at 12 V the doubled on-time hits T_ON_MAX and the duty cap sooner, so
+the top of the strength range compresses.
+
+**(b) Driving a 12 V COIL from the existing 24 V brick.** Electrically fine,
+but the board was deliberately scoped against it. A 12 V coil of the same
+~4 W is ~36 ohm, so on 24 V it pulls 0.67 A, and parts-power.md already
+analysed this exact case: it collides with the 0.8 A trip (0.67 A is 84 % of
+threshold - expect nuisance trips on a comparator whose ~3 mV hysteresis is
+a known weakness), the 1 ohm 1206 shunt (0.45 W while on against a 0.25 W
+rating; 0.16 W average at 35 % duty), and the I_SENSE ceiling. That document
+offers the fix if low-R coils are ever wanted: "a 0.33 ohm 1 W 2512 shunt
+with gain about 30, a 2 A slow fuse, and a trip threshold that scales with
+the coil". ADR 0001's "coils >= ~100 ohm" scope is that sentence being
+declined.
+
+Coil thermals are the real limit there, not the board: 24 V into 36 ohm is
+16 W while on, against a ~4 W part, with nothing but duty cycle protecting
+it. At the 35 % cap that averages 5.6 W, over rating - it would want the cap
+nearer 25 % and the NTC fitted so the 70 C cutout can see the coil.
+
+**Why it is still interesting**: deliberately overdriving a solenoid is
+standard practice and good for punch - more volts across less inductance
+makes current rise faster, and rise rate IS the strike. It is the cheapest
+way to find out what harder drive feels like without building a boost rail.
+
+**But do not spend this margin yet.** ADR 0001's biggest open question is
+whether 24 V has enough punch in the first place, and that bench test has
+not been run. Going lower before answering it spends headroom that may turn
+out to be needed. Also note coil inductance is still unmeasured (open item
+2), and until it is, neither force nor heating is predictable for any of
+this - L/R decides whether a 3 ms pulse reaches 0.1 A or 0.65 A.
+
 ## State of the firmware
 
 Written 2026-09-16, builds clean (release, clippy) for thumbv7em-none-eabihf,
