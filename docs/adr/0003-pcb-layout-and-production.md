@@ -171,12 +171,15 @@ first-article bring-up alone with an ST-LINK, the class never sees a probe.
      redesigned in both schematic and firmware. Nothing on the board forces either.
      The anti-mixup requirement that motivated 3 pins lives on the box shell, where
      GX12-3 and GX12-4 cannot mate, not on the board where these are soldered once.
-   - **THT assembly is now down to one part.** Wire pads are holes with nothing to
-     insert, so after this change the only through-hole components left are C101, the
-     470 uF radial bulk capacitor, and J302, the 1x5 SWD header. Whether that still
-     justifies JLC's THT service is an open question below; default is to keep it,
-     because changing the bulk capacitor is a separate decision with its own stock and
-     ripple-rating risk.
+   - **Through-hole soldering is nearly gone, but not gone.** Wire pads are holes with
+     nothing to insert, so what is left is C101 (470 uF radial), J302 (the 1x5 SWD
+     header), and - easy to miss - **J301's four plated shell tabs**: the HRO
+     TYPE-C-31-M-12 is 16 SMD signal pads plus 4 PTH tabs and 2 NPTH locating pegs, so
+     the USB-C is not a pure SMD part. In practice it is one of JLC's most common SMT
+     line items and they handle it routinely; the point is only that "SMT-only" is not
+     literally true while it is on the board. Whether the THT service still earns its
+     fee is an open question below; default is to keep it, because changing the bulk
+     capacitor is a separate decision with its own stock and ripple-rating risk.
 
 ---
 
@@ -339,8 +342,11 @@ Everything analog references the pour at one point next to the shunt.
   is the price paid for deleting four unverified footprints, the crimp tooling and
   most of the loose-parts order. It also removes the keying those connectors provided,
   so the silkscreen legend and a continuity check become load-bearing.
-- The enclosure gains the encoder and the box sockets, and loses every tolerance that
-  used to run between a board-mounted jack and a printed wall.
+- The enclosure gains the encoder and the box sockets, and loses all but one of the
+  tolerances that used to run between a board-mounted jack and a printed wall. The
+  exception is USB-C, which is still soldered to the board and still has to line up
+  with a hole in the printed rear wall. It is the one connector whose mating half is a
+  cable nobody has to source, which is exactly why it stayed.
 
 ### Risks
 - **JLC stock**: STM32F411CEU6 (819 in stock at the last check) can vanish.
@@ -524,8 +530,9 @@ with the pedal's board side left at 4 pads so the socket question stays open.
       heel-down and cannot fire, which is fail-safe but loses the "no pedal" message.
       Blocks: the box wall cutout, the loose-parts order, and one io.kicad_sch change
       if GX12 wins.
-- [ ] **Keep JLC's THT assembly service?** After Decision 9 it inserts C101 and J302
-      only. Options: keep it (default, no change); move C101 to an SMD 470 uF and go
+- [ ] **Keep JLC's THT assembly service?** After Decision 9 the only parts needing it
+      are C101 and J302 (J301's four shell tabs are through-hole too, but that part is
+      standard JLC SMT - confirm how they bill it when the order is placed). Options: keep it (default, no change); move C101 to an SMD 470 uF and go
       SMT-only, which needs a stock and ripple-rating check; or hand-fit C101 on 12
       boards, which breaks the ADR 0001 reproducibility rule for a tall electrolytic.
 - [ ] How the cover holds the display module (pocket plus clips, or two M2 screws) and

@@ -300,11 +300,15 @@ Decisions still open (ADR "Open Questions"):
   wiper so an unplugged pedal reads heel-down and cannot fire: fail-safe, but
   it can no longer tell "unplugged" from "pedal at rest"). The board commits
   to neither; four pads serve both.
-- **Keep JLC's THT assembly service? (new, 2026-10-01)** After the rework it
-  inserts C101 and J302 and nothing else - wire pads are holes with no part.
-  Options: keep it (default, no change), move C101 to an SMD 470 uF and go
-  SMT-only (needs a stock and ripple check), or hand-fit C101 on 12 boards
-  (breaks the ADR 0001 reproducibility rule for a tall electrolytic).
+- **Keep JLC's THT assembly service? (new, 2026-10-01)** After the rework the
+  parts needing it are C101 and J302; wire pads are holes with no part. Note
+  J301 is not pure SMD either - the HRO TYPE-C-31-M-12 is 16 SMD pads + 4
+  PLATED shell tabs + 2 NPTH pegs - so there is through-hole solder on the
+  board regardless. It is a standard JLC SMT line item in practice; confirm
+  how they bill it at order time. Options: keep the service (default, no
+  change), move C101 to an SMD 470 uF and go SMT-only (needs a stock and
+  ripple check), or hand-fit C101 on 12 boards (breaks the ADR 0001
+  reproducibility rule for a tall electrolytic).
 - NTC fitted on all handpieces, or rely on the coil-resistance estimate?
 - Default strike ranges (1-60 Hz, 0.5-15 ms, 35 % duty cap) to be confirmed
   on the bench.
@@ -345,5 +349,7 @@ Decisions still open (ADR "Open Questions"):
    and 24 V from the lab PSU. Fix what the hardware disagrees with.
 7. **Enclosure** in FreeCAD from a STEP export of the board. It now carries
    more than before: the encoder and its shaft, the display, the box sockets,
-   and a loom exit for each pad row. In exchange, no tolerance runs between a
-   board-mounted connector and a printed wall any more.
+   and a loom exit for each pad row. In exchange all but one of the
+   board-to-wall tolerances are gone - the exception is USB-C, still soldered
+   to the board and still needing to line up with a hole in the printed rear
+   wall. Its mouth direction against the real part is unverified.

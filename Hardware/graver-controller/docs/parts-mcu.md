@@ -115,9 +115,17 @@ gmcrit = 4 * ESR * (2*pi*f)^2 * (C0 + CL)^2, must be < Gm_crit_max.
 
 ## 5. SWD - recommendation
 
-Populate the 1x5 THT header (C492404, 0.03 USD). The board already needs THT assembly for
-the encoder, jacks, socket and terminal, so the marginal cost is a few joints. Pin order
-suggestion: 1 3V3, 2 SWCLK (PA14), 3 GND, 4 SWDIO (PA13), 5 NRST. Zero-cost alternative:
+Populate the 1x5 THT header (C492404, 0.03 USD).
+
+**Pin order AS DRAWN (corrected 2026-10-01 - this is the schematic, not a
+suggestion): 1 +3V3, 2 SWDIO (PA13), 3 SWCLK (PA14), 4 NRST, 5 GND.** An earlier
+version of this line proposed 1 3V3 / 2 SWCLK / 3 GND / 4 SWDIO / 5 NRST, which
+swaps clock and data and puts ground on the wrong pin. Wire the ST-LINK cable
+from the list above, or from the board.
+
+The old rationale here - "the board already needs THT assembly for the encoder,
+jacks, socket and terminal" - is void since ADR 0003 Decision 9: none of those
+parts exist any more. See the THT open question in ADR 0003. Zero-cost alternative:
 Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical pads (needs a ~40 USD cable);
 not worth it for a class batch that will be flashed over USB DFU anyway.
 
