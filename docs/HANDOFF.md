@@ -3,15 +3,34 @@
 Last updated 2026-10-01. Read this first in a new session; it says what
 exists, what is decided, how to work on it and what comes next.
 
-**Most recent change (2026-10-01): the connectors came off the board.** ADR
-0003 Decision 9 replaced every board connector except USB-C with a row of
-plated holes for a soldered wire loom, moved the rotary encoder off the board
-into the cover plate, and shrank the board from 110 x 70 to 95 x 70 mm.
-Jan's reasoning: sourcing the mating halves was the problem, soldering is
-not. It also deleted the four unverified THT footprints in one go, which was
-the largest open layout risk. The schematic is re-captured and ERC-clean; the
-board is re-placed and re-poured; the route is the part still in flight - see
-"State of the design".
+## Start here
+
+**The board is finished and tagged `v0.2`** (commit 9645970, signed).
+95 x 70 mm, 2-layer: 0 DRC errors, 0 schematic parity, 0 unconnected, all
+eight per-net width floors PASS. Nothing more is needed on the copper.
+
+**But it has never been near real hardware.** The firmware has never run on
+a board, the 24 V punch test is unanswered and coil inductance is unmeasured.
+v0.2 passes every check that can be run on a file; it is not a board known to
+work. Keep that distinction - "0 DRC errors" is not "it works", and this
+document said so too quietly once already.
+
+**What changed on 2026-10-01 (ADR 0003 Decision 9):** every board connector
+except USB-C became a row of plated holes for a soldered wire loom, the
+rotary encoder moved off the board into the cover plate, and the board shrank
+from 110 x 70 to 95 x 70. Jan's reasoning: sourcing the mating halves was the
+problem, soldering is not. It also deleted the four unverified THT footprints
+in one go, which was the largest open layout risk in the project, and brought
+the long side under JLC's 100 x 100 price band.
+
+**The single next piece of work** is the export set, ADR 0003 step 8 - Gerber,
+drill, BOM, CPL, STEP, assembly PDF, test sheet. None of it exists; nothing in
+`tools/` produces it. Everything else below is a decision rather than a task.
+
+**Three decisions are blocking**, all in "Open items": the pedal socket (blocks
+the loose-parts order and the box wall cutout), whether JLC's THT service still
+earns its fee, and a manufacturer STEP for J301 (without it the enclosure
+cannot be drawn around the USB opening, because that part is invisible in 3D).
 
 ## What this is
 
@@ -430,6 +449,15 @@ Decisions still open (ADR "Open Questions"):
   wiper so an unplugged pedal reads heel-down and cannot fire: fail-safe, but
   it can no longer tell "unplugged" from "pedal at rest"). The board commits
   to neither; four pads serve both.
+- **A manufacturer STEP for J301 (new, 2026-10-01, blocks the enclosure).**
+  KiCad 10 ships no 3D model anywhere for the HRO TYPE-C-31-M-12 and nothing
+  in the library is the right shape to stand in, so the part is invisible in
+  the 3D view, in `kicad-cli pcb render` and in a STEP export. The board is
+  fine - it is populated, in the BOM and in the CPL - but you cannot cut an
+  accurate opening in the printed rear wall from a model that does not
+  contain the connector. Drop a vendor STEP into a project `3d/` folder.
+  Same loose part answers the other USB-C unknown: its mouth direction
+  against the real thing.
 - **Keep JLC's THT assembly service? (new, 2026-10-01)** After the rework the
   parts needing it are C101 and J302; wire pads are holes with no part. Note
   J301 is not pure SMD either - the HRO TYPE-C-31-M-12 is 16 SMD pads + 4
@@ -445,34 +473,32 @@ Decisions still open (ADR "Open Questions"):
 
 ## Next steps, in order
 
-1. **DONE 2026-10-01: the board is electrically complete.** 0 DRC errors, 0
-   parity, 0 unconnected, all width floors PASS. The route plus the three
-   hand-closed pairs are committed and manual.json holds the 38 hand-drawn
-   items. Nothing further is needed on the copper unless placement changes.
-   The next real step is the export set, item 4.
+The copper is done (v0.2). Steps 1 and 2 are a review and three decisions;
+step 3 is the only real build work left before an order.
 
-2. **Jan reviews the board in pcbnew.** The old "decide on the empty right
+1. **Jan reviews the board in pcbnew.** The old "decide on the empty right
    third" question is answered - the shrink to 95 x 70 took that space back.
    What is worth his eye now: whether the pad rows sit where the looms
    actually want to leave the box, and whether the silkscreen legend is
    readable enough to solder from, since with the keyed connectors gone that
    legend is the only thing preventing a reversed loom.
-3. **Answer the two new open questions** (pedal socket, THT service) - the
-   first blocks the loose-parts order and the box wall cutout.
-4. **Export set**, ADR 0003 step 8: Gerber, drill, BOM with the LCSC column,
+2. **Answer the three open questions** - pedal socket, JLC's THT service, and
+   a manufacturer STEP for J301. The first blocks the loose-parts order and
+   the box wall cutout; the third blocks the enclosure.
+3. **Export set**, ADR 0003 step 8: Gerber, drill, BOM with the LCSC column,
    CPL with rotation review, STEP, assembly PDF, per-board test sheet. Not
    scripted yet; `kicad-cli pcb export gerbers / drill / pos` plus a BOM from
    the netlist is the shape of it. The test sheet now needs a loom continuity
    and orientation check as its first line.
-5. **JLC order**: 12 assembled, 5 bare. Loose parts are a much shorter list
+4. **JLC order**: 12 assembled, 5 bare. Loose parts are a much shorter list
    than before - display modules, encoders and knobs, GX12 pigtails and
    plugs, hook-up wire, and whatever the pedal question settles on. The XH
    housings, crimp contacts, ribbon leads, screw plugs and the XH crimp tool
    are all out of the project.
-6. **Firmware bring-up** on the Blackpill bench rig (docs/bench-rig.md):
+5. **Firmware bring-up** on the Blackpill bench rig (docs/bench-rig.md):
    flash, display, buttons/encoder, VIN divider + pot, then the coil at 12 V
    and 24 V from the lab PSU. Fix what the hardware disagrees with.
-7. **Enclosure** in FreeCAD from a STEP export of the board. It now carries
+6. **Enclosure** in FreeCAD from a STEP export of the board. It now carries
    more than before: the encoder and its shaft, the display, the box sockets,
    and a loom exit for each pad row. In exchange all but one of the
    board-to-wall tolerances are gone - the exception is USB-C, still soldered
