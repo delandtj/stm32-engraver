@@ -20,7 +20,7 @@ pcb="$proj/graver-controller.kicad_pcb"
 out="$proj/output/pcb"
 
 # must match ORIGIN / BOARD_W / BOARD_H in place.py
-ox=50; oy=50; bw=110; bh=70; margin=8
+ox=50; oy=50; bw=95; bh=70; margin=8
 page_w=297                      # A4 landscape, the default kicad-cli page
 pxmm="${PXMM:-18}"              # output pixels per board mm
 
@@ -66,7 +66,7 @@ zoom() {   # name x_mm y_mm w_mm h_mm
     magick "$out/placement.png" -crop "$geo" +repage -resize 1600x "$out/$name.png"
     echo "$out/$name.png"
 }
-zoom zoom-rear   0  0 110 30
+zoom zoom-rear   0  0  95 30
 zoom zoom-mcu   34 32  40 30
 zoom zoom-power  0 12  36 50
 zoom zoom-driver 48 10  52 34

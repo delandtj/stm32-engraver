@@ -1,6 +1,7 @@
 # 0003 - PCB layout and board production
 
-**Status**: Accepted (review asks answered 2026-09-17)
+**Status**: Accepted (review asks answered 2026-09-17; connectors and board size
+amended 2026-10-01, see Decision 9)
 **Date**: 2026-09-17
 
 ---
@@ -16,8 +17,10 @@ without re-deriving anything.
 
 What is settled and must not be re-litigated here:
 
-- Single 2-layer board, 1.6 mm, 1 oz, fully assembled by JLCPCB (SMT + THT). Builders
-  plug in the display ribbon, screw in the GX12 pigtail, mount the board. No soldering.
+- Single 2-layer board, 1.6 mm, 1 oz, assembled by JLCPCB. Amended 2026-10-01: the
+  board carries no connectors except USB-C (Decision 9), so Jan solders five wire
+  looms into plated holes when he builds the boxes. The class still receives finished
+  boxes and touches no solder.
 - The board is the top face of a desk console; display and encoder on top, all jacks on
   the rear edge (ADR 0001 section 10).
 - Parts, LCSC numbers, footprint gotchas: `Hardware/graver-controller/docs/parts-*.md`.
@@ -28,9 +31,11 @@ What is still open on the bench and can still change the copper:
   comes back and the power block grows. Layout must not start on the power block until
   this is answered, or must leave room for it.
 - Coil inductance, which sizes the TVS energy (parts already chosen with margin).
-- Footprints not yet checked against real parts: DC jack (J101), 5.08 mm terminal
-  (J201, KiCad drill 1.2 mm vs 1.5-1.7 mm needed), Neutrik NMJ6HCD2 normalling
-  contacts, encoder lug spacing, display module pin order and outline.
+- Display module pin order and outline, checked on one bench module only. Amended
+  2026-10-01: the rest of this list (DC jack, the 5.08 mm terminal's 1.2 mm drill, the
+  Neutrik normalling contacts, encoder lug spacing) went away with the connectors.
+  Decision 9 replaced every one of them with plated holes from the stock KiCad
+  libraries, which is the single largest reduction of layout risk in this ADR.
 
 Constraints from the class context: below EUR 150 per complete unit, 10 identical units
 that behave identically, a printed enclosure (Creality K2 Max, FreeCAD), Jan does the
@@ -54,15 +59,22 @@ first-article bring-up alone with an ST-LINK, the class never sees a probe.
    then a property of the print alone, and the cover height is no longer tied to the
    module's 11 mm stack. This is a refinement of ADR 0001's "PCB is the top face": the PCB
    is the top structural layer, the print is the skin.
-3. **Board outline 110 x 70 mm**, rectangle, 2 mm corner radius, four M3 holes at 4 mm
-   from each corner with 6 mm ground-free keepout. Rear edge (long side) carries, left
-   to right seen from the front: DC jack, USB-C, handpiece terminal, pedal jack. The
-   pedal jack sits at the far right so the pedal cable leaves the console at its edge;
-   the extra 10 mm of width keeps the Neutrik body clear of the corner M3 hole. Front
-   half carries the display ribbon connector (left) and the encoder (right). Power block
-   behind the DC jack, driver block behind the handpiece terminal, MCU in the middle,
-   analog front end between driver and MCU. The 12.5 x 20 mm bulk capacitor stands
-   upright as JLC inserts it; the cover plate has a dome over it.
+3. **Board outline 95 x 70 mm** (amended 2026-10-01; was 110 x 70 while the rear edge
+   had to seat four connector bodies), rectangle, 2 mm corner radius, four M3 holes at
+   4 mm from each corner with 6 mm ground-free keepout. Rear edge (long side) carries,
+   left to right seen from the front: the power wire pads, USB-C, the handpiece pads,
+   the pedal pads. Front half carries the display pad row (left) and the encoder pad
+   row (right). Power block behind the power pads, driver block behind the handpiece
+   pads, MCU in the middle, analog front end between driver and MCU. The 12.5 x 20 mm
+   bulk capacitor stands upright; the cover plate has a dome over it.
+
+   Why 95: measured on the routed 110 x 70 board, every part except the connectors,
+   the encoder and the mounting holes fits inside 84.5 x 64.0 mm, and only four parts
+   (R205-R208, Q203) sat beyond x=130. The connectors, not the electronics, were
+   setting the width. 95 clears the parts with routing headroom rather than squeezing
+   to 85, and it brings the long side under JLCPCB's 100 x 100 mm price band, which is
+   worth having across 17 boards. Confirm the band on order day; it is a vendor
+   pricing tier, not a design rule.
 4. **Layer use**: top = parts and signal, bottom = ground pour with the few crossing
    traces. One ground net, but the shunt's power-ground tap is a single point: the
    sense side of R204 (the 1 ohm shunt) joins the pour only at the shunt, and the
@@ -97,6 +109,74 @@ first-article bring-up alone with an ST-LINK, the class never sees a probe.
    alone. The router runs on a copy of the project, never on the committed files, and
    its own pass messages are ignored; see the risk below. Jan reviews in pcbnew before
    anything is ordered.
+9. **Wire pads instead of connectors** (added 2026-10-01). Every board connector
+   except USB-C becomes a row of plated through-holes, and the rotary encoder moves
+   off the board onto wires. Jan solders the looms when he builds the boxes; the class
+   still receives finished units. Reason: the mating halves were the sourcing problem,
+   not the board halves. GX12 pigtails, 4-pin screw plugs, XH-7 crimp housings and
+   ready-made ribbon leads all had to be found, ordered and assembled separately,
+   while the board-side sockets were the four parts in this project whose footprints
+   were still unverified against real hardware. Soldering a wire costs a joint; a
+   wrong THT footprint costs a re-spin.
+
+   | Ref | Function | Footprint | Pads | Drill |
+   |---|---|---|---|---|
+   | J101 | Power in from the brick | `Connector_Wire:SolderWire-1sqmm_1x02_P5.4mm_D1.4mm_OD2.7mm` | 2 | 1.4 mm |
+   | J201 | Handpiece | `Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical` | 4 | 1.0 mm |
+   | J301 | USB-C, unchanged | HRO 31-M-12, SMD | - | - |
+   | J401 | Display | `Connector_PinHeader_2.54mm:PinHeader_1x07_P2.54mm_Vertical` | 7 | 1.0 mm |
+   | J402 | Pedal | `Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical` | 4 | 1.0 mm |
+   | J403 | Encoder (replaces SW401) | `Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical` | 4 | 1.0 mm |
+
+   Pin order as actually captured 2026-10-01, verified against the exported netlist.
+   These are the numbers the silkscreen and the wiring card must carry:
+
+   | Ref | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+   |---|---|---|---|---|---|---|---|
+   | J101 | GND | +24V | | | | | |
+   | J201 | VIN | COIL_NEG | NTC | GND | | | |
+   | J401 | GND | +3V3 | SCL | SDA | RES | DC | BLK |
+   | J402 | tip | ring-normal (GND) | ring | sleeve (GND) | | | |
+   | J403 | ENC_A | GND | ENC_B | ENC_SW | | | |
+
+   J101 has ground on pad 1 because that is what let the existing +24V run to the
+   fuse survive the swap untouched; the silkscreen says GND and +24V, so no one reads
+   a pad number anyway. J402 pads 2 and 4 are both ground: pad 2 is the socket's
+   ring-normal contact and pad 4 its sleeve, and they are separate wires precisely so
+   the normalling contact can do the plug detection. J403 merges the EC11's two
+   commons onto pad 2.
+
+   All six are stock KiCad library footprints, so nothing here needs measuring
+   against a loose part first. The 2.54 mm rows take 22 AWG comfortably and, as a free
+   option, accept an ordinary 0.1 inch pin header if a pluggable joint is ever wanted.
+   Only the power feed gets 1.4 mm holes, because it is the one joint that takes
+   mechanical strain from a brick lead; it gets a strain-relief anchor beside it so
+   the solder is not the mechanical joint.
+
+   Consequences that are decisions in their own right:
+
+   - **The encoder is now 4 wires**: ENC_A, ENC_B, ENC_SW and one GND. The EC11's
+     two commons (encoder C and switch S2) are already the same net, so they join at
+     the encoder body. Run 5 wires instead if that bridge is unwanted. The 10k
+     pull-ups R402-R404 and the 10 nF debounce caps C401-C403 stay on the board at the
+     MCU. Risk: the A/B lines now leave the board at 10k impedance. Keep the encoder
+     loom away from the handpiece cable; if it miscounts on the bench, drop R402-R404
+     to 2.2k.
+   - **The pedal gets 4 pads, not 3**: tip, ring-normal, ring, sleeve. The pedal
+     socket choice is deliberately deferred (see Open Questions). Four pads keep both
+     answers alive: a 6.35 mm TRS socket in the box wall wires all four and the
+     plugged-in detection of ADR 0001 section 8 keeps working untouched, because the
+     detection is the socket's ring-normal contact grounding the ring. A GX12-3 later
+     wires three and leaves the fourth empty, and then the detection has to be
+     redesigned in both schematic and firmware. Nothing on the board forces either.
+     The anti-mixup requirement that motivated 3 pins lives on the box shell, where
+     GX12-3 and GX12-4 cannot mate, not on the board where these are soldered once.
+   - **THT assembly is now down to one part.** Wire pads are holes with nothing to
+     insert, so after this change the only through-hole components left are C101, the
+     470 uF radial bulk capacitor, and J302, the 1x5 SWD header. Whether that still
+     justifies JLC's THT service is an open question below; default is to keep it,
+     because changing the bulk capacitor is a separate decision with its own stock and
+     ripple-rating risk.
 
 ---
 
@@ -106,8 +186,8 @@ first-article bring-up alone with an ST-LINK, the class never sees a probe.
 
 Blocks as they appear on the board, each with what it must satisfy in layout.
 
-1. **Input power** (`power.kicad_sch`): DC jack J101, fuse, reverse-polarity P-FET,
-   SMBJ36A, 470 uF bulk, VIN sense divider R102/R103. Placement: DC jack on the rear
+1. **Input power** (`power.kicad_sch`): power wire pads J101, fuse, reverse-polarity
+   P-FET, SMBJ36A, 470 uF bulk, VIN sense divider R102/R103. Placement: J101 on the rear
    edge at the left, fuse and P-FET immediately behind it, TVS and bulk cap next; the
    bulk cap stands upright (standard 5 mm radial footprint) under the cover's dome, kept
    10 mm or more from the encoder and clear of the display pocket in the cover above, so
@@ -136,45 +216,51 @@ Blocks as they appear on the board, each with what it must satisfy in layout.
    coil pins of J201 and the bulk cap. 1 ohm 1206 shunt R204 from FET source to power
    ground, Kelvin traces from the shunt pads to the TLV9062 (R209/R213), op-amp within 10
    mm of the shunt, its output filtered (R212/C205) at the MCU pin PA6. The comparator
-   output to PB12 is a short track. Handpiece terminal J201 right of centre on the rear
-   edge, between USB-C and the pedal jack: pin 1 VIN, 2 COIL_NEG, 3 NTC, 4 GND; NTC
-   pull-up and cap near the MCU.
-5. **UI** (`io.kicad_sch`): display connector J3 (J401 in the schematic) in the
-   front-left, a keyed 7-pin JST XH header (B7B-XH-A, LCSC C144398, 2.50 mm pitch; same
-   nets and pin order as the drawn 1x7 socket: GND VCC SCL SDA RES DC BLK) with pin
-   names on the silkscreen. The module sits in a pocket of the cover plate and connects
-   with a 7-way ribbon, XH-7 housing on the board end and a 1x7 2.54 mm female housing
-   on the module's pin header, 100 mm or shorter; Jan fits the module end and marks pin
-   1 before the class, the builders only plug the keyed end. J3 within 40 mm of the
-   MCU's SPI pins, SCL routed next to a ground return; backlight FET and 100 R nearby.
-   If the ribbon rings, the SPI clock comes down in firmware before any part is added.
-   Encoder SW401 front-right, shaft centre at least 20 mm from the display pocket edge
-   for a knob, its 10k/10 nF debounce at the MCU; status LED with a light pipe hole in
-   the cover; pedal jack J5 (Neutrik) at the far right of the rear edge with the nut on
-   the rear wall (wall thickness under 4.7 mm at the jack), PESD5V0S2BT at the jack,
-   ring 1k/10n filter as drawn.
-6. **Mechanical**: four M3 holes; outline; cover plate reference points (J3 position
-   for the ribbon run, encoder shaft, LED, rear connector faces) exported as a STEP so
-   FreeCAD builds
-   the console around the real geometry. Tallest parts: bulk cap 20 mm upright (22 mm dome
-   in the cover), encoder shaft 20 mm, pedal jack nose through the wall.
+   output to PB12 is a short track. Handpiece pads J201 right of centre on the rear
+   edge, between USB-C and the pedal pads: pin 1 VIN, 2 COIL_NEG, 3 NTC, 4 GND; NTC
+   pull-up and cap near the MCU. The 7.6 mm pad row replaced a 21 mm terminal body,
+   which shortens the flyback loop rather than lengthening it.
+5. **UI** (`io.kicad_sch`): display pads J401 in the front-left, a 1x7 row on 2.54 mm
+   pitch carrying the drawn pin order GND VCC SCL SDA RES DC BLK, with pin names on
+   the silkscreen. The module sits in a pocket of the cover plate and reaches the board
+   through a 7-way loom, 100 mm or shorter, soldered at the board end by Jan and
+   terminated in a 1x7 2.54 mm female housing on the module's own pin header. J401
+   within 40 mm of the MCU's SPI pins, SCL routed next to a ground return; backlight
+   FET and 100 R nearby. If the loom rings, the SPI clock comes down in firmware before
+   any part is added. Encoder pads J403 front-right (ENC_A, ENC_B, ENC_SW, GND), with
+   the 10k pull-ups and 10 nF debounce staying at the MCU; the encoder itself mounts in
+   the cover plate, so the old shaft-clearance and bulk-cap-height constraints against
+   SW401 no longer apply to the board. Status LED with a light pipe hole in the cover.
+   Pedal pads J402 at the right of the rear edge (T, RN, R, S), PESD5V0S2BT and the
+   ring 1k/10n filter on the board as drawn.
+6. **Mechanical**: four M3 holes; outline; cover plate reference points (J401 position
+   for the display loom run, J403 for the encoder loom, LED, the USB-C face and the
+   wire exits) exported as a STEP so FreeCAD builds the console around the real
+   geometry. Tallest part is now the bulk cap at 20 mm upright (22 mm dome in the
+   cover); with the encoder and the jacks off the board, nothing else stands proud.
+   The cover plate now carries the encoder and its shaft, the display, and whatever
+   sockets the box gets, so the tolerance loop that used to run through the board
+   runs through the print alone.
 
 ### Data Flow / Interaction
 
-    rear   +-----------------------------------------------------------+
-    y=0    |  [DC jack] [USB-C]   [4p 5.08 terminal]   [pedal jack TRS] |
-           |  fuse P-FET TVS [470uF up]   gate drv FET TVS diode        |
-           |                                                            |
-           |  buck 5V   crystal, caps       analog: shunt amp, VIN div, |
-           |  LDO 3V3   [   STM32F411   ]   NTC, pedal filter           |
-           |                                                            |
-           |   display in the cover      SW401                          |
-    front  |  [J3 ribbon 7p]           [encoder]                (M3)   |
-    y=70   +-----------------------------------------------------------+
-           x=0                  110 x 70 mm, top view                x=110
+    rear   +--------------------------------------------------+
+    y=0    |  [J101 2p] [USB-C]   [J201 4p]      [J402 4p]     |
+           |   power     DFU       handpiece      pedal        |
+           |  fuse P-FET TVS [470uF up]  gate drv FET TVS diode|
+           |                                                   |
+           |  buck 5V   crystal, caps    analog: shunt amp,    |
+           |  LDO 3V3   [  STM32F411  ]  VIN div, NTC, pedal   |
+           |                                                   |
+           |  [J401 7p]                  [J403 4p]             |
+    front  |   display loom               encoder loom   (M3)  |
+    y=70   +--------------------------------------------------+
+           x=0                95 x 70 mm, top view           x=95
+
+    Every bracket except USB-C is a row of plated holes, not a part.
 
 Top view as KiCad shows it and as the user sees the console from their seat: front edge
-towards the user, rear edge with the connectors away from them, DC jack at the left.
+towards the user, rear edge with the looms and USB-C away from them, power pads at the left.
 (The first draft drew this upside down, which mirrored left and right against the text.)
 
 Current paths: brick -> jack -> fuse -> P-FET -> bulk cap -> J201 pin 1 -> coil ->
@@ -204,11 +290,17 @@ Everything analog references the pour at one point next to the shunt.
 - **Bets on**: the class caring how the raw PCB looks. The cover plate makes the bet moot.
 
 ### Hand assembly of the THT parts by Jan
-- **The idea**: JLC does the SMT only, the eight THT parts are soldered at home.
-- **Optimizes for**: avoiding JLC's THT assembly fee and its footprint constraints.
-- **Sharpest tradeoff**: ten boards times eight parts, including a 6-pin Neutrik jack
-  and a 12.5 mm capacitor, and the reproducibility rule of ADR 0001 is broken by hand.
-- **Bets on**: the THT fee being significant. For 10 boards it is tens of euros.
+- **The idea**: JLC does the SMT only, the THT parts are soldered at home.
+- **Status 2026-10-01**: partly adopted by Decision 9, for a different reason than
+  this entry assumed. The connectors did not move to hand assembly, they stopped being
+  parts at all; what Jan hand-solders is wire into holes, during box build, which he
+  was going to do at the box end of every loom anyway.
+- **Sharpest tradeoff as originally framed**: ten boards times eight parts, including
+  a 6-pin Neutrik jack and a 12.5 mm capacitor, and the reproducibility rule of ADR
+  0001 broken by hand. That objection still stands for C101, which is why the bulk
+  capacitor stays a JLC insertion by default.
+- **Bets on**: the THT fee being significant. For 10 boards it is tens of euros, and
+  after Decision 9 it buys the insertion of one capacitor and one header.
 
 ### Socketed Blackpill on the production board
 - Rejected in ADR 0001; unchanged.
@@ -219,8 +311,10 @@ Everything analog references the pour at one point next to the shunt.
 - **Sharpest tradeoff**: the console grows, the printed cover plate approaches the
   K2 Max's comfortable single-piece size, and every extra square centimetre of a board
   ordered twelve times is paid for.
-- **Bets on**: 110 x 70 mm being too tight. The rear edge is the constraint: jack 14 mm,
-  USB-C 9 mm, terminal 21 mm, Neutrik 19 mm, plus gaps = about 80 mm, which fits.
+- **Bets on**: 110 x 70 mm being too tight. The rear edge was the constraint: jack
+  14 mm, USB-C 9 mm, terminal 21 mm, Neutrik 19 mm, plus gaps = about 80 mm, which
+  fits. Moot after Decision 9: the same rear edge now needs USB-C 9 mm plus three pad
+  rows totalling 21 mm, and the board went the other way, down to 95 x 70.
 
 ---
 
@@ -235,18 +329,35 @@ Everything analog references the pour at one point next to the shunt.
 - The generator is retired; the drawing discipline from rev 0.1 now depends on the
   person editing in eeschema.
 - A cover plate is a second printed part per unit and needs a tolerance loop against
-  the encoder shaft. The display no longer takes part in it, at the price of one ribbon
-  per unit and a display that is fastened to the print instead of the board.
+  the encoder shaft. Since 2026-10-01 the encoder is mounted in the plate rather than
+  passing through it, so that loop is now internal to the print. The display is
+  likewise fastened to the print, at the price of one loom per unit.
 - Everything on top means the top-side silkscreen must carry the assembly information
   as well as the connector labels.
+- Decision 9 moves work from ordering to soldering. Five looms per box, about twenty
+  joints at the board plus the box ends, times twelve boards, all done by Jan. That
+  is the price paid for deleting four unverified footprints, the crimp tooling and
+  most of the loose-parts order. It also removes the keying those connectors provided,
+  so the silkscreen legend and a continuity check become load-bearing.
+- The enclosure gains the encoder and the box sockets, and loses every tolerance that
+  used to run between a board-mounted jack and a printed wall.
 
 ### Risks
-- **JLC stock**: STM32F411CEU6 (819 in stock at the last check) and the Bourns encoder
-  (889) can vanish. Mitigation: STM32F401CCU6 is pin compatible, the Alps EC11E15244G1 is
-  the drawn encoder; check stock the day the order is placed.
-- **Footprint errors on the THT connectors**: the terminal's drill and the Neutrik's
-  normalling contacts are unverified. Mitigation: buy one of each loose part first and
-  measure; a wrong THT footprint is a re-spin.
+- **JLC stock**: STM32F411CEU6 (819 in stock at the last check) can vanish.
+  Mitigation: STM32F401CCU6 is pin compatible; check stock the day the order is
+  placed. The encoder left this risk on 2026-10-01: it is no longer a JLC line item,
+  so it can be bought from any seller in any quantity without touching the board.
+- **Footprint errors on the THT connectors**: retired 2026-10-01 by Decision 9. The
+  terminal, the barrel jack, the Neutrik and the encoder are no longer on the board,
+  and their replacements are stock KiCad pad rows. What remains of this risk is the
+  display loom's pin order, which is a wiring mistake and not a re-spin.
+- **Soldered looms have no keying**: the connectors that are gone were also what
+  stopped a loom going on backwards. Mitigation: pin 1 marked on the silkscreen of
+  every row, the function legend printed beside it, the rows given different pad
+  counts where they sit near each other, and Jan builds a wiring card for the box
+  assembly. A reversed display loom puts +3V3 on GND; a reversed handpiece loom puts
+  24 V on the NTC input. Both are worth a continuity check before first power-up, and
+  the per-board test sheet gets that line.
 - **CPL rotation**: JLC's part orientation convention differs from KiCad's for QFN,
   SOT-23-6 and diodes. Mitigation: review the JLC assembly preview image for every
   polarised or asymmetric part before confirming.
@@ -289,10 +400,11 @@ stocked at JLC. Decided 2026-09-17: dome.
 
 **Q: How does the Neutrik jack's nut end up on the outside of the rear wall if JLC
 solders the jack before the box exists?**
-A: The jack nose passes through a hole in the printed rear wall and the nut is fitted
-during final assembly; the wall is 3 mm at the jack, under the 4.7 mm limit. The board
-is screwed to the console first, then the nut goes on. The DC jack and the terminal do
-not need nuts.
+A: Obsolete since 2026-10-01. It was a real problem and Decision 9 dissolved it: no
+board-mounted jack means no nose through a wall, no nut fitted around a soldered part,
+and no dependency between the print's wall thickness and a connector's thread length.
+Whatever socket the box gets is mounted in the print on its own and wired back to a
+pad row, so the board and the enclosure stop constraining each other's tolerances.
 
 **Q: You are ordering 12 assembled boards with about 30 extended parts. What does the
 setup cost look like next to the parts?**
@@ -312,11 +424,11 @@ other eleven are opened; it is the reason for ordering 12 rather than 10.
 
 ### Decisions you will probably want to tweak
 
-- **Board size and rear-edge order.** Choice (2026-09-17): 110 x 70 mm, jack / USB-C /
-  terminal / pedal from left to right, the pedal jack at the far right so the pedal
-  cable leaves the console at its edge. Alternative: 100 x 70 mm with the pedal jack
-  between USB-C and the terminal. Cost to change later:
-  before the first order, nothing; after, a re-spin and a new cover.
+- **Board size and rear-edge order.** Choice (2026-10-01): 95 x 70 mm, power / USB-C /
+  handpiece / pedal from left to right as pad rows. Supersedes the 2026-09-17 choice
+  of 110 x 70 with connector bodies, which was sized by the connectors. Alternative:
+  100 x 70 if 95 fights the router. Cost to change later: before the first order,
+  nothing; after, a re-spin and a new cover.
 - **Cover plate over the PCB.** Choice: printed skin, PCB hidden. Alternative: PCB as the
   cosmetic face, ENIG finish, black solder mask, SMD on the bottom. Cost to change later:
   assembly side changes, so a re-order.
@@ -331,9 +443,10 @@ other eleven are opened; it is the reason for ordering 12 rather than 10.
 - **Punch at 24 V**: default is the ADR 0001 power block as drawn; signal to pivot is
   the bench test saying steel needs more than 30 V. Layout order puts the power block
   last so the answer can arrive during layout.
-- **THT footprints**: default is the KiCad library footprints with the terminal drill
-  enlarged to 1.6 mm; signal to pivot is a caliper measurement on the loose parts that
-  disagrees by more than 0.2 mm. Loose parts are ordered before layout begins.
+- **THT footprints**: resolved 2026-10-01. Decision 9 removed every connector whose
+  footprint was in doubt, so there is nothing left to measure and no loose part to
+  order before layout. What replaced them are stock pad rows whose geometry is a
+  drill size, not a part.
 - **Display module pin order**: default GND VCC SCL SDA RES DC BLK, verified on the bench
   module in September; signal to pivot is a second module from the batch listing with a
   different silkscreen. The 12 modules for the class come from one listing in one order.
@@ -346,38 +459,51 @@ Component specs, in the order that lets unknowns land late:
 
 1. **Project prep**: retire the generator (README note, verify.sh reduced to ERC +
    render; done 2026-09-17), enter the design rules of Decision 5 in the `.kicad_pro`,
-   import the project footprints (encoder with 12.0 mm lugs, terminal with 1.6 mm
-   drills, Neutrik with SN pin symbol), add mounting holes and outline to the schematic
-   as symbols, run ERC, update the PCB from the schematic.
-2. **Outline and fixed parts**: 110 x 70 mm, M3 holes, rear-edge connectors placed on
-   the edge line with their 3D models checked for clashes, display ribbon connector and
-   encoder placed from the front, cover-plate cutouts derived from these positions and
-   exported as a DXF reference.
+   add mounting holes and outline to the schematic as symbols, run ERC, update the PCB
+   from the schematic. The project-footprint import step is void since 2026-10-01: no
+   custom footprints are needed any more.
+2. **Outline and fixed parts**: 95 x 70 mm, M3 holes, USB-C on the rear edge line with
+   its 3D model checked for clashes, the four pad rows placed at the edges their looms
+   leave from, cover-plate cutouts derived from these positions and exported as a DXF
+   reference. The cover plate also now carries the encoder and the box sockets, so the
+   DXF has to name the loom exit points, not just the connector faces.
 3. **MCU block**: QFN, decoupling, crystal, VDDA filter, SWD, BOOT0/NRST, USB-C with
    ESD and the differential pair, status LED. Route this block first, it has the most
    pins.
 4. **Analog block**: shunt amp, VIN divider, NTC, pedal filters, all within the
    "quiet" zone between the driver and the MCU, referenced to the shunt's ground pad.
-5. **Driver block**: gate driver, FET, flyback parts, terminal, tight loop, drain island.
+5. **Driver block**: gate driver, FET, flyback parts, handpiece pads, tight loop,
+   drain island.
 6. **Power block**: jack, fuse, P-FET, TVS, bulk cap, buck, ORing diodes, LDO. Placed
    last so the punch-test outcome can still change it.
 7. **Ground pour and DRC**: bottom pour, top pour where it helps, thermal reliefs on
    THT, DRC with the rules in the Decision, review the ratsnest for zero unrouted.
 8. **Exports**: Gerber + drill (JLC preset in kicad-cli), BOM (LCSC), CPL with
-   rotation review, STEP, PDF assembly drawing with connector pinouts, a per-board test
-   sheet listing: VIN and 5 V / 3V3 rails, gate low at reset, DFU enumeration, display,
-   encoder, pedal jack presence detect, one strike into a 141 ohm coil at 24 V.
-9. **Order**: 12 assembled, 5 bare, loose parts (display modules, 7-way display ribbons,
-   GX12 pigtails and
-   plugs, 4-pin terminal plugs, encoder knobs), all in one week.
+   rotation review, STEP, PDF assembly drawing with the pad-row pinouts, a per-board
+   test sheet listing: loom continuity and orientation before first power-up, VIN and
+   5 V / 3V3 rails, gate low at reset, DFU enumeration, display, encoder, pedal
+   presence detect, one strike into a 141 ohm coil at 24 V.
+9. **Order**: 12 assembled, 5 bare, loose parts (display modules, encoders and knobs,
+   GX12 pigtails and plugs for the handpiece, hook-up wire, whatever the pedal
+   question below settles on), all in one week. Shorter than the 2026-09-17 list: the
+   XH housings, crimp contacts, ready-made ribbon leads and 4-pin screw plugs are all
+   gone, and with them the XH-size crimp tool.
 
 Review asks, answered by Jan on 2026-09-17:
 
 1. Cover plate over a hidden PCB, or the PCB as the visible top face? -> cover plate.
 2. Rear-edge order jack / USB-C / pedal / terminal, or pedal jack at the far right?
-   -> pedal jack at the far right (board 110 x 70 mm).
+   -> pedal jack at the far right (board 110 x 70 mm). Superseded 2026-10-01: the
+   connectors are pad rows and the board is 95 x 70.
 3. Bulk cap bent flat after delivery, or a dome in the cover? -> dome in the cover.
 4. Order the loose THT connectors for measurement before layout starts? -> yes.
+   Superseded 2026-10-01: there are none to order.
+
+Further direction from Jan, 2026-10-01: sourcing connectors is the problem, soldering
+is not. Power in is two soldered wires; the handpiece keeps an easily sourced 4-way
+connector on the box; the pedal gets a 3-way one on the box so the two cannot be
+swapped; the display and the encoder go on soldered looms. Decision 9 implements this,
+with the pedal's board side left at 4 pads so the socket question stays open.
 
 ---
 
@@ -388,14 +514,31 @@ Review asks, answered by Jan on 2026-09-17:
 - [x] Cover plate versus visible PCB (review ask 1): cover plate, 2026-09-17.
 
 **Behavior definers**
-- [ ] Terminal drill and Neutrik normalling contacts measured on loose parts.
+- [x] Terminal drill and Neutrik normalling contacts measured on loose parts:
+      dropped 2026-10-01, both parts are off the board (Decision 9).
+- [ ] **Pedal socket.** Deliberately deferred; the board carries 4 pads that serve
+      either answer. A bought expression pedal has a moulded 6.35 mm TRS plug, so it
+      needs a TRS socket in the box wall, and the plugged-in detection of ADR 0001
+      section 8 then works unchanged. A GX12-3 needs the pedals built or re-leaded and
+      a redesigned detection: a pulldown on the wiper so an unplugged pedal reads
+      heel-down and cannot fire, which is fail-safe but loses the "no pedal" message.
+      Blocks: the box wall cutout, the loose-parts order, and one io.kicad_sch change
+      if GX12 wins.
+- [ ] **Keep JLC's THT assembly service?** After Decision 9 it inserts C101 and J302
+      only. Options: keep it (default, no change); move C101 to an SMD 470 uF and go
+      SMT-only, which needs a stock and ripple-rating check; or hand-fit C101 on 12
+      boards, which breaks the ADR 0001 reproducibility rule for a tall electrolytic.
 - [ ] How the cover holds the display module (pocket plus clips, or two M2 screws) and
-      whether the glass needs a gasket.
-- [x] J3 part number: B7B-XH-A(LF)(SN), C144398; cable side XHP-7 (C144406) with
-      SXH-001T-P0.6 (C140573). See parts-mcu.md section 14a.
-- [ ] Ribbon source (crimped by Jan or ready-made XH-7 to 1x7 female leads) and length.
+      whether the glass needs a gasket. Now also: how it holds the encoder.
+- [x] J3 part number: superseded 2026-10-01. J401 is a 1x7 2.54 mm pad row; the loom
+      is plain hook-up wire soldered at the board end, so the XH housing, the crimp
+      contacts and the crimp tool are all out of the project.
+- [ ] Display loom length and wire gauge, and whether the module end keeps its 1x7
+      female housing or is also soldered.
 - [ ] BOOT0 and NRST through the rear wall or the bottom.
 
 **Polish**
-- Silkscreen wording on the rear edge (proposed: DC 24V, USB, PEDAL, HANDPIECE with the
-  four pin numbers).
+- Silkscreen wording on the rear edge (proposed: 24V + -, USB, HANDPIECE, PEDAL with
+  per-pad function letters and a pin-1 mark on every row). With no keyed connectors
+  left, this legend is the only thing standing between a builder and a reversed loom,
+  so it is worth the board space.

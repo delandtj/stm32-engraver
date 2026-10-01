@@ -7,6 +7,49 @@ the critical copper is data in `copper.py`, which draws it on top of that and
 locks it; the silkscreen is `silk.py`, which searches rather than tabulates.
 None of them routes the rest.
 
+## AMENDED 2026-10-01: wire pads instead of connectors
+
+ADR 0003 Decision 9 took every connector except USB-C off the board and moved
+the rotary encoder off it as well. Each became a row of plated holes for a
+soldered wire loom, and the board shrank from 110 x 70 to **95 x 70 mm**:
+
+| ref | was | is now | pads |
+|---|---|---|---|
+| J101 | DC-005 barrel jack | `Connector_Wire:SolderWire-1sqmm_1x02_P5.4mm_D1.4mm_OD2.7mm` | 2, GND / +24V |
+| J201 | WJ2EDGRC 5.08 terminal | `PinHeader_1x04_P2.54mm_Vertical` | 4, VIN / COIL / NTC / GND |
+| J301 | USB-C | unchanged, the one real connector left | - |
+| J401 | JST XH B7B 1x7 | `PinHeader_1x07_P2.54mm_Vertical` | 7, display loom |
+| J402 | Neutrik NMJ6HCD2 | `PinHeader_1x04_P2.54mm_Vertical` | 4, TIP / RN / RING / SLV |
+| J403 | was SW401, an Alps EC11 | `PinHeader_1x04_P2.54mm_Vertical` | 4, A / GND / B / SW |
+
+Consequences for the reader of the rest of this file:
+
+- **Where this document disagrees with the list above, this list is right**
+  and the text below describes the pre-rework board. The narrative sections
+  were written against 110 x 70 with connector bodies and have not all been
+  re-derived.
+- `PinHeader_1x0N_Vertical` lays its pads along **+y**, so every row is placed
+  at rotation 90 to lie along the board edge. All four rows then run pad 1
+  leftmost, ascending to the right, which is why the old "J201 is reversed"
+  rule in "Rear-edge connectors" is gone.
+- `manual.json` was **emptied**. Its 38 hand-drawn VDDA / PB2 / +5V items were
+  absolute coordinates on the old layout; after the re-place they shorted
+  VDDA to PEDAL_RING.
+- **`close_pairs.py` is stale.** Everything "Closing the last three by hand"
+  says below is about the OLD board. The script hard-codes that board's
+  geometry - named tracks, named corridors, a named rip target - so on the
+  95 x 70 board a `--dry` run ends in `FAIL: nothing ripped for ENC_A`. It
+  needs rewriting against the new layout, or the last pairs get drawn in
+  pcbnew and captured with `place.py --export-manual`, which still works.
+- The `SW401` MP-lug bridge is gone from `copper.py` BRIDGES: no encoder, no
+  phantom `unconnected-(SW401-PadMP)` net.
+- The five pad rows carry **no LCSC or MPN field** - they are holes, not
+  parts. An empty field is dropped when place.py copies fields onto the
+  footprint, which reads as a parity mismatch, so the properties are removed
+  from the symbols outright.
+- The "footprints to verify against loose parts" list near the end of this
+  file is void: every part on it left the board.
+
 ## Where the board stands (eighth pass)
 
 Commit-independent, from `kicad-cli pcb drc --schematic-parity --severity-all`
@@ -234,7 +277,7 @@ See "Known DRC output" below.
    netlist, and carries sheetname, sheetfile, Value, LCSC, MPN, Datasheet and
    Description, plus the `in_bom` / `dnp` flags read out of the `.kicad_sch`
    files. That is what makes "Update PCB from schematic" in the GUI a no-op.
-3. Draws the 110 x 70 mm outline with 2 mm corner radii on Edge.Cuts and sets
+3. Draws the 95 x 70 mm outline with 2 mm corner radii on Edge.Cuts and sets
    the aux and grid origin to the board's top-left corner at page (50, 50).
 4. Places everything, checks it, and saves.
 
@@ -327,10 +370,16 @@ geometry rather than guessed:
 
 | ref  | footprint evidence | local face | rot | overhang |
 |------|--------------------|-----------|-----|----------|
-| J101 | F.Fab -13.7..0.8 in x with a flange line at -10.2; the 3.5 mm beyond it is the barrel nose | -x | 270 | 3.5 mm |
+| J101 | 2 wire pads, 2.7 mm OD, no body | n/a | 0 | -2.0 mm (inset) |
 | J301 | F.Fab body -3.65..3.65 in y, contact tails at y = -4.045 behind it | +y | 180 | 0.5 mm |
-| J201 | silkscreen draws four wire-entry funnels at y = 8.61..10.11, one per contact | +y | 180 | 0 mm |
-| J402 | F.Fab body ends at x = 16.7 with the 3 mm chrome ferrule out to 19.7 | +x | 90 | 3.0 mm |
+| J201 | 4 wire pads on 2.54 mm, no body | n/a | 90 | -1.0 mm (inset) |
+| J402 | 4 wire pads on 2.54 mm, no body | n/a | 90 | -1.0 mm (inset) |
+
+Amended 2026-10-01. Only J301 still has a mating face to line up; the three
+rows have **negative** overhang, i.e. they are inset from the rear edge.
+J101's 2.7 mm pads sitting flush broke the 0.3 mm copper-to-edge rule by
+0.05 mm, which is what the inset fixes; J201 and J402 are inset 1 mm for silk
+room rather than for clearance.
 
 Rotation 180 is **forced** for J201: the four wire-entry funnels are drawn on
 its +y side, so nothing else points them out of the rear edge. That reverses

@@ -8,6 +8,222 @@
 		(title "IO")
 	)
 	(lib_symbols
+		(symbol "Connector_Generic:Conn_01x04"
+		(pin_names
+		(offset 1.016)
+		(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "J"
+		(at 0 5.08 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Value" "Conn_01x04"
+		(at 0 -7.62 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Footprint" ""
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Datasheet" ""
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Description" "Generic connector, single row, 01x04, script generated (kicad-library-utils/schlib/autogen/connector/)"
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "ki_keywords" "connector"
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "ki_fp_filters" "Connector*:*_1x??_*"
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(symbol "Conn_01x04_1_1"
+		(rectangle
+		(start -1.27 3.81)
+		(end 1.27 -6.35)
+		(stroke
+		(width 0.254)
+		(type default)
+		)
+		(fill
+		(type background)
+		)
+		)
+		(rectangle
+		(start -1.27 2.667)
+		(end 0 2.413)
+		(stroke
+		(width 0.1524)
+		(type default)
+		)
+		(fill
+		(type none)
+		)
+		)
+		(rectangle
+		(start -1.27 0.127)
+		(end 0 -0.127)
+		(stroke
+		(width 0.1524)
+		(type default)
+		)
+		(fill
+		(type none)
+		)
+		)
+		(rectangle
+		(start -1.27 -2.413)
+		(end 0 -2.667)
+		(stroke
+		(width 0.1524)
+		(type default)
+		)
+		(fill
+		(type none)
+		)
+		)
+		(rectangle
+		(start -1.27 -4.953)
+		(end 0 -5.207)
+		(stroke
+		(width 0.1524)
+		(type default)
+		)
+		(fill
+		(type none)
+		)
+		)
+		(pin passive line
+		(at -5.08 2.54 0)
+		(length 3.81)
+		(name "Pin_1"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(number "1"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		)
+		(pin passive line
+		(at -5.08 0 0)
+		(length 3.81)
+		(name "Pin_2"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(number "2"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		)
+		(pin passive line
+		(at -5.08 -2.54 0)
+		(length 3.81)
+		(name "Pin_3"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(number "3"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		)
+		(pin passive line
+		(at -5.08 -5.08 0)
+		(length 3.81)
+		(name "Pin_4"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(number "4"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		)
+		)
+		(embedded_fonts no)
+		)
 		(symbol "Connector_Audio:AudioJack3_SwitchTR"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -1884,7 +2100,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "no plug or mono plug: RN grounds the ring -> firmware sees no pedal"
+	(text "no plug or mono plug: RN grounds the ring -> firmware sees no pedal (needs a TRS socket)"
 		(exclude_from_sim no)
 		(at 58.42 157.48 0)
 		(effects
@@ -1895,7 +2111,7 @@
 		)
 		(uuid "03891b8b-0383-42cf-bae7-97281564e52a")
 	)
-	(text "EC11E15244G1: 30 detents / 15 pulses, TIM3 encoder mode"
+	(text "Encoder is OFF-BOARD, in the cover plate: 4 wires to J403"
 		(exclude_from_sim no)
 		(at 109.22 92.71 0)
 		(effects
@@ -1905,6 +2121,17 @@
 			(justify left top)
 		)
 		(uuid "26a67154-c5e3-4bde-b648-1f0513665ac8")
+	)
+	(text "EC11E15244G1 or any EC11: 30 detents / 15 pulses, TIM3 encoder mode"
+		(exclude_from_sim no)
+		(at 109.22 95.25 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "8f2c1a04-7d3e-4b21-9c55-2e6a1f0b7d44")
 	)
 	(text "1.3in ST7789 240x240 module, 3V3, no CS: SPI mode 3"
 		(exclude_from_sim no)
@@ -1939,7 +2166,7 @@
 		)
 		(uuid "b86ec7fd-e88c-4d09-aceb-77c521d65ef7")
 	)
-	(text "TRS: tip = wiper, ring = 3V3 feed, sleeve = GND"
+	(text "Pedal socket is OFF-BOARD: tip = wiper, ring = 3V3 feed, sleeve = GND"
 		(exclude_from_sim no)
 		(at 58.42 154.94 0)
 		(effects
@@ -2022,14 +2249,6 @@
 		(color 0 0 0 0)
 		(uuid "e064cb7d-f9c0-4b1d-b76f-d0774d863fd4")
 	)
-	(no_connect
-		(at 152.4 71.12)
-		(uuid "710215ee-82cc-4498-968c-5d36efe4f8c1")
-	)
-	(no_connect
-		(at 78.74 132.08)
-		(uuid "b9dcdc8e-0522-4d32-bb2f-606bdc0ec539")
-	)
 	(wire
 		(pts
 			(xy 86.36 142.24) (xy 118.11 142.24)
@@ -2089,16 +2308,6 @@
 			(type default)
 		)
 		(uuid "2660d7ed-0ed7-40b6-a96e-837a9336223a")
-	)
-	(wire
-		(pts
-			(xy 160.02 66.04) (xy 165.1 66.04)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "297b1249-9636-491a-aa1d-73f116d89696")
 	)
 	(wire
 		(pts
@@ -2891,8 +3100,8 @@
 		)
 	)
 	(symbol
-		(lib_id "Connector_Audio:AudioJack3_SwitchTR")
-		(at 73.66 124.46 0)
+		(lib_id "Connector_Generic:Conn_01x04")
+		(at 73.66 127.0 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -2900,9 +3109,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(uuid "16418f7c-258f-4797-abb6-facd0d5b1500")
+		(uuid "3d005073-c195-41f4-bc63-34bf6755864b")
 		(property "Reference" "J402"
-			(at 63.5 114.3 0)
+			(at 71.11999999999999 116.84 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2911,8 +3120,8 @@
 				)
 			)
 		)
-		(property "Value" "NMJ6HCD2"
-			(at 63.5 137.16 0)
+		(property "Value" "Pedal pads 1x4"
+			(at 71.11999999999999 137.16 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -2921,8 +3130,8 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_Audio:Jack_6.35mm_Neutrik_NMJ6HCD2_Horizontal"
-			(at 73.66 124.46 0)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical"
+			(at 73.66 127.0 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2933,7 +3142,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 73.66 124.46 0)
+			(at 73.66 127.0 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2944,7 +3153,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 73.66 124.46 0)
+			(at 73.66 127.0 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2954,42 +3163,17 @@
 				)
 			)
 		)
-		(property "LCSC" "C368502"
-			(at 73.66 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
+		(pin "1"
+			(uuid "5ea6984e-22b6-4a88-8993-340a249fb35d")
 		)
-		(property "MPN" "NMJ6HCD2"
-			(at 73.66 124.46 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
+		(pin "2"
+			(uuid "e2efe4a1-980d-4cfd-a40e-06bcbe599606")
 		)
-		(pin "R"
-			(uuid "aa5e6cc0-373e-4dec-a144-bf75c375a74a")
+		(pin "3"
+			(uuid "cf343447-aebb-4313-85f9-924406306289")
 		)
-		(pin "RN"
-			(uuid "504e1e14-c6cc-4ec3-80db-29730e38c3da")
-		)
-		(pin "S"
-			(uuid "259e848c-2517-4953-8192-6784e09c23d0")
-		)
-		(pin "T"
-			(uuid "58767fee-57bd-4eff-a9da-ab90ccfd89d1")
-		)
-		(pin "TN"
-			(uuid "f3d72c4f-3570-46ca-8dca-5a278c96c558")
+		(pin "4"
+			(uuid "b3204fc8-b0b2-4887-9167-20ace344f3da")
 		)
 		(instances
 			(project "graver-controller"
@@ -3021,7 +3205,7 @@
 				)
 			)
 		)
-		(property "Value" "LCD XH 1x7"
+		(property "Value" "LCD pads 1x7"
 			(at 71.12 74.93 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3031,7 +3215,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_JST:JST_XH_B7B-XH-A_1x07_P2.50mm_Vertical"
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x07_P2.54mm_Vertical"
 			(at 73.66 63.5 0)
 			(hide yes)
 			(show_name no)
@@ -3054,28 +3238,6 @@
 			)
 		)
 		(property "Description" ""
-			(at 73.66 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC" "C144398"
-			(at 73.66 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MPN" "B7B-XH-A(LF)(SN)"
 			(at 73.66 63.5 0)
 			(hide yes)
 			(show_name no)
@@ -3547,83 +3709,6 @@
 			(project "graver-controller"
 				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/2f15ba9a-6165-4167-85f8-f67e3d99cc62"
 					(reference "MH401")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 165.1 66.04 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "4672cbec-55bb-41a5-842b-84d31a33b215")
-		(property "Reference" "#PWR410"
-			(at 165.1 72.39 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 165.1 71.12 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 165.1 66.04 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 165.1 66.04 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" ""
-			(at 165.1 66.04 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "874cad0a-5d53-453d-9ef7-daebebfcafcd")
-		)
-		(instances
-			(project "graver-controller"
-				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/2f15ba9a-6165-4167-85f8-f67e3d99cc62"
-					(reference "#PWR410")
 					(unit 1)
 				)
 			)
@@ -4573,8 +4658,8 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:RotaryEncoder_Switch_MP")
-		(at 152.4 63.5 0)
+		(lib_id "Connector_Generic:Conn_01x04")
+		(at 149.86 63.5 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -4582,9 +4667,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(uuid "a790a4a1-66c7-45f9-8629-df0a6d81e069")
-		(property "Reference" "SW401"
-			(at 147.32 53.34 0)
+		(uuid "6619ca0d-e835-4d58-9f52-a38078fb8000")
+		(property "Reference" "J403"
+			(at 147.32000000000002 53.34 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4593,8 +4678,8 @@
 				)
 			)
 		)
-		(property "Value" "EC11E15244G1"
-			(at 157.48 77.47 0)
+		(property "Value" "Encoder pads 1x4"
+			(at 158.75 73.66 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -4603,8 +4688,8 @@
 				)
 			)
 		)
-		(property "Footprint" "Rotary_Encoder:RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm"
-			(at 152.4 63.5 0)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical"
+			(at 149.86 63.5 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4615,7 +4700,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 152.4 63.5 0)
+			(at 149.86 63.5 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4626,7 +4711,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 152.4 63.5 0)
+			(at 149.86 63.5 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4636,50 +4721,22 @@
 				)
 			)
 		)
-		(property "LCSC" "C370970"
-			(at 152.4 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
+		(pin "1"
+			(uuid "5ccae9cc-97a7-44a0-a215-46a3b7d157a2")
 		)
-		(property "MPN" "EC11E15244G1"
-			(at 152.4 63.5 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
+		(pin "2"
+			(uuid "25c0278e-a550-4d30-875c-37262dbb5a42")
 		)
-		(pin "A"
-			(uuid "595c7b7d-30d6-4e32-94b6-2d13b5b9e125")
+		(pin "3"
+			(uuid "72616da7-8755-4dbb-9f83-5d8bc93390ef")
 		)
-		(pin "B"
-			(uuid "ec149e7e-18f0-4810-818c-52a0e822ea68")
-		)
-		(pin "C"
-			(uuid "3d485a4e-0623-4b7e-ab69-9100846c492f")
-		)
-		(pin "MP"
-			(uuid "309bfe1e-0030-401f-a83f-4d833752fa10")
-		)
-		(pin "S1"
-			(uuid "a88f9ede-67b4-44e4-bc04-3dd65f13b802")
-		)
-		(pin "S2"
-			(uuid "361fc470-c7a4-43fa-b474-10b2fe814a98")
+		(pin "4"
+			(uuid "429d1bc6-3ac8-456a-9724-35b457ac2921")
 		)
 		(instances
 			(project "graver-controller"
 				(path "/d303ff23-e0bc-456d-81fe-4c8aea3d493e/2f15ba9a-6165-4167-85f8-f67e3d99cc62"
-					(reference "SW401")
+					(reference "J403")
 					(unit 1)
 				)
 			)
@@ -5919,5 +5976,35 @@
 		(path "/"
 			(page "1")
 		)
+	)
+	(wire
+		(pts
+			(xy 144.78 68.58) (xy 144.78 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8e7a268a-b87b-4c36-af14-c037c88c4527")
+	)
+	(wire
+		(pts
+			(xy 144.78 71.12) (xy 160.02 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a386a887-c5bb-434a-bb60-82994a6cd22a")
+	)
+	(wire
+		(pts
+			(xy 160.02 71.12) (xy 160.02 60.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "651ce48b-42bf-4e32-9a3e-1226b6669785")
 	)
 )

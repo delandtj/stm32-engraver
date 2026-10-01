@@ -8,6 +8,164 @@
 		(title "Power")
 	)
 	(lib_symbols
+		(symbol "Connector_Generic:Conn_01x02"
+		(pin_names
+		(offset 1.016)
+		(hide yes)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "J"
+		(at 0 2.54 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Value" "Conn_01x02"
+		(at 0 -5.08 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Footprint" ""
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Datasheet" ""
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "Description" "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "ki_keywords" "connector"
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(property "ki_fp_filters" "Connector*:*_1x??_*"
+		(at 0 0 0)
+		(show_name no)
+		(do_not_autoplace no)
+		(hide yes)
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(symbol "Conn_01x02_1_1"
+		(rectangle
+		(start -1.27 1.27)
+		(end 1.27 -3.81)
+		(stroke
+		(width 0.254)
+		(type default)
+		)
+		(fill
+		(type background)
+		)
+		)
+		(rectangle
+		(start -1.27 0.127)
+		(end 0 -0.127)
+		(stroke
+		(width 0.1524)
+		(type default)
+		)
+		(fill
+		(type none)
+		)
+		)
+		(rectangle
+		(start -1.27 -2.413)
+		(end 0 -2.667)
+		(stroke
+		(width 0.1524)
+		(type default)
+		)
+		(fill
+		(type none)
+		)
+		)
+		(pin passive line
+		(at -5.08 0 0)
+		(length 3.81)
+		(name "Pin_1"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(number "1"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		)
+		(pin passive line
+		(at -5.08 -2.54 0)
+		(length 3.81)
+		(name "Pin_2"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		(number "2"
+		(effects
+		(font
+		(size 1.27 1.27)
+		)
+		)
+		)
+		)
+		)
+		(embedded_fonts no)
+		)
 		(symbol "Connector:Barrel_Jack_Switch"
 			(pin_names
 				(hide yes)
@@ -3092,10 +3250,6 @@
 		(uuid "e6546232-55ac-421b-80d1-c744275468df")
 	)
 	(no_connect
-		(at 68.58 106.68)
-		(uuid "862701cc-e788-4ad4-8ea8-d1dce893a806")
-	)
-	(no_connect
 		(at 146.05 179.07)
 		(uuid "b86915c3-dff1-4e17-ab3c-be71ad0406ca")
 	)
@@ -3462,16 +3616,6 @@
 			(type default)
 		)
 		(uuid "f556be5f-f5c9-4bf8-bd2c-19acba207d28")
-	)
-	(wire
-		(pts
-			(xy 68.58 109.22) (xy 73.66 109.22)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f5a5dd30-f2a7-4f50-8bc8-8cc6e8a56417")
 	)
 	(wire
 		(pts
@@ -8456,8 +8600,8 @@
 		)
 	)
 	(symbol
-		(lib_id "Connector:Barrel_Jack_Switch")
-		(at 60.96 106.68 0)
+		(lib_id "Connector_Generic:Conn_01x02")
+		(at 63.5 106.68 180)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -8465,9 +8609,9 @@
 		(on_board yes)
 		(in_pos_files yes)
 		(dnp no)
-		(uuid "c4de1925-0cd1-4b60-bdca-262ed67dca82")
+		(uuid "6a5f7cad-f0e1-4e97-8b7c-09195acee731")
 		(property "Reference" "J101"
-			(at 53.34 99.06 0)
+			(at 60.96 100.33000000000001 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8476,8 +8620,8 @@
 				)
 			)
 		)
-		(property "Value" "DC jack 5.5x2.1"
-			(at 53.34 114.3 0)
+		(property "Value" "Power in 2p"
+			(at 60.96 113.03 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8486,8 +8630,8 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_BarrelJack:BarrelJack_Horizontal"
-			(at 60.96 106.68 0)
+		(property "Footprint" "Connector_Wire:SolderWire-1sqmm_1x02_P5.4mm_D1.4mm_OD2.7mm"
+			(at 63.5 106.68 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8498,7 +8642,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 60.96 106.68 0)
+			(at 63.5 106.68 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8509,29 +8653,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 60.96 106.68 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC" "C720557"
-			(at 60.96 106.68 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MPN" "DC-005-A200"
-			(at 60.96 106.68 0)
+			(at 63.5 106.68 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8542,13 +8664,10 @@
 			)
 		)
 		(pin "1"
-			(uuid "ecbd5522-e3d9-47ff-8855-50be306f4df3")
+			(uuid "3cbbabb0-8ba2-4808-b76f-1223c5f2fa3e")
 		)
 		(pin "2"
-			(uuid "312d3f6d-57a5-44cc-85f1-9d0a93c55b79")
-		)
-		(pin "3"
-			(uuid "d89c2d85-6053-4308-a1a8-5797fa2b41da")
+			(uuid "82cf06a3-cd29-40fe-8ad1-4bfea13f720d")
 		)
 		(instances
 			(project "graver-controller"
@@ -9413,5 +9532,25 @@
 		(path "/"
 			(page "1")
 		)
+	)
+	(wire
+		(pts
+			(xy 68.58 106.68) (xy 73.66 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7ce4d76b-6960-4145-85cc-1b46d18b6cbd")
+	)
+	(wire
+		(pts
+			(xy 73.66 106.68) (xy 73.66 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ab6478dc-99b1-456f-af2e-3b65b50de00f")
 	)
 )

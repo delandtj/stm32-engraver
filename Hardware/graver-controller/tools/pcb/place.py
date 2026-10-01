@@ -56,7 +56,7 @@ NETLIST = os.path.join(OUT, "netlist.xml")
 FPLIB = "/usr/share/kicad/footprints"
 
 # ---------------------------------------------------------------- board ----
-BOARD_W = 110.0
+BOARD_W = 95.0
 BOARD_H = 70.0
 CORNER_R = 2.0
 # Board top-left corner on the KiCad page; also the aux/grid origin.
@@ -94,12 +94,20 @@ GROUP_GAP = 0.15      # ... and between parts of the same function group
 # J301 moved 3 mm left (32.0 -> 29.0) in the second pass to open the gap for
 # the SWD header, which now lies ALONG the rear edge instead of sticking down
 # into the MCU's rear side.
+# 2026-10-01: J101/J201/J402 are wire-pad rows now, not connector bodies, so
+# none of them overhangs the rear edge and none needs a mating-face clearance.
+# PinHeader_1x0N_Vertical lays its pads along +y, so the rear rows are turned
+# 90 degrees to lie ALONG the edge instead of marching into the board;
+# SolderWire-1x02 is already an x-axis row and stays at rot 0.
 EDGE_PARTS = {
     # ref:   (x, rot, out_axis, overhang_mm)
-    "J101": (17.5, 270, "-x", 3.5),
-    "J301": (29.0, 180, "+y", 0.5),
-    "J201": (69.5, 180, "+y", 0.0),
-    "J402": (80.0, 90, "+x", 3.0),
+    # Negative overhang = inset from the rear edge. The rows carry no mating
+    # face to line up, so they are pulled inboard for edge clearance (J101's
+    # 2.7 mm pads broke the 0.3 mm rule sitting flush) and for silk room.
+    "J101": (14.0,   0, "+y", -2.0),
+    "J301": (29.0, 180, "+y",  0.5),
+    "J201": (55.0,  90, "+y", -1.0),
+    "J402": (75.0,  90, "+y", -1.0),
 }
 
 # ------------------------------------------------------------- anchors -----
@@ -123,14 +131,16 @@ ANCHORS = {
         ("D103",  16.0, 40.0,   0),   # VBUS ORing Schottky
         ("U102",   9.0, 44.0,   0),   # AP2112K 3V3 LDO
     ]),
-    # Solenoid driver, behind the handpiece terminal.
+    # Solenoid driver, behind the handpiece pad row.
     "DRIVER": ((50.0, 14.0), [
         # Q201/D201/D202/Q202/C102/C103 come from FLYBACK_CANDIDATES, and
         # U201/R202/R204/U202 hang off the FET (see DRIVER_SATS) so they
         # follow whichever flyback arrangement wins.
         #
-        # Slow-decay bypass control. J402's courtyard owns x 78..98 down to
-        # y 24, so this cluster has to sit below it rather than beside Q202.
+        # Slow-decay bypass control. Until 2026-10-01 J402's Neutrik courtyard
+        # owned x 78..98 down to y 24 and forced this cluster below it; the
+        # pedal is a pad row now and that reservation is gone, so these seeds
+        # are free to be re-tuned if the placer wants the room.
         ("Q203",  36.0, 14.0,   0),   # BSS123
         ("R205",  30.0, 16.0,  90),   # CLAMP divider top
         ("R206",  36.0, 18.0,  90),   # to Q203 drain
@@ -156,8 +166,8 @@ ANCHORS = {
     ]),
     # Front edge: display ribbon left, encoder right, indicators between.
     "FRONT": ((0.0, 0.0), [
-        ("J401",  20.0, 61.0,   0),   # JST XH 1x7 to the display in the cover
-        ("SW401", 80.5, 52.5,   0),   # Alps EC11 encoder, shaft at (88, 55)
+        ("J401",  20.0, 61.0,  90),   # 1x7 pad row, display loom to the cover
+        ("J403",  72.0, 62.0,  90),   # 1x4 pad row, encoder loom to the cover
         # Indicators between the display pocket and the encoder, where the
         # cover has room for two light pipes.
         ("D301",  66.0, 63.0,   0),   # status LED
@@ -278,9 +288,9 @@ MCU_LINKS = [
     ("12", "J402.R", 1.5),      # PEDAL_RING
     ("19", "J201.3", 1.5),      # NTC
     ("18", "C101.1", 1.5),      # VIN_SENSE, divider fed from the bulk cap
-    ("40", "SW401.A", 1.0),     # ENC_A
-    ("41", "SW401.B", 1.0),     # ENC_B
-    ("43", "SW401.S1", 1.0),    # ENC_SW
+    ("40", "J403.1", 1.0),      # ENC_A
+    ("41", "J403.3", 1.0),      # ENC_B
+    ("43", "J403.4", 1.0),      # ENC_SW
     ("34", "J302.2", 1.0),      # SWDIO
     ("37", "J302.3", 1.0),      # SWCLK
     ("7", "J302.4", 1.0),       # NRST
@@ -459,7 +469,7 @@ GROUP_SEED = {
     # mcu and the rear/front furniture
     "U301": "mcu", "U302": "usb", "R305": "usb", "R306": "usb",
     "SW301": "button", "SW302": "button",
-    "J401": "lcd", "SW401": "enc", "D301": "led", "D104": "led",
+    "J401": "lcd", "J403": "enc", "D301": "led", "D104": "led",
     "J302": "swd", "U401": "pedal-esd",
     "Y301": "mcu", "C310": "mcu", "C311": "mcu",
 }
@@ -557,7 +567,6 @@ CRITERIA = [
     ("buck U101 to crystal Y301", "part", "U101", "Y301", 15.0, "min"),
     ("buck U101 to op-amp U202", "part", "U101", "U202", 15.0, "min"),
     ("buck U101 to I_SENSE filter C205", "part", "U101", "C205", 15.0, "min"),
-    ("bulk cap C101 to encoder SW401", "part", "C101", "SW401", 10.0, "min"),
     ("USB pair U301.33 to J301.A6", "pad", "U301.33", "J301.A6", 40.0, "max"),
     ("display J401 to SPI pin U301.15", "pad", "J401.3", "U301.15", 40.0, "max"),
     # Added in the second pass.
@@ -603,20 +612,19 @@ ADVISORY = {
         "what actually decouples that corner. C301 sits beside C304 on the "
         "same +3V3 / GND copper."),
     "clamp loop (no FET)": (
-        "Floor is about 24 mm: the closing edge between J201's own VIN and "
-        "coil pins is 5.08 mm, each of the two legs that touch those pads has "
-        "to drop at least 3.4 mm clear of the terminal's 12.6 mm body before "
-        "it reaches anything, and the SMA/SMB/0805 chain adds two hops of "
+        "Floor dropped on 2026-10-01 when J201 became a 1x4 pad row: the "
+        "closing edge between its VIN and coil pins is now 2.54 mm instead of "
+        "5.08 mm and there is no 12.6 mm terminal body to clear, so the legs "
+        "start at the pads. The SMA/SMB/0805 chain still adds two hops of "
         "about 5 mm. ADR 0003's 'closed within about 15 mm' is a statement "
         "about the loop AREA over solid bottom ground, which this arrangement "
         "does satisfy - the parts sit in a 10 x 12 mm block directly under "
         "the terminal."),
     "flyback loop perimeter": (
-        "J201's own body is 12.6 mm deep, so both legs touching its pads cost "
-        "4 mm of vertical run before any part is reached; its pins are 5.08 mm "
-        "apart; and the TO-252 plus the SMB span ~14 mm on their own. The "
-        "6-vertex path the brief specifies also revisits the terminal, so it "
-        "cannot close under about 30 mm. The clamp-only loop below is the "
+        "Since 2026-10-01 J201 is a pad row with no body, so its legs no "
+        "longer pay 4 mm of vertical run and its pins are 2.54 mm apart, not "
+        "5.08. The TO-252 plus the SMB still span ~14 mm on their own and the "
+        "6-vertex path the brief specifies revisits the pad row. The clamp-only loop below is the "
         "number ADR 0003 actually cares about."),
 }
 

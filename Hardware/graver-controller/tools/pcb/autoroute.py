@@ -90,10 +90,14 @@ OUT = os.path.join(PROJ, "output", "pcb")
 AUTOROUTED_GROUP = "autorouted"
 SCRIPTED_GROUP = "scripted-copper"
 
+# 2026-10-01: this used to default to one session's /tmp scratchpad, which is
+# deleted when that session ends - a later run then died with "KRT_DIR not
+# found" naming a path that had never existed for it. The default is now a
+# stable per-user cache, and PCB_SCRATCH still overrides it. Nothing here may
+# live inside the repo; the work-dir guard below refuses that outright.
 SCRATCH = os.environ.get(
     "PCB_SCRATCH",
-    "/tmp/claude-1000/-home-delandtj-Electronics-stm32-engraver/"
-    "c35434fb-71f8-4fe0-a190-ed9924ac831a/scratchpad")
+    os.path.join(os.path.expanduser("~"), ".cache", "graver-pcb"))
 KRT_DIR = os.environ.get("KRT_DIR",
                          os.path.join(SCRATCH, "routetest", "KiCadRoutingTools"))
 KRT_PY = os.environ.get("KRT_PY",

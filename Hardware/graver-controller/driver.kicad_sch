@@ -4311,7 +4311,7 @@
 				)
 			)
 		)
-		(property "Value" "Handpiece"
+		(property "Value" "Handpiece pads 1x4"
 			(at 154.94 53.34 270)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4321,7 +4321,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_Phoenix_MSTB:PhoenixContact_MSTBA_2,5_4-G-5,08_1x04_P5.08mm_Horizontal"
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical"
 			(at 163.83 60.96 0)
 			(hide yes)
 			(show_name no)
@@ -4344,28 +4344,6 @@
 			)
 		)
 		(property "Description" ""
-			(at 163.83 60.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "LCSC" "C8446"
-			(at 163.83 60.96 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "MPN" "WJ2EDGRC-5.08-4P"
 			(at 163.83 60.96 0)
 			(hide yes)
 			(show_name no)

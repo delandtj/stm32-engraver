@@ -23,14 +23,12 @@ feeder fee per unique part per order). Stock is LCSC/JLC stock at time of query.
 | U2 alt | USB ESD (2nd-source listing) | USBLC6-2SC6 | C2687116 | Ext | 150,192 | 0.048 | SOT-23-6 | same | same |
 | J2 | SWD 1x5 2.54 THT | PZ254V-11-05P | C492404 | Ext | 251,600 | 0.033 | THT | Connector_Generic:Conn_01x05 | Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical |
 | SW1,SW2 | BOOT0, NRST tact | TS-1187A-B-A-B (XKB) | C318884 | Basic | 1.68M | 0.020 | SMD 5.1x5.1, top-actuated | Switch:SW_Push | Button_Switch_SMD:SW_Push_1P1T_XKB_TS-1187A |
-| SW3 | Encoder 24/24 + push (preferred) | PEC11R-4220F-S0024 (Bourns) | C143797 | Ext | 889 | 2.68 | THT vertical, 20 mm flatted shaft | Device:RotaryEncoder_Switch_MP | NOT in std lib - see notes (copy of Rotary_Encoder:RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm with MP moved) |
-| SW3 alt | Encoder 30 det / 15 pulse + push | EC11E15244G1 (Alps) | C370970 | Ext | 5,515 | 2.26 | THT vertical, 20 mm flat shaft | Device:RotaryEncoder_Switch_MP | Rotary_Encoder:RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm |
-| J3 | Display ribbon header 1x7, keyed, 2.5 mm | B7B-XH-A(LF)(SN) (JST) | C144398 | Ext | 11,035 | 0.117 | THT vertical | Connector_Generic:Conn_01x07 | Connector_JST:JST_XH_B7B-XH-A_1x07_P2.50mm_Vertical |
-| J3 old | Display socket 1x7 2.54 | PM254V-11-07-H85 | C2832270 | Ext | 46,203 | 0.098 | THT, 8.5 mm | Connector_Generic:Conn_01x07 | Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical |
-| J4 | DC jack 5.5x2.1 RA 3 A | DC-005-A200 (XUNPU) | C720557 | Ext | 76,247 | 0.144 | THT right angle | Connector:Barrel_Jack_Switch | Connector_BarrelJack:BarrelJack_Horizontal (compatible, see notes) |
-| J5 | 6.35 mm TRS jack, switched | NMJ6HCD2 (Neutrik) | C368502 | Ext | 2,090 | 3.34 | THT horizontal, nut | custom (AudioJack3_SwitchTR + SN pin) | Connector_Audio:Jack_6.35mm_Neutrik_NMJ6HCD2_Horizontal |
-| J6 | 4P 5.08 pluggable header, RA, closed | WJ2EDGRC-5.08-04P-14-00A (Kangnex) | C8446 | Ext | 14,588 | 0.096 | THT right angle | Connector_Generic:Conn_01x04 | Connector_Phoenix_MC_HighVoltage:PhoenixContact_MC_1,5_4-G-5.08_1x04_P5.08mm_Horizontal with drill enlarged (see notes) |
-| (loose) | Matching 4P screw plug | WJ2EDGK-5.08-04P-14-00A (Kangnex) | C71372 | Ext (order as loose part) | 38,790 | 0.382 | plug | - | - |
+| J3 | Display loom pads 1x7 (GND VCC SCL SDA RES DC BLK) | none - plated holes | - | - | - | 0 | 7 holes, 1.0 mm drill, 2.54 pitch | Connector_Generic:Conn_01x07 | Connector_PinHeader_2.54mm:PinHeader_1x07_P2.54mm_Vertical |
+| J4 | Power-in wire pads (+24V, GND) | none - plated holes | - | - | - | 0 | 2 holes, 1.4 mm drill, 5.4 pitch | Connector_Generic:Conn_01x02 | Connector_Wire:SolderWire-1sqmm_1x02_P5.4mm_D1.4mm_OD2.7mm |
+| J5 | Pedal wire pads (T, R, RN, S) | none - plated holes | - | - | - | 0 | 4 holes, 1.0 mm drill, 2.54 pitch | Connector_Generic:Conn_01x04 | Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical |
+| J6 | Handpiece wire pads (VIN, COIL_NEG, NTC, GND) | none - plated holes | - | - | - | 0 | 4 holes, 1.0 mm drill, 2.54 pitch | Connector_Generic:Conn_01x04 | Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical |
+| J7 | Encoder wire pads (ENC_A, ENC_B, ENC_SW, GND) | none - plated holes | - | - | - | 0 | 4 holes, 1.0 mm drill, 2.54 pitch | Connector_Generic:Conn_01x04 | Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical |
+| (loose) | Encoder, 30 det / 15 pulse + push, mounts in the cover | EC11E15244G1 (Alps) or any EC11 | C370970 if bought at LCSC | order as a loose part | 5,515 | 2.26 | 20 mm flat shaft, 4 wires to J7 | - | - |
 | D1 | Pedal tip/ring ESD, 2-ch bidir | PESD5V0S2BT,215 (Nexperia) | C49338 | Ext | 28,300 | 0.125 | SOT-23 | Device:D_TVS_Dual_AAC | Package_TO_SOT_SMD:SOT-23 |
 | D1 alt | same, cheap clone, 20 pF | PESD5V0S2BT | C5451656 | Ext | ~2-20k | 0.031 | SOT-23 | same | same |
 | D2 | Status LED red | KT-0603R | C2286 | Basic | 8.1M | 0.007 | 0603 | Device:LED | LED_SMD:LED_0603_1608Metric |
@@ -135,6 +133,12 @@ no KiCad std-lib footprint (import from EasyEDA/LCSC).
 
 ## 7. Encoder - no 20/20 part on LCSC
 
+**Amended 2026-10-01 (ADR 0003 Decision 9): the encoder is no longer on the board.**
+It mounts in the cover plate and wires to the J403 pad row (ENC_A, ENC_B, ENC_SW,
+GND). It is off the JLC BOM, so LCSC stock and the lug-spacing problem below no
+longer constrain anything - buy any EC11 with the right detent ratio. The detent /
+pulse rule and the firmware divisor still apply.
+
 - Searched every EC11/PEC11 listing on JLC. **No 20 detent / 20 pulse part is stocked.**
 - Datasheet facts: Alps EC11E18244A5 = **36 detents / 18 pulses** (Farnell/Alps);
   EC11E1834403 = 18 pulses, **no detent**; EC11E15244G1 = 30 detents / 15 pulses, 20 mm flat
@@ -156,6 +160,11 @@ no KiCad std-lib footprint (import from EasyEDA/LCSC).
 - KiCad pin names on the footprint: A, C (common), B, S1, S2, MP.
 
 ## 8. Display socket
+
+**Amended 2026-10-01 (ADR 0003 Decision 9): J401 is a 1x7 2.54 mm pad row.**
+The JST XH header, its housing, its crimps and the crimp tool are all out of the
+project; the loom is hook-up wire soldered at the board end. The pin order below
+(GND VCC SCL SDA RES DC BLK) is unchanged and still the thing to get right.
 
 - **Superseded for the production board (ADR 0003, 2026-09-17; J401 in the schematic,
   swapped the same day):** the module is mounted
@@ -180,6 +189,11 @@ no KiCad std-lib footprint (import from EasyEDA/LCSC).
 
 ## 9. DC jack
 
+**Amended 2026-10-01 (ADR 0003 Decision 9): J101 is two 1.4 mm plated holes.**
+The brick's leads are soldered in. The 30 V rating ceiling noted below was a property
+of the DC-005 jack and no longer applies, so the 18-36 V electronics rating is the
+only limit left.
+
 - DC-005-A200 (XUNPU, C720557): 2.0 mm pin (fits 5.5x2.1 plugs), **3 A, rated 30 V**,
   right angle THT. 30 V covers the 24 V brick; it is below the ADR's 36 V upper operating
   limit - note it in the ADR or keep the brick spec at 24 V.
@@ -191,6 +205,11 @@ no KiCad std-lib footprint (import from EasyEDA/LCSC).
   PDF is bot-blocked, so I could not fetch it).
 
 ## 10. 6.35 mm jack
+
+**Amended 2026-10-01 (ADR 0003 Decision 9): no jack on the board.** J402 is a 1x4
+pad row carrying T, R, RN and S. Whether the box gets a 6.35 mm socket at all is an
+open question in ADR 0003; the notes below apply if it does, and the fourth pad (RN)
+exists so the normalling detection still works when it is wired.
 
 - Neutrik NMJ6HCD2 (C368502, 3.34 USD, 2090 stock): 1/4" stereo, **3 switching contacts**
   (0.5 A / 50 V), 3 A main contacts, horizontal PCB, mounting nut included, rear panel
@@ -215,6 +234,11 @@ no KiCad std-lib footprint (import from EasyEDA/LCSC).
   low-risk pick.
 
 ## 11. Handpiece terminal
+
+**Amended 2026-10-01 (ADR 0003 Decision 9): J201 is a 1x4 2.54 mm pad row.**
+The 5.08 mm terminal and its screw plug are gone, along with the 1.5-1.7 mm drill
+problem below. The GX12 on the box shell is unchanged; its pigtail now solders
+straight to the board instead of going into a plug.
 
 - Header WJ2EDGRC-5.08-04P-14-00A (C8446) + plug WJ2EDGK-5.08-04P-14-00A (C71372), same
   maker (Ningbo Kangnex), mating pair. Order the plug as a loose part (10 + spares).
@@ -258,24 +282,29 @@ no KiCad std-lib footprint (import from EasyEDA/LCSC).
 
 **No mismatches.** All listed peripheral signals exist on the stated pins.
 
-## 14a. Loose parts order before layout (ADR 0003 ask 4)
+## 14a. Loose parts order (superseded 2026-10-01)
 
-Checked on jlcsearch 2026-09-17. Two of each, for calipers and a paper-print fit check:
+**This whole section is void.** ADR 0003 Decision 9 removed every board connector
+except USB-C, so there is nothing left to measure before layout and no board-side
+connector to order. The parts below are kept only so a future session can see what
+was dropped and why: DC-005-A200 barrel jack (C720557), WJ2EDGRC-5.08 terminal and
+its screw plug (C8446 / C71372), Neutrik NMJ6HCD2 (C368502), Bourns PEC11R
+(C143797), B7B-XH-A header (C144398) with XHP-7 housings (C144406) and SXH-001T-P0.6
+crimps (C140573). The XH-size crimp tool is no longer needed.
 
-| Ref | Part | LCSC | Stock | USD | What to measure |
-|---|---|---|---|---|---|
-| J4/J101 | DC-005-A200 (XUNPU) | C720557 | 76,247 | 0.144 | pin slots vs BarrelJack_Horizontal, body overhang past the board edge |
-| J6/J201 | WJ2EDGRC-5.08-04P-14-00A (Kangnex) | C8446 | 14,588 | 0.096 | pin diameter -> drill 1.5-1.7 mm, body overhang |
-| (plug) | WJ2EDGK-5.08-04P-14-00A (Kangnex) | C71372 | 38,790 | 0.382 | mates with the header; order the class quantity here too (12) |
-| J5 | NMJ6HCD2 (Neutrik) | C368502 | 2,090 | 3.34 | SN/RN/TN normalling contacts with a meter, nose length vs 3 mm wall |
-| SW3 | PEC11R-4220F-S0024 (Bourns) | C143797 | 889 | 2.68 | lug spacing 12.0 mm, detent feel vs the Alps |
-| SW3 alt | EC11E15244G1 (Alps) | C370970 | 5,515 | 2.26 | same, 30/15 part |
-| J3 | B7B-XH-A(LF)(SN) (JST) | C144398 | 11,035 | 0.117 | height under the cover, keying direction vs pin 1 |
-| (cable) | XHP-7 housing (JST) | C144406 | 12,111 | 0.042 | 15 pcs |
-| (cable) | SXH-001T-P0.6 crimp (JST) | C140573 | 1.4M | 0.013 | 150 pcs, needs an XH-size crimp tool |
+What still has to be bought loose, none of it from JLC:
 
-Not on LCSC: GX12 4-pin socket with pigtail and plug, display modules, encoder knobs,
-XH-7 to 1x7 2.54 mm female ribbon leads (if bought ready made instead of crimped).
+| What | Qty | Note |
+|---|---|---|
+| 1.3 in ST7789 240x240 display modules | 12 | one listing, one order; pin order GND VCC SCL SDA RES DC BLK |
+| EC11 encoders, 30 det / 15 pulse, 20 mm shaft | 12 | any seller now - off the board, so no footprint to match |
+| Encoder knobs for 6 mm shaft | 12 | printed or bought |
+| GX12 4-pin socket with pigtail, plus plug | 12 | handpiece, on the box shell |
+| Pedal socket | 12 | blocked on the open pedal question in ADR 0003 |
+| Hook-up wire, stranded, 22 AWG | - | display, encoder, pedal, handpiece looms |
+| Hook-up wire, stranded, 18 AWG | - | power feed into J101 |
+
+Board-side pad rows need no parts at all; they are holes.
 
 ## 14. Recommended spec (ADR) changes
 

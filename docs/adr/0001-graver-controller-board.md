@@ -208,10 +208,16 @@ Sized for a 141 ohm coil at up to 36 V (255 mA steady). Supported coil range: >=
 
 #### 7. Front-panel control
 
-- **Encoder**: Alps EC11E15244G1, EC11-type with push switch, PCB-mount THT, **30 detents /
-  15 pulses per revolution**, 6 mm shaft, fits the stock KiCad EC11E footprint. Rule: the
-  detent count equals the pulse count or twice it, and the firmware divisor matches (here:
-  one step per half quadrature cycle). No 20/20 part is stocked at LCSC.
+- **Encoder**: Alps EC11E15244G1, EC11-type with push switch, **30 detents /
+  15 pulses per revolution**, 6 mm shaft. Rule: the detent count equals the pulse count
+  or twice it, and the firmware divisor matches (here: one step per half quadrature
+  cycle). No 20/20 part is stocked at LCSC. **Amended 2026-10-01 (ADR 0003 Decision
+  9)**: the encoder is no longer mounted on the PCB. It mounts in the cover plate and
+  reaches the board on four wires (ENC_A, ENC_B, ENC_SW, GND) into the J403 pad row;
+  the EC11's encoder common and switch common are the same net, so they join at the
+  encoder body. Five wires if that bridge is unwanted. This takes the part off the JLC
+  BOM entirely, so any EC11 from any seller now works and the lug spacing no longer
+  has to match a footprint.
 - **Debounce**: 10k pull-ups plus 10 nF to GND on A and B, read by TIM3 in hardware
   encoder mode, so no counts are lost while the CPU is busy with the display. The push
   switch gets the same RC and a firmware debounce.
@@ -226,7 +232,14 @@ An "expression pedal" is a potentiometer in a rocking foot pedal, connected with
 EX-P has a polarity switch and is the recommended pedal.
 
 - **Jack**: Neutrik NMJ6HCD2, PCB-mount 6.35 mm stereo jack with tip, ring and sleeve
-  normalling contacts, rear edge.
+  normalling contacts, rear edge. **Amended 2026-10-01 (ADR 0003 Decision 9)**: no
+  jack is mounted on the board. J402 is a row of four pads carrying tip, ring,
+  ring-normal and sleeve, and whatever socket the box gets is wired back to them. The
+  circuit below is unchanged and still assumes a socket with a ring-normal contact; if
+  the pedal socket question settles on a GX12-3 instead, the plug-detect bullet has to
+  be redesigned, because an aviation connector has no normalling contact. The fallback
+  is a pulldown on the wiper so an unplugged pedal reads heel-down and cannot fire:
+  fail-safe, but it cannot tell "unplugged" from "pedal at rest".
 - **Wiring**: ring = 3.3 V through a 1k series resistor (a mono plug shorts ring to
   sleeve; the resistor makes that harmless), tip = wiper to ADC through RC filter,
   sleeve = GND. The ring-normal contact goes to GND.
@@ -272,6 +285,11 @@ and not confusable with the power plug.
 - The PCB forms the **top face** of a 3D-printed desk console (the box may tilt the board
   toward the user). Display and encoder on top; DC jack, pedal jack and the GX12 terminal
   on the **rear edge**; USB-C, BOOT0, NRST reachable from the rear or bottom.
+  **Amended 2026-10-01 (ADR 0003 Decision 9)**: only USB-C is still a board-mounted
+  connector. The display, the encoder, the power feed, the handpiece and the pedal all
+  reach the board on soldered looms, and their sockets live in the printed cover plate
+  and rear wall. The board is still the top structural layer; it is no longer what the
+  cables plug into.
 - Four M3 mounting holes, ground-free keepout around them.
 - Tallest top-side parts placed away from the display area and documented with a 3D STEP
   export for the enclosure design in FreeCAD.

@@ -66,7 +66,7 @@ DRU = os.path.join(PROJ, NAME + ".kicad_dru")
 OUT = os.path.join(PROJ, "output", "pcb")
 
 ORIGIN = (50.0, 50.0)          # must match place.py
-BOARD_W, BOARD_H = 110.0, 70.0
+BOARD_W, BOARD_H = 95.0, 70.0
 EDGE_KEEP = 0.35               # copper to board edge (rule is 0.3)
 
 SCRIPTED_GROUP = "scripted-copper"
@@ -872,7 +872,7 @@ class Copper:
 
 # ============================================================== zones =====
 def board_polygon(inset=0.0):
-    """The 110 x 70 outline with 2 mm corner radii, as a point list."""
+    """The board outline with 2 mm corner radii, as a point list."""
     w, h, r = BOARD_W - inset, BOARD_H - inset, 2.0
     x0, y0 = inset, inset
     pts = []
@@ -2223,19 +2223,34 @@ def step6_usb(cop):
 #   which is where the two pads face each other, and it clears pins 2 and 5
 #   (GND and VBUS, 0.95 mm away in x) by 0.55 mm.
 #
-#   SW401's two mounting lugs both carry the pad number MP, so KiCad invents
-#   the net unconnected-(SW401-PadMP) for them. Nothing else is on it and the
-#   schematic has no node for it, so a short link between the two lugs is the
-#   only thing that can close it. It runs straight down x = 88, under the
-#   encoder's body, 7.5 mm clear of every other pad of the part.
+#   SW401's two MP mounting lugs used to need a bridge here, because KiCad
+#   invented the net unconnected-(SW401-PadMP) for them and nothing else could
+#   close it. Removed 2026-10-01: the encoder left the board (ADR 0003
+#   Decision 9), so there are no lugs and no phantom net.
 #
 # (label, ref, pad a, pad b, width, inset) - `inset` is how far inside each
 # pad's own copper the link starts, None to start at the pad centre (which is
 # what a THT lug with a 0.2 mm annular ring needs).
+#   SW301 and SW302 are the same case as U302, found 2026-10-01. The XKB
+#   TS-1187A is a 4-pad tactile whose pads are numbered 1, 1, 2, 2 - the two
+#   halves of each pair are 6.00 mm apart in x and joined inside the switch,
+#   which KiCad's connectivity cannot see. On the old board the router
+#   happened to reach both halves; on the 95 x 70 re-place it did not, and
+#   SW302's NRST pair came out as an open pad pair. Bridging them makes the
+#   connection a property of the board instead of a property of whichever
+#   route the router found. The link runs straight across x under the
+#   switch body, where there is no other copper. Only the signal halves are
+#   bridged: SW302's other half is GND, which the pour ties anyway, and
+#   SW301's is +3V3, whose .kicad_dru floor is 0.30 mm - bridging it at
+#   W_SIG (0.25) produced one track_width error, and one error is enough for
+#   autoroute's import gate to refuse the WHOLE route, which is how a 6-open
+#   board briefly became a 72-open one on 2026-10-01. Any bridge on a
+#   Power-class net must carry that net's floor, not W_SIG.
 BRIDGES = [
     ("U302 D+ across the die", "U302", "3", "4", USB_W, 0.2),
     ("U302 D- across the die", "U302", "1", "6", USB_W, 0.2),
-    ("SW401 mounting lugs", "SW401", "MP", "MP", W_SIG, None),
+    ("SW301 BOOT0 across the switch", "SW301", "1", "1", W_SIG, 0.2),
+    ("SW302 NRST across the switch", "SW302", "1", "1", W_SIG, 0.2),
 ]
 
 
@@ -2489,17 +2504,17 @@ def step6c_signals(cop):
 # ============================================================= power =====
 POWER = [
     # VIN chain, in the power block
-    ("VIN jack to fuse", "J101.1", "F101.1", 0.8),
+    ("VIN pads to fuse", "J101.2", "F101.1", 0.8),
     ("VIN fuse to P-FET drain", "F101.2", "Q101.2", 0.8),
     ("VIN P-FET source to TVS", "Q101.3", "D102.1", 0.8),
     ("VIN TVS to bulk cap", "D102.1", "C101.1", 0.8),
     ("VIN bulk cap to buck CIN", "C101.1", "C106.1", 0.8),
     # flyback loop, 1.0 mm, under the terminal
-    ("COIL_NEG terminal to SS110", "J201.2", "D201.2", 1.0),
+    ("COIL_NEG pad row to SS110", "J201.2", "D201.2", 1.0),
     ("CLAMP SS110 to SMBJ24A", "D201.1", "D202.1", 1.0),
     ("VIN SMBJ24A to C102", "D202.2", "C102.1", 1.0),
     ("VIN C102 to C103", "C102.1", "C103.1", 1.0),
-    ("VIN terminal pin 1 to C102", "J201.1", "C102.1", 1.0),
+    ("VIN pad row pin 1 to C102", "J201.1", "C102.1", 1.0),
     ("VIN C103 to bypass FET source", "C103.1", "Q202.3", 0.5),
     # gate drive
     # D202.1 -> Q202.2 is NOT here: it is POWER_LAYERED below, because the

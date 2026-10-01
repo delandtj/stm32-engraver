@@ -55,7 +55,7 @@ PRO = os.path.join(PROJ, NAME + ".kicad_pro")
 OUT = os.path.join(PROJ, "output", "pcb")
 
 ORIGIN = (50.0, 50.0)          # must match place.py
-BOARD_W, BOARD_H = 110.0, 70.0
+BOARD_W, BOARD_H = 95.0, 70.0
 CORNER_R = 2.0
 
 SILK_GROUP = "scripted-silk"
@@ -120,28 +120,46 @@ REF_OVERRIDE = {
 # from that seed, so the numbers below are intent, not hard coordinates.
 REAR_LABELS = (
     # ref,    text,         seed (x, y),      size
-    ("J101", "DC 24V",    (17.60, 1.58), LABEL_SIZE),
-    ("J301", "USB",       (29.00, 4.20), LABEL_SIZE),
+    ("J101", "24V IN",    (16.70, 7.00), LABEL_SIZE),
+    ("J301", "USB",       (29.00, 8.00), LABEL_SIZE),
     ("J302", "SWD",       (43.60, 5.60), LABEL_SIZE),
-    ("J201", "HANDPIECE", (61.90, 4.60), LABEL_SIZE),
-    ("J402", "PEDAL",     (88.00, 1.75), LABEL_SIZE),
+    ("J201", "HANDPIECE", (58.80, 9.60), LABEL_SIZE),
+    ("J402", "PEDAL",     (78.80, 9.60), LABEL_SIZE),
 )
 
 # Pin legends. The seed is an offset from the pad itself, so the legend
 # follows the connector if place.py moves it.
 #
-# J201 is at rotation 180 (place.py: the four wire-entry funnels are drawn on
-# its +y side and nothing else points them out of the rear edge), which
-# reverses the pin order on the board. Seen from the front, left to right,
-# it is 4 GND / 3 NTC / 2 COIL_NEG / 1 VIN - the legend has to follow that
-# and not the schematic.
+# 2026-10-01: every row below is a wire-pad row at rotation 90 (place.py),
+# which runs the pads along +x in ascending pad order - pad 1 is the leftmost
+# hole seen from the front on the rear rows, and the leftmost on the front
+# rows too. No reversal any more: the legend follows the schematic directly.
+#
+# These legends are load-bearing. With the keyed connectors gone (ADR 0003
+# Decision 9) the silkscreen is the only thing standing between a builder and
+# a loom soldered on backwards, so every hole gets its function printed, not
+# just a pin number.
 PIN_LEGEND = (
     # ref,   pad, text,     seed offset from the pad, rot, size
-    ("J201", "4", "4 GND",  (0.0, -3.05), 0, PIN_SIZE),
-    ("J201", "3", "3 NTC",  (0.0, -3.05), 0, PIN_SIZE),
-    ("J201", "2", "2 COIL", (0.0, -3.05), 0, PIN_SIZE),
-    ("J201", "1", "1 VIN",  (0.0, -3.05), 0, PIN_SIZE),
-    # J401, the LCD's 1x7 XH: names along the pins, in front of the body.
+    ("J101", "1", "GND",    (0.0, 3.00), 90, PIN_SIZE),
+    ("J101", "2", "24V",    (0.0, 3.00), 90, PIN_SIZE),
+    ("J201", "1", "VIN",    (0.0, 3.60), 90, PIN_SIZE),
+    ("J201", "2", "COIL",   (0.0, 3.60), 90, PIN_SIZE),
+    ("J201", "3", "NTC",    (0.0, 3.60), 90, PIN_SIZE),
+    ("J201", "4", "GND",    (0.0, 3.60), 90, PIN_SIZE),
+    # J402, the pedal: tip / ring-normal / ring / sleeve. RN and SLV are both
+    # ground; they stay separate wires so the socket's normalling contact can
+    # still do the plug detection.
+    ("J402", "1", "TIP",    (0.0, 3.60), 90, PIN_SIZE),
+    ("J402", "2", "RN",     (0.0, 3.60), 90, PIN_SIZE),
+    ("J402", "3", "RING",   (0.0, 3.60), 90, PIN_SIZE),
+    ("J402", "4", "SLV",    (0.0, 3.60), 90, PIN_SIZE),
+    # J403, the encoder loom: A / GND / B / switch.
+    ("J403", "1", "A",      (0.0, 3.00), 90, PIN_SIZE),
+    ("J403", "2", "G",      (0.0, 3.00), 90, PIN_SIZE),
+    ("J403", "3", "B",      (0.0, 3.00), 90, PIN_SIZE),
+    ("J403", "4", "SW",     (0.0, 3.00), 90, PIN_SIZE),
+    # J401, the LCD's 1x7: names along the pins, in front of the body.
     ("J401", "1", "G",      (0.0, 6.40), 90, PIN_SIZE),
     ("J401", "2", "3V3",    (0.0, 5.90), 90, PIN_SIZE),
     ("J401", "3", "SCK",    (0.0, 5.90), 90, PIN_SIZE),
@@ -155,9 +173,14 @@ PIN_LEGEND = (
 # direction the tip faces.
 PIN1_MARKS = (
     # ref,   pad, seed (x, y),     point
-    ("J201", "1", (71.85, 10.05), "W"),
-    ("J302", "1", (37.00, 4.95),  "N"),
-    ("J401", "1", (20.00, 57.30), "S"),
+    # Left of pad 1 pointing at it: the rear rows sit 1-2 mm off the board
+    # edge, so there is no room for a mark above them. J101 has no mark - two
+    # holes labelled GND and 24V cannot be miscounted.
+    ("J201", "1", (53.00,  2.32), "E"),
+    ("J402", "1", (73.00,  2.32), "E"),
+    ("J302", "1", (37.00,  4.95), "N"),
+    ("J401", "1", (18.00, 61.00), "E"),
+    ("J403", "1", (70.00, 62.00), "E"),
 )
 
 # Board title, in the empty front-centre strip (README "What is still rough"
