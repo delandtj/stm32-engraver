@@ -121,7 +121,7 @@ first-article bring-up alone with an ST-LINK, the class never sees a probe.
 
    | Ref | Function | Footprint | Pads | Drill |
    |---|---|---|---|---|
-   | J101 | Power in from the brick | `Connector_Wire:SolderWire-1sqmm_1x02_P5.4mm_D1.4mm_OD2.7mm` | 2 | 1.4 mm |
+   | J101 | Power in from the brick | `Connector_Wire:SolderWire-1sqmm_1x02_P5.4mm_D1.4mm_OD2.7mm` | 2 | 1.75 mm |
    | J201 | Handpiece | `Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical` | 4 | 1.0 mm |
    | J301 | USB-C, unchanged | HRO 31-M-12, SMD | - | - |
    | J401 | Display | `Connector_PinHeader_2.54mm:PinHeader_1x07_P2.54mm_Vertical` | 7 | 1.0 mm |
@@ -149,9 +149,17 @@ first-article bring-up alone with an ST-LINK, the class never sees a probe.
    All six are stock KiCad library footprints, so nothing here needs measuring
    against a loose part first. The 2.54 mm rows take 22 AWG comfortably and, as a free
    option, accept an ordinary 0.1 inch pin header if a pluggable joint is ever wanted.
-   Only the power feed gets 1.4 mm holes, because it is the one joint that takes
+   Only the power feed gets big holes, because it is the one joint that takes
    mechanical strain from a brick lead; it gets a strain-relief anchor beside it so
    the solder is not the mechanical joint.
+
+   **Careful with that footprint name.** `SolderWire-1sqmm_1x02_P5.4mm_D1.4mm_OD2.7mm`
+   reads as a 1.4 mm drill and is not one - the file says `(drill 1.75)`, and the
+   `D1.4mm` in the name is the wire it is sized for, not the hole. Corrected here
+   2026-10-01 after counting the drill table off the board; the ADR, the parts table
+   and the handoff had all repeated the 1.4 mm reading. Nothing had to change on the
+   board: 1.75 mm is roomier for an 18 AWG lead than 1.4 would have been, and the
+   annular ring is still 0.48 mm.
 
    Consequences that are decisions in their own right:
 

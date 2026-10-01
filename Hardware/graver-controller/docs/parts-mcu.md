@@ -24,7 +24,7 @@ feeder fee per unique part per order). Stock is LCSC/JLC stock at time of query.
 | J2 | SWD 1x5 2.54 THT | PZ254V-11-05P | C492404 | Ext | 251,600 | 0.033 | THT | Connector_Generic:Conn_01x05 | Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical |
 | SW1,SW2 | BOOT0, NRST tact | TS-1187A-B-A-B (XKB) | C318884 | Basic | 1.68M | 0.020 | SMD 5.1x5.1, top-actuated | Switch:SW_Push | Button_Switch_SMD:SW_Push_1P1T_XKB_TS-1187A |
 | J3 | Display loom pads 1x7 (GND VCC SCL SDA RES DC BLK) | none - plated holes | - | - | - | 0 | 7 holes, 1.0 mm drill, 2.54 pitch | Connector_Generic:Conn_01x07 | Connector_PinHeader_2.54mm:PinHeader_1x07_P2.54mm_Vertical |
-| J4 | Power-in wire pads (+24V, GND) | none - plated holes | - | - | - | 0 | 2 holes, 1.4 mm drill, 5.4 pitch | Connector_Generic:Conn_01x02 | Connector_Wire:SolderWire-1sqmm_1x02_P5.4mm_D1.4mm_OD2.7mm |
+| J4 | Power-in wire pads (+24V, GND) | none - plated holes | - | - | - | 0 | 2 holes, 1.75 mm drill, 5.4 pitch | Connector_Generic:Conn_01x02 | Connector_Wire:SolderWire-1sqmm_1x02_P5.4mm_D1.4mm_OD2.7mm |
 | J5 | Pedal wire pads (T, R, RN, S) | none - plated holes | - | - | - | 0 | 4 holes, 1.0 mm drill, 2.54 pitch | Connector_Generic:Conn_01x04 | Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical |
 | J6 | Handpiece wire pads (VIN, COIL_NEG, NTC, GND) | none - plated holes | - | - | - | 0 | 4 holes, 1.0 mm drill, 2.54 pitch | Connector_Generic:Conn_01x04 | Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical |
 | J7 | Encoder wire pads (ENC_A, ENC_B, ENC_SW, GND) | none - plated holes | - | - | - | 0 | 4 holes, 1.0 mm drill, 2.54 pitch | Connector_Generic:Conn_01x04 | Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical |
@@ -197,7 +197,9 @@ project; the loom is hook-up wire soldered at the board end. The pin order below
 
 ## 9. DC jack
 
-**Amended 2026-10-01 (ADR 0003 Decision 9): J101 is two 1.4 mm plated holes.**
+**Amended 2026-10-01 (ADR 0003 Decision 9): J101 is two 1.75 mm plated holes.**
+The footprint is named `...D1.4mm_OD2.7mm` but its file says `(drill 1.75)` - the
+`D1.4mm` is the wire size, not the hole.
 The brick's leads are soldered in. The 30 V rating ceiling noted below was a property
 of the DC-005 jack and no longer applies, so the 18-36 V electronics rating is the
 only limit left.
