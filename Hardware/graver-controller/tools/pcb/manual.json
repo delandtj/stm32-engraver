@@ -1,4 +1,537 @@
 {
-  "items": [],
-  "note": "Hand-drawn copper, re-added by place.py as the last step of a pipeline run. Coordinates are mm from the board's top-left corner, which is page (50, 50). Emptied 2026-10-01: the connector rework (ADR 0003 Decision 9) moved every part and shrank the board to 95 x 70, so the previous 38 items - VDDA, PB2 and +5V - were drawn against coordinates that no longer mean anything and shorted VDDA to PEDAL_RING where they landed. Re-close the remaining pairs with close_pairs.py after the route stage, then place.py --export-manual to refill this file."
+  "items": [
+    {
+      "end": [
+        36.8,
+        16.1
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        32.3,
+        16.1
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        43.2,
+        15.0
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        38.0,
+        15.0
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        47.2,
+        19.0
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        43.2,
+        15.0
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        17.3,
+        48.1
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        17.3,
+        48.3
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        16.9,
+        43.6
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        16.9,
+        43.9
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        17.3,
+        48.3
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        18.6,
+        49.6
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        19.9,
+        49.6
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        20.6,
+        50.3
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        51.0,
+        19.0
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        48.8,
+        19.0
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        20.6,
+        50.3
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        21.3,
+        50.3
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        31.2,
+        17.2
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        29.1,
+        17.2
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        21.3,
+        50.3
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        21.3,
+        52.8
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        18.6,
+        49.6
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        19.9,
+        49.6
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        29.1,
+        31.4
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        16.9,
+        43.6
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        29.1,
+        17.2
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        28.9,
+        17.4
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        29.1,
+        19.6
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "+5V",
+      "start": [
+        29.1,
+        31.4
+      ],
+      "width": 0.3
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        48.8,
+        19.0
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        29.1,
+        19.6
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        47.2,
+        19.0
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        28.9,
+        17.4
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        31.2,
+        17.2
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        16.9,
+        43.9
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        36.8,
+        16.1
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        17.3,
+        48.1
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        32.3,
+        16.1
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "+5V",
+      "pos": [
+        38.0,
+        15.0
+      ],
+      "size": 0.6
+    },
+    {
+      "end": [
+        32.3,
+        16.1
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        31.2,
+        17.2
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        48.8,
+        19.0
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        47.2,
+        19.0
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        28.9,
+        19.4
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        29.1,
+        19.6
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        38.0,
+        15.0
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        37.9,
+        15.0
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        28.9,
+        17.4
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        28.9,
+        19.4
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        16.9,
+        43.9
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        17.3,
+        44.3
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        17.3,
+        44.3
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        17.3,
+        48.1
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        37.9,
+        15.0
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "+5V",
+      "start": [
+        36.8,
+        16.1
+      ],
+      "width": 0.3
+    },
+    {
+      "end": [
+        52.6,
+        34.9
+      ],
+      "kind": "track",
+      "layer": "F.Cu",
+      "net": "GND",
+      "start": [
+        52.6,
+        40.2
+      ],
+      "width": 0.4
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "GND",
+      "pos": [
+        43.5,
+        46.5
+      ],
+      "size": 0.6
+    },
+    {
+      "drill": 0.3,
+      "kind": "via",
+      "layers": [
+        "F.Cu",
+        "B.Cu"
+      ],
+      "net": "GND",
+      "pos": [
+        40.5,
+        50.1
+      ],
+      "size": 0.6
+    },
+    {
+      "end": [
+        40.5,
+        50.1
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "GND",
+      "start": [
+        43.5,
+        47.1
+      ],
+      "width": 0.4
+    },
+    {
+      "end": [
+        43.5,
+        47.1
+      ],
+      "kind": "track",
+      "layer": "B.Cu",
+      "net": "GND",
+      "start": [
+        43.5,
+        46.5
+      ],
+      "width": 0.4
+    }
+  ],
+  "note": "Hand-drawn copper, re-added by place.py as the last step of a pipeline run. Coordinates are mm from the board's top-left corner, which is page (50, 50)."
 }

@@ -176,7 +176,18 @@ USB_DIE_BRIDGE = "U302"
 # corner; everything the board hands back is in page mm, hence USB_ORIGIN.
 USB_ORIGIN = (50.0, 50.0)
 USB_CROSSING_OK = [
-    ("+5V", "B.Cu", 36.45, 21.35, 0.75),
+    # Moved 2026-10-01 with the connector rework (ADR 0003 Decision 9). The
+    # 110 x 70 board crossed at (36.45, 21.35); on the re-placed 95 x 70 board
+    # the +5V run from D105.1 to C201.1 crosses at (31.62, 16.77) instead -
+    # 1.56 mm of B.Cu at 90 degrees to the pair, 0.60 mm off the nearest pair
+    # track, picked by close_pairs.close_5v out of 172 candidate sites.
+    #
+    # Why a crossing at all: with the pair's B.Cu shadow respected there is NO
+    # path between the power block and the gate driver - the pair walls the
+    # two halves of the board apart. A search allowed to ignore the shadow
+    # came back crossing the run TWICE at a shallow angle, which this check
+    # refused. One short perpendicular crossing is the agreed trade.
+    ("+5V", "B.Cu", 31.62, 16.77, 0.75),
 ]
 
 
