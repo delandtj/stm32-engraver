@@ -32,7 +32,7 @@ pub async fn run(strike: &Sender<'static, CriticalSectionRawMutex, StrikeParams,
         BENCH_F_HZ,
         BENCH_DELAY.as_secs()
     );
-    Timer::after(BENCH_DELAY).await;
+    wait_beating(BENCH_DELAY).await;
 
     strike.send(StrikeParams {
         f_hz: BENCH_F_HZ,
@@ -40,11 +40,21 @@ pub async fn run(strike: &Sender<'static, CriticalSectionRawMutex, StrikeParams,
         firing: true,
     });
     let millis = BENCH_PULSES as u64 * 1000 / BENCH_F_HZ as u64;
-    Timer::after(Duration::from_millis(millis)).await;
+    wait_beating(Duration::from_millis(millis)).await;
     strike.send(StrikeParams {
         f_hz: BENCH_F_HZ,
         t_on_us: BENCH_T_ON_US,
         firing: false,
     });
     defmt::info!("BENCH BUILD: burst done");
+}
+
+/// Sleep without starving the watchdog supervisor: the burst runs inside the
+/// control task before its loop, so it has to keep the heartbeat going.
+async fn wait_beating(d: Duration) {
+    let end = embassy_time::Instant::now() + d;
+    while embassy_time::Instant::now() < end {
+        crate::heartbeat();
+        Timer::after_millis(100).await;
+    }
 }
