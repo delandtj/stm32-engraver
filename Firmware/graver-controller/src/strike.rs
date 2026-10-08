@@ -140,18 +140,24 @@ impl StrikeEngine {
         //    real overcurrent still cuts the pulse in under 100 ns.
         //  - AOE = 0: MOE is NOT restored at the next update event. A trip
         //    latches until firmware clears it. This is the safety property.
+        // One write, not a chain of modify() helpers: a BDTR write needs one
+        // APB cycle to take effect, so back-to-back read-modify-writes read
+        // stale bits and dropped BKP, leaving the break active low and
+        // permanently tripped by the PB12 pull-down.
         tim.set_ois(Channel::Ch1, false);
-        tim.set_ossi(vals::Ossi::IDLE_LEVEL);
-        tim.set_ossr(vals::Ossr::DISABLED);
-        tim.set_break_polarity(vals::Bkp::ACTIVE_HIGH);
-        tim.set_break_filter(FilterValue::FCK_INT_N8);
-        tim.set_automatic_output_enable(false);
-        tim.set_break_enable(true);
+        adv.bdtr().write(|w| {
+            w.set_ossi(vals::Ossi::IDLE_LEVEL);
+            w.set_ossr(vals::Ossr::DISABLED);
+            w.set_bkp(0, vals::Bkp::ACTIVE_HIGH);
+            w.set_bkf(0, FilterValue::FCK_INT_N8);
+            w.set_aoe(false);
+            w.set_bke(0, true);
+            w.set_moe(false);
+        });
 
         // RM0383 12.4.9 CCER.CC1E: connect OC1 to the pin. The output still
         // needs MOE (set in `arm`), so PA8 stays at the idle level for now.
         tim.enable_channel(Channel::Ch1, true);
-        tim.set_moe(false);
 
         // Load PSC/ARR/CCR1 into the shadow registers without raising an
         // interrupt (RM0383 12.4.6 EGR.UG, URS already set above).
@@ -249,8 +255,11 @@ pub async fn strike_task(mut engine: StrikeEngine) {
 
     fault_tx.send(false);
 
+    // A command picked up by the idle wait below, applied at the loop top.
+    let mut pending: Option<StrikeParams> = None;
+
     loop {
-        if let Some(new) = rx.try_changed() {
+        if let Some(new) = pending.take().or_else(|| rx.try_changed()) {
             if new.firing != params.firing {
                 defmt::debug!(
                     "strike: firing = {}, f = {} Hz, t_on = {} us",
@@ -276,8 +285,12 @@ pub async fn strike_task(mut engine: StrikeEngine) {
             engine.disable_output();
             next = Instant::now();
             // Idle: wake on the next command, but poll often enough to notice
-            // a fault clear request.
-            let _ = embassy_futures::select::select(rx.changed(), Timer::after_millis(20)).await;
+            // a fault clear request. `changed()` consumes the value, so keep it.
+            if let embassy_futures::select::Either::First(new) =
+                embassy_futures::select::select(rx.changed(), Timer::after_millis(20)).await
+            {
+                pending = Some(new);
+            }
             continue;
         }
 
