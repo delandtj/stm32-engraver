@@ -1,51 +1,8 @@
 ** Drc report for graver-controller.kicad_pcb **
-** Created on 2026-10-09T22:31:11 **
+** Created on 2026-10-09T22:35:11 **
 ** Report includes: Errors, Warnings, Exclusions **
 
-** Found 11 DRC violations **
-[silk_overlap]: Silkscreen clearance
-    Rule: board setup constraints silk; warning
-    @(84.5000 mm, 73.4400 mm): PCB text '3V' on F.Silkscreen
-    @(84.5000 mm, 73.4400 mm): PCB text 'CK' on F.Silkscreen
-[silk_overlap]: Silkscreen clearance
-    Rule: board setup constraints silk; warning
-    @(84.5000 mm, 73.4400 mm): PCB text '3V' on F.Silkscreen
-    @(84.5000 mm, 73.4400 mm): PCB text 'RS' on F.Silkscreen
-[silk_overlap]: Silkscreen clearance
-    Rule: board setup constraints silk; warning
-    @(84.5000 mm, 73.4400 mm): PCB text '3V' on F.Silkscreen
-    @(84.5000 mm, 73.4400 mm): PCB text 'G' on F.Silkscreen
-[silk_overlap]: Silkscreen clearance
-    Rule: board setup constraints silk; warning
-    @(84.5000 mm, 73.4400 mm): PCB text 'CK' on F.Silkscreen
-    @(84.5000 mm, 73.4400 mm): PCB text 'RS' on F.Silkscreen
-[silk_overlap]: Silkscreen clearance
-    Rule: board setup constraints silk; warning
-    @(84.5000 mm, 73.4400 mm): PCB text 'CK' on F.Silkscreen
-    @(84.5000 mm, 73.4400 mm): PCB text 'G' on F.Silkscreen
-[silk_overlap]: Silkscreen clearance
-    Rule: board setup constraints silk; warning
-    @(84.5000 mm, 73.4400 mm): PCB text 'CK' on F.Silkscreen
-    @(84.5000 mm, 73.4400 mm): PCB text 'IO' on F.Silkscreen
-[silk_overlap]: Silkscreen clearance
-    Rule: board setup constraints silk; warning
-    @(84.5000 mm, 73.4400 mm): PCB text '3V' on F.Silkscreen
-    @(84.5000 mm, 73.4400 mm): PCB text 'IO' on F.Silkscreen
-[silk_overlap]: Silkscreen clearance
-    Rule: board setup constraints silk; warning
-    @(84.5000 mm, 73.4400 mm): PCB text 'RS' on F.Silkscreen
-    @(84.5000 mm, 73.4400 mm): PCB text 'G' on F.Silkscreen
-[silk_overlap]: Silkscreen clearance
-    Rule: board setup constraints silk; warning
-    @(84.5000 mm, 73.4400 mm): PCB text 'RS' on F.Silkscreen
-    @(84.5000 mm, 73.4400 mm): PCB text 'IO' on F.Silkscreen
-[silk_overlap]: Silkscreen clearance
-    Rule: board setup constraints silk; warning
-    @(84.5000 mm, 73.4400 mm): PCB text 'G' on F.Silkscreen
-    @(84.5000 mm, 73.4400 mm): PCB text 'IO' on F.Silkscreen
-[track_dangling]: Track has unconnected end
-    Local override; warning
-    @(96.2500 mm, 68.5625 mm): Track [OC_TRIP] on F.Cu, length 0.9000 mm
+** Found 0 DRC violations **
 
 ** Found 0 unconnected pads **
 

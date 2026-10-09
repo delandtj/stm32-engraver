@@ -49,7 +49,8 @@ names = { J101 = "24V IN", J301 = "USB", J201 = "HANDPIECE", J402 = "PEDAL", J30
 [connlabels.legends]
 J101 = ["G", "+"]
 J201 = ["VI", "CN", "NT", "G"]
-J302 = ["3V", "IO", "CK", "RS", "G"]
+# J302 (SWD, vertical 1x5 inside the board): no pin legends, connlabels stacks
+# them on one point there; the pin order is in the schematic and HANDOFF.md.
 J401 = ["G", "3V", "CL", "DA", "RS", "DC", "BL"]
 J402 = ["T", "RN", "R", "S"]
 J403 = ["A", "G", "B", "SW"]
