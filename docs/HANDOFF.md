@@ -31,9 +31,9 @@ Lessons: KRT cannot escape the QFN48 or attach to the USB-C pads by itself
 (hence handroute.py), `krt-reroute` without `--keep` rips neighbours, and
 every pcbnew save goes to scratch with only the .kicad_pcb copied back.
 Open for order day: the CPL rotation table in pcbkit.toml is package
-convention, confirm it in JLC's placement preview; 4-layer cost (ADR 0005
-open question 2); and the width-floor reading (ADR 0005 "As built": 52
-short +3V3/VBUS/VDDA necks at 0.2-0.25 mm instead of ADR 0003's 0.3).
+convention, confirm it in JLC's placement preview, and confirm the 4-layer
+price. Width floors are half the class width (ADR 0005 "As built", Jan's
+decision 2026-10-09).
 
 
 **The board is finished and tagged `v0.2`** (commit 9645970, signed).

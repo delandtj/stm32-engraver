@@ -1,7 +1,6 @@
 # 0005 - Compact 4-layer board, laid out with pcbkit in the granite_controller style
 
-**Status**: Accepted 2026-10-09 (laid out on branch adr-0005-compact-4layer), pending
-open question 2 (4-layer cost) and the width-floor reading below, both Jan's call
+**Status**: Accepted (2026-10-09, laid out on branch adr-0005-compact-4layer)
 **Date**: 2026-10-09
 **Amends**: ADR 0003 Decisions 3 (outline), 4 (layer use), 5 (design rules), 8 (layout method)
 
@@ -180,8 +179,9 @@ Acceptance criteria, all checked by tool output, not by eye:
 
 1. ~~ADR 0004 boost stage: schematic first or a reserved keepout area?~~ Decided
    2026-10-09: reserved keepout (Decision 7).
-2. Is a 4-layer cost increase accepted for the 17-board order? Confirm on order day
-   with JLC's quote; the layout does not depend on it.
+2. ~~Is a 4-layer cost increase accepted for the 17-board order?~~ Decided
+   2026-10-09: accepted; the price is confirmed with JLC's quote on order day, like
+   the 100 x 100 band.
 3. ~~May the display and encoder pad rows move off the front edge?~~ Decided
    2026-10-09: yes, if it buys area. The placement kept them on the front edge
    (J401 centre, J403 right) because the width is set by the rear edge row.
@@ -221,7 +221,7 @@ Deviations from the text above, all deliberate:
   above the pad row, D- pads below, an orthogonal detour on the D+ connector leg
   sized from the two leg lengths. Clearances: signal classes 0.15, power classes
   0.2, USB class 0.15 (the pair gap).
-- **Width floors (a decision for Jan).** ADR 0003's `.kicad_dru` floors were
+- **Width floors (decided 2026-10-09: half the class width).** ADR 0003's `.kicad_dru` floors were
   0.5 mm for HighCurrent and 0.3 mm for Power. The HighCurrent nets meet the
   0.5 floor everywhere on this board (VIN and SHUNT_HI min 0.50, the rest at
   0.8). The 0.3 Power floor does not hold: 52 segments of +3V3 (42), VBUS (7)
@@ -233,8 +233,7 @@ Deviations from the text above, all deliberate:
   the class width") already described. The CLAMP net's gate-bias branch (D203,
   R205, R206, Q203, rule area 'clamp-bias') is exempt: it carries no coil
   current. QFN pads need one pour spoke, not two (they carry their own via).
-  Re-routing those 42 necks by hand would restore the 0.3 floor; it is about
-  an evening's work and has not been done.
+  Jan chose the half-class reading over re-routing the 42 necks by hand.
 - ERC on the final schematic (unchanged by this ADR): 0 violations.
 - Rotation corrections for the CPL (`[jlcfab] corrections` in pcbkit.toml) are
   package conventions, to be confirmed in JLC's placement preview on order day.
