@@ -1,0 +1,87 @@
+# pcbkit settings for the graver controller (ADR 0005: 4-layer JLC04161H-7628,
+# 85 x 60 mm ceiling, granite_controller style). Tools: ~/Electronics/pcbkit.
+# Pipeline: tools/pcb5/build.sh (netlist -> mkboard -> outline -> setrules ->
+# place.py -> krt-route -> ... -> gndpour -> silk -> connlabels -> render).
+
+[project]
+name = "graver-controller"
+
+[mkboard]
+copper_layers = 4
+
+[outline]
+# ADR 0005 Decision 2: target 75 x 55, ceiling 85 x 60. Current size below.
+length = 85.0
+height = 60.0
+origin = [50.0, 50.0]
+radius = 1.0
+# The four M3 holes are schematic parts (MH401-MH404, IO sheet) placed by
+# tools/pcb5/place.py, so outline adds none of its own.
+hole_refs = []
+
+[rules]
+stackup = "jlc04161h-7628"
+layers = { "In1.Cu" = ["power", "GND"], "In2.Cu" = ["power", "+3V3"] }
+
+# USB 0.25/0.15 on 0.2104 mm 7628 over the In1 GND plane: 90-92 ohm by the
+# Hammerstad-Jensen microstrip formula (Er 4.4-4.6), the same geometry
+# granite_controller solved to 89 ohm with a 2D field solver.
+# Two via sizes on the whole board: 0.5/0.2 signal, 0.6/0.3 power.
+[rules.netclasses]
+# name = [track, clearance, via_dia, via_drill, diff_width, diff_gap]
+Default     = [0.2,  0.15, 0.5, 0.2]
+GND         = [0.4,  0.2,  0.6, 0.3]
+PWR_3V3     = [0.4,  0.2,  0.6, 0.3]
+PWR_5V      = [0.5,  0.2,  0.6, 0.3]
+HighCurrent = [0.8,  0.2,  0.6, 0.3]
+USB         = [0.25, 0.2,  0.5, 0.2, 0.25, 0.15]
+
+[gndpour]
+short_edge_inset = 1.0
+
+[silk]
+order = ["J", "U", "Q", "D", "L", "Y", "SW", "F"]
+
+[connlabels]
+# placement is greedy in table order: keep this order
+names = { J101 = "24V IN", J301 = "USB", J201 = "HANDPIECE", J402 = "PEDAL", J302 = "SWD", J401 = "DISPLAY", J403 = "ENCODER" }
+
+[connlabels.legends]
+J101 = ["G", "+"]
+J201 = ["VI", "CN", "NT", "G"]
+J302 = ["3V", "IO", "CK", "RS", "G"]
+J401 = ["G", "3V", "CL", "DA", "RS", "DC", "BL"]
+J402 = ["T", "RN", "R", "S"]
+J403 = ["A", "G", "B", "SW"]
+
+[viaout]
+keep = [["U301", "49"]]      # QFN48 EP thermal vias stay in the pad
+
+[jlcfab]
+out = "fab"
+lcsc_field = "LCSC"
+mpn_field = "MPN"
+
+[krt]
+dir = "~/.cache/graver-pcb/routetest/KiCadRoutingTools"
+python = "~/.cache/graver-pcb/routetest/venv/bin/python"
+work = "~/.cache/graver-pcb/pcbkit/route"
+rework = "~/.cache/graver-pcb/pcbkit/reroute"
+clearance = 0.2
+via = [0.5, 0.2]
+track_width = 0.2
+same_net_pad_clearance = 0.15     # no vias in SMD pads
+signal_layers = ["F.Cu", "B.Cu"]  # In1/In2 stay solid planes
+route_extra = ["--ordering", "mps"]
+power_nets   = ["GND", "+3V3", "*VDDA", "+5V", "VBUS", "*D105-A*", "VIN", "*COIL_NEG", "*CLAMP", "*SHUNT_HI", "*U101-SW*", "*J101-Pin_2*", "*Q101-D*"]
+power_widths = [0.4,   0.4,    0.4,     0.5,   0.5,    0.5,        0.8,   0.8,        0.8,      0.8,         0.8,          0.8,             0.8]
+planes = { nets = ["GND", "+3V3"], layers = ["In1.Cu", "In2.Cu"], via = [0.6, 0.3] }
+ground = { net = "GND", width = 0.4 }
+
+[[krt.diff]]
+desc = "USB 0.25/0.15 (90 ohm over In1)"
+nets = ["*USB_DP", "*USB_DM"]
+width = 0.25
+gap = 0.15
+# skew <= 0.15 mm by meanders on the shorter leg (ADR 0005 Decision 4)
+extra = ["--diff-pair-intra-match", "--length-match-tolerance", "0.15", "--meander-amplitude", "0.6"]

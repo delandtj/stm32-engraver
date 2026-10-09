@@ -2,7 +2,12 @@
 *-backups/
 fp-info-cache
 *.kicad_prl
-output/
+# ADR 0005: the acceptance renders in output/pcb/ are committed, the rest is not
+output/*
+!output/pcb/
+output/pcb/*
+!output/pcb/*.png
+!output/pcb/drc.rpt
 .kicad-mcp/
 .history/
 __pycache__/
