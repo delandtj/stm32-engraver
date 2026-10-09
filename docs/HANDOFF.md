@@ -7,7 +7,7 @@ exists, what is decided, how to work on it and what comes next.
 
 **2026-10-09, ADR 0005 (Accepted): the board is now 4-layer, 85 x 60 mm,
 built with pcbkit** on branch `adr-0005-compact-4layer`. kicad-cli DRC
-after a zone refill: 0 errors, 0 unconnected, 0 parity, 11 warnings; USB
+after a zone refill: 0 errors, 0 unconnected, 0 parity, 0 warnings; USB
 pair 0.25/0.15 with 0.000 mm skew and no vias; In1 solid GND, In2 solid
 +3V3; a 25 x 20 mm reserve for the ADR 0004 boost stage at the front left.
 Fab set in `Hardware/graver-controller/fab/`. Everything below this

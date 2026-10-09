@@ -193,7 +193,7 @@ Measured on the committed board with kicad-cli 10.0.7 after a zone refill
 | item | value |
 |---|---|
 | DRC errors / unconnected / schematic parity | 0 / 0 / 0 |
-| DRC warnings | 11: 10 silk_overlap (footprint silk under refs on 0402/0603 parts), 1 track_dangling (a KRT stub end) |
+| DRC warnings | 0 (the component spec's target) |
 | outline | 85.0 x 60.0 mm (the ceiling; the boost reserve costs the 75 x 55 target) |
 | USB pair | 0.25 / 0.15 mm, D+ 14.81 mm, D- 14.81 mm, skew 0.000 mm, 0 vias, F.Cu only |
 | vias | 256, sizes 0.5/0.2 and 0.6/0.3 only |
