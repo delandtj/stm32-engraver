@@ -1,6 +1,7 @@
 # 0005 - Compact 4-layer board, laid out with pcbkit in the granite_controller style
 
-**Status**: Accepted (2026-10-09, laid out on branch adr-0005-compact-4layer)
+**Status**: Accepted 2026-10-09 (laid out on branch adr-0005-compact-4layer), pending
+open question 2 (4-layer cost) and the width-floor reading below, both Jan's call
 **Date**: 2026-10-09
 **Amends**: ADR 0003 Decisions 3 (outline), 4 (layer use), 5 (design rules), 8 (layout method)
 
@@ -220,11 +221,21 @@ Deviations from the text above, all deliberate:
   above the pad row, D- pads below, an orthogonal detour on the D+ connector leg
   sized from the two leg lengths. Clearances: signal classes 0.15, power classes
   0.2, USB class 0.15 (the pair gap).
-- Width floors in `.kicad_dru` are half the class width (necking at pads);
-  check.py reports the class-width count per net. The CLAMP net's gate-bias
-  branch (D203, R205, R206, Q203, rule area 'clamp-bias') is exempt: it carries
-  no coil current. QFN pads need one pour spoke, not two (they carry their own
-  via).
+- **Width floors (a decision for Jan).** ADR 0003's `.kicad_dru` floors were
+  0.5 mm for HighCurrent and 0.3 mm for Power. The HighCurrent nets meet the
+  0.5 floor everywhere on this board (VIN and SHUNT_HI min 0.50, the rest at
+  0.8). The 0.3 Power floor does not hold: 52 segments of +3V3 (42), VBUS (7)
+  and VDDA (3), 46 mm in all, are 0.2 or 0.25 mm necks at 0402/0603 pads and
+  plane-tap vias; a scripted attempt to widen them to 0.3 succeeded for only 10
+  (the other 42 hit clearance). The committed `.kicad_dru` therefore uses half
+  the class width as the floor (0.4 HighCurrent, 0.25 5V, 0.2 3V3 and GND),
+  which the old file's own comment ("necking at small pads is allowed to half
+  the class width") already described. The CLAMP net's gate-bias branch (D203,
+  R205, R206, Q203, rule area 'clamp-bias') is exempt: it carries no coil
+  current. QFN pads need one pour spoke, not two (they carry their own via).
+  Re-routing those 42 necks by hand would restore the 0.3 floor; it is about
+  an evening's work and has not been done.
+- ERC on the final schematic (unchanged by this ADR): 0 violations.
 - Rotation corrections for the CPL (`[jlcfab] corrections` in pcbkit.toml) are
   package conventions, to be confirmed in JLC's placement preview on order day.
 - pcbkit gained general fixes for this board (commits in ../pcbkit): krt-route
