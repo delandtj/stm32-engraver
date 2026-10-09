@@ -100,7 +100,8 @@ ADR 0004 (boost coil rail, Proposed) adds a power stage that is not in the schem
    gndpour, silk, connlabels, jlcfab, render). The only project code is one placement
    script on `pcbtool.Placer` plus, where the router fails, scripted hand routes with
    `pcbtool.add_track` / `add_via` (the granite pattern). Fixes that are general go
-   into pcbkit, not into project copies. `tools/pcb/` of ADR 0003 is retired; it stays
+   into pcbkit, not into project copies. The CPL rotation review of ADR 0003 step 8
+   is a tool check too: `tools/pcb5/cplcheck.py` against the EasyEDA footprints. `tools/pcb/` of ADR 0003 is retired; it stays
    reachable at tag `pcb-pre-pcbkit`. Every pcbnew save goes to a scratch directory,
    only the .kicad_pcb is copied back.
 
@@ -252,9 +253,10 @@ Deviations from the text above, all deliberate:
   in JLC's preview. All 27 polarized or asymmetric parts agree. The package
   conventions first put in `[jlcfab] corrections` were wrong for six of them
   (both LEDs reversed, the IRLR3410, the AP2112K, the SWD header, the
-  inductor); JLC's footprints differ per part even within a package. The JLC
-  placement preview on order day stays as the last look, as ADR 0003 step 8
-  says, but nothing is left to discover there.
+  inductor); JLC's footprints differ per part even within a package. This is
+  the CPL rotation review of ADR 0003 implementation step 8, done as a tool
+  check against the same footprints JLC's preview would show (amends that
+  step); the preview is not needed for it.
 - pcbkit gained general fixes for this board (commits in ../pcbkit): krt-route
   keeps rule areas and the `[krt] keep_groups` groups and does not rip them,
   `[[krt.diff]]` takes `extra` flags, `[krt] clearance = 0` lets KRT use the net

@@ -33,7 +33,7 @@ Lessons: KRT cannot escape the QFN48 or attach to the USB-C pads by itself
 every pcbnew save goes to scratch with only the .kicad_pcb copied back.
 Open for order day: confirm the 4-layer price with the quote. The CPL
 rotations are verified against the EasyEDA footprints (tools/pcb5/cplcheck.py,
-27 of 27 parts agree); JLC's placement preview is the last look, not a check. Width floors are ADR 0003's (0.5 / 0.3 mm), with 0.2 mm only at the
+27 of 27 parts agree), which is ADR 0003 step 8's rotation review. Width floors are ADR 0003's (0.5 / 0.3 mm), with 0.2 mm only at the
 0.5 mm pitch pads as ADR 0003 says (ADR 0005 "As built").
 
 
