@@ -50,6 +50,21 @@ Module choice:
 | OPEN-SMART single MOSFET (3.3 V logic OK) | 13.5 V max, NEVER 24 V (dies) | timing, UI, scope of the pulse; hits are ~1/4 force |
 | D4184 dual-MOSFET trigger module | 5-36 V | the real 24 V punch test |
 | Bare logic-level N-FET (IRLZ44N, IRL540, IRLB8721) | any | best: gate <- PA8 through 100 R, 100k gate to GND, source to GND, drain to coil |
+| IBT-2 (BTS7960 half bridges) | 5.5-27 V | 24 V punch test; see below. Not above 27 V, so no 28-30 V tests |
+
+IBT-2 as a high-side switch with active freewheel (no 1N4007 needed: when
+the high side is off the low-side FETs short the coil, i.e. slow decay):
+
+| IBT-2 pin | Goes to |
+|---|---|
+| VCC | Blackpill 3V3 (the on-board 74HC244 then switches cleanly at 3.3 V logic; at 5 V its threshold is ~3.15 V, marginal) |
+| GND | Blackpill G |
+| R_EN, L_EN | 3V3 |
+| RPWM | PA8, plus 100k to G so the bridge stays off while the MCU is in reset |
+| LPWM | G |
+| R_IS, L_IS | leave open (sense ratio ~8500:1 is too coarse at 0.17 A) |
+| B+ / B- | PSU 24 V + / - (B- also to Blackpill G) |
+| M+ / M- | coil, either way round |
 
 EG27324 + M3004D module (the one on the bench, 2026-09-16, photo:
 mosfet-module-eg27324-m3004d.jpg in this directory): the M3004D is a
@@ -208,6 +223,12 @@ power the board from it while USB is plugged). `probe-rs run` flashes and
 streams logs. probe-rs on this machine currently warns about udev
 permissions: install the `stlink` package (ships the udev rules) or add a
 rule for the probe's VID:PID, then replug.
+
+Switch the coil PSU OFF before flashing or attaching over SWD. With a
+working FET module and a firmware that switches the coil (coil_test, the
+bench burst, a held pedal), the coil current shares the breadboard ground
+with the ST-Link and SWD fails: `JtagNoDeviceConnected`, AP timeouts, even
+at 100 kHz and with NRST tricks. PSU off -> flashes first time (2026-10-09).
 
 ## Test order
 
