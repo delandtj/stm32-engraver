@@ -72,13 +72,14 @@ ADR 0004 (boost coil rail, Proposed) adds a power stage that is not in the schem
    Two via sizes on the whole board: 0.5/0.2 and 0.6/0.3. No vias in SMD pads except
    the QFN48 EP thermal vias (`--same-net-pad-clearance 0.15` for the router).
 
-   Width floors (amends ADR 0003 Decision 5, decided 2026-10-09): the class width
-   is the routing target; the `.kicad_dru` floor that DRC enforces is half the
-   class width (0.4 HighCurrent, 0.25 5 V/VBUS, 0.2 3V3/GND), for necking at
-   0402/0603 pads and plane-tap vias. The CLAMP net's gate-bias branch (rule area
-   'clamp-bias') carries no coil current and may use signal widths. `check.py`
-   reports, per net, the minimum width against the floor and how many segments sit
-   below the class width.
+   Width floors: ADR 0003 Decision 5's floors stay (`.kicad_dru`: 0.5 mm
+   HighCurrent, 0.3 mm for the 5 V and 3V3 classes), with the two exceptions
+   ADR 0003 itself states or implies: 0.2 mm at the 0.5 mm pitch parts (rule
+   areas 'fine-pitch' around U301, J301, U302) and signal widths on the CLAMP
+   net's gate-bias branch (rule area 'clamp-bias', no coil current). GND has
+   no ADR 0003 floor; its plane-tap stubs are 0.2 mm. `check.py` reports, per
+   net, the minimum width against the floor and how many segments sit below the
+   class width.
 
 4. **USB D+/D- as a 90 ohm differential pair.**
    - Surface microstrip on F.Cu over unbroken In1 GND, start from granite's 0.25 mm
@@ -132,8 +133,8 @@ Acceptance criteria, all checked by tool output, not by eye:
 - In1 and In2 have no tracks; In1 is one connected GND region under the USB pair,
   the crystal and the analog front end (render check plus a scripted zone query).
 - USB pair: net class geometry as computed, skew <= 0.15 mm, 0 vias, 0 crossings.
-- Per-net width floors of Decision 3 (half the class width, `.kicad_dru`) hold,
-  checked by `tools/pcb5/check.py` and by DRC itself.
+- Per-net width floors of ADR 0003 Decision 5 hold (`.kicad_dru` as in Decision
+  3), enforced by DRC and reported by `tools/pcb5/check.py`.
 - ADR 0003 placement rules still hold: crystal within 5 mm of OSC pins with its
   keepout, decoupling within 2 mm of VDD pins, buck >= 15 mm from ADC front end and
   crystal, gate driver within 5 mm of the FET gate, op-amp within 10 mm of the shunt.
@@ -214,9 +215,9 @@ Measured on the committed board with kicad-cli 10.0.7 after a zone refill
 Deviations from the text above, all deliberate:
 
 - The pipeline is `tools/pcb5/` on pcbkit: place.py (placement, keepouts,
-  inner planes), handroute.py (USB pair, crystal, a staggered stub-and-via
+  rule areas, inner planes), handroute.py (USB pair, crystal, a staggered stub-and-via
   escape for every used QFN pin: the router cannot escape the 0.5 mm pitch on
-  its own), krt-route, viaout, postroute.py, widen.py, gndpour, joins.py (the
+  its own), krt-route, viaout, postroute.py, widen.py, floors.py, gndpour, joins.py (the
   five pairs KRT left open: NRST under the QFN, VDDA, the LDO input, PEDAL_TIP
   and a GND island), prune, silk, connlabels, check.py, render.sh, jlcfab.
 - J302 (SWD) stands inside the board between the power block and the MCU, not on
@@ -229,19 +230,20 @@ Deviations from the text above, all deliberate:
   above the pad row, D- pads below, an orthogonal detour on the D+ connector leg
   sized from the two leg lengths. Clearances: signal classes 0.15, power classes
   0.2, USB class 0.15 (the pair gap).
-- **Width floors (decided 2026-10-09: half the class width).** ADR 0003's `.kicad_dru` floors were
-  0.5 mm for HighCurrent and 0.3 mm for Power. The HighCurrent nets meet the
-  0.5 floor everywhere on this board (VIN and SHUNT_HI min 0.50, the rest at
-  0.8). The 0.3 Power floor does not hold: 52 segments of +3V3 (42), VBUS (7)
-  and VDDA (3), 46 mm in all, are 0.2 or 0.25 mm necks at 0402/0603 pads and
-  plane-tap vias; a scripted attempt to widen them to 0.3 succeeded for only 10
-  (the other 42 hit clearance). The committed `.kicad_dru` therefore uses half
-  the class width as the floor (0.4 HighCurrent, 0.25 5V, 0.2 3V3 and GND),
-  which the old file's own comment ("necking at small pads is allowed to half
-  the class width") already described. The CLAMP net's gate-bias branch (D203,
-  R205, R206, Q203, rule area 'clamp-bias') is exempt: it carries no coil
-  current. QFN pads need one pour spoke, not two (they carry their own via).
-  Jan chose the half-class reading over re-routing the 42 necks by hand.
+- **Width floors: ADR 0003's hold.** First pass of this layout had 52 power
+  necks at 0.2-0.25 mm against the 0.3 mm floor and the floors were read as
+  "half the class width" (Jan, 2026-10-09, when the alternative looked like an
+  evening of hand work). It turned out cheaper: the necks were the router
+  bending power around signals it had laid first, and most "blockers" were the
+  stale GND pour itself. `tools/pcb5/floors.py` rips the five signal nets in
+  the way, re-draws two necks, widens the rest to class width; `krt-reroute
+  --keep` re-lays the signals around the wider copper. Result: no 5 V / 3V3 /
+  VBUS / VDDA segment below 0.3 mm outside the fine-pitch areas, +3V3 and VDDA
+  at the full 0.4 mm class width everywhere (0 of 264 and 0 of 16 segments
+  below), HighCurrent at or above 0.5 mm everywhere. The 27 segments at 0.2-0.25
+  mm that remain all touch the QFN48 or USB-C pads, where ADR 0003 Decision 5
+  says 0.2 mm. The CLAMP gate-bias exception and the one-spoke rule for QFN
+  pads stand.
 - ERC on the final schematic (unchanged by this ADR): 0 violations.
 - Rotation corrections for the CPL (`[jlcfab] corrections` in pcbkit.toml) are
   package conventions, to be confirmed in JLC's placement preview on order day.

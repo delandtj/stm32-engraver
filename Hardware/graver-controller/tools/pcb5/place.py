@@ -39,7 +39,7 @@ for g in seq(b.Groups()):
             b.Delete(it)
         b.Delete(g)
 for z in [b.Zones()[i] for i in range(len(b.Zones()))]:
-    if z.GetZoneName() in ('ADR0004 boost reserve', 'xtal keepout') or z.GetZoneName().startswith('MH40') \
+    if z.GetZoneName() in ('ADR0004 boost reserve', 'xtal keepout', 'clamp-bias', 'fine-pitch') or z.GetZoneName().startswith('MH40') \
             or (not z.GetIsRuleArea() and z.GetLayerSet().Contains(pcbnew.In1_Cu) | z.GetLayerSet().Contains(pcbnew.In2_Cu)):
         b.Delete(z)
 for t in [b.Tracks()[i] for i in range(len(b.Tracks()))]:
@@ -217,6 +217,13 @@ for r, (x, y) in HOLES.items():
 # L-shaped: the corner at MH403 belongs to the hole keepout, not the reserve
 BOOST_POLY = [(BOOST[0], BOOST[1]), (BOOST[2], BOOST[1]), (BOOST[2], BOOST[3]), (58.5, BOOST[3]), (58.5, 101.5), (BOOST[0], 101.5)]
 rule_area('ADR0004 boost reserve', BOOST_POLY, CU4, footprints=True)
+# 'fine-pitch': ADR 0003 D5 allows 0.2 mm tracks at the 0.5 mm pitch parts; the
+# .kicad_dru power floors skip these areas (courtyard + 1.2 mm)
+for r in ('U301', 'J301', 'U302'):
+    fx0, fy0, fx1, fy1 = cbox(FP[r])
+    zf = rule_area('fine-pitch', rect(fx0 - 1.2, fy0 - 1.2, fx1 + 1.2, fy1 + 1.2), (pcbnew.F_Cu, pcbnew.B_Cu))
+    for fn in (zf.SetDoNotAllowTracks, zf.SetDoNotAllowVias, zf.SetDoNotAllowZoneFills):
+        fn(False)
 zb = rule_area('clamp-bias', rect(123.6, 65.0, 133.4, 77.0), CU4)
 for fn in (zb.SetDoNotAllowTracks, zb.SetDoNotAllowVias, zb.SetDoNotAllowZoneFills):
     fn(False)   # no keepout: a named area for the .kicad_dru width exception only

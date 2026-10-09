@@ -1,20 +1,21 @@
 (version 1)
-# ADR 0003 Decision 5 / ADR 0005 Decision 3: KiCad's net class widths are
-# defaults, not limits, so these rules make DRC catch a power net routed at
-# the signal width. Necking down at small pads is allowed to about half the
-# class width (ADR 0005 as built: floors are half the class width); the
-# class-width count per net is reported by tools/pcb5/check.py.
-# The CLAMP net's gate-bias branch (D203, R205, R206, Q203, inside the
-# 'clamp-bias' area) carries no coil current and may use signal widths.
+# ADR 0003 Decision 5 floors, kept by ADR 0005 Decision 3: KiCad's net class
+# widths are defaults, not limits, so these rules make DRC catch a power net
+# routed at the signal width. ADR 0003 itself sets 0.2 mm at the 0.5 mm pitch
+# parts (QFN48, USB-C, USBLC6): the 'fine-pitch' rule areas around U301, J301
+# and U302 (tools/pcb5/place.py, floors.py) carry that exception. The CLAMP
+# net's gate-bias branch (D203, R205, R206, Q203, inside 'clamp-bias') carries
+# no coil current and may use signal widths. GND has no ADR 0003 floor; 0.2 is
+# the plane-tap stub width.
 (rule "HighCurrent tracks"
   (condition "A.NetClass == 'HighCurrent' && !A.intersectsArea('clamp-bias')")
-  (constraint track_width (min 0.4mm)))
+  (constraint track_width (min 0.5mm)))
 (rule "5V tracks"
-  (condition "A.NetClass == 'PWR_5V'")
-  (constraint track_width (min 0.25mm)))
+  (condition "A.NetClass == 'PWR_5V' && !A.intersectsArea('fine-pitch')")
+  (constraint track_width (min 0.3mm)))
 (rule "3V3 tracks"
-  (condition "A.NetClass == 'PWR_3V3'")
-  (constraint track_width (min 0.2mm)))
+  (condition "A.NetClass == 'PWR_3V3' && !A.intersectsArea('fine-pitch')")
+  (constraint track_width (min 0.3mm)))
 (rule "GND tracks"
   (condition "A.NetClass == 'GND'")
   (constraint track_width (min 0.2mm)))

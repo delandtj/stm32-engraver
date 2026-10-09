@@ -25,7 +25,9 @@ def class_widths(pro):
     return {p['pattern']: w[p['netclass']] for p in ns.get('netclass_patterns', [])}
 
 def drc(board, rpt):
-    subprocess.run(['kicad-cli', 'pcb', 'drc', '--severity-error', '-o', rpt, board],
+    # refill: the pour steps back from a widened track, so without a refill
+    # the stale fill reports a clearance violation that is not real
+    subprocess.run(['kicad-cli', 'pcb', 'drc', '--severity-error', '--refill-zones', '--save-board', '-o', rpt, board],
                    check=True, capture_output=True)
     txt = open(rpt).read()
     pts = set()
@@ -62,6 +64,9 @@ def main():
     for rnd in range(12):
         b.Save(work)
         pts = drc(work, os.path.join(S, 'drc.rpt'))
+        b = pcbnew.LoadBoard(work)              # the refilled board; re-find our tracks
+        byid = {t.m_Uuid.AsString(): t for t in seq(b.Tracks())}
+        old = {u: (byid[u], w0) for u, (t, w0) in old.items() if u in byid}
         hit = []
         for uid, (t, w0) in old.items():
             if MM(t.GetWidth()) == w0:
@@ -79,7 +84,8 @@ def main():
             t.SetWidth(pcbnew.FromMM(max(lower) if lower else w0))
         reverted += len(hit)
         print('round %d: %d reverted' % (rnd, len(hit)))
-    b.Save(work); shutil.copy(work, path)
+    b.Save(work)
+    drc(work, os.path.join(S, 'drc.rpt')); shutil.copy(work, path)   # leave it refilled
     narrow = {}
     for uid, (t, w0) in old.items():
         if MM(t.GetWidth()) == w0:
