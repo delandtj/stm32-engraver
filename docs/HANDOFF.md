@@ -22,7 +22,7 @@ previous board (tag `pcb-pre-pcbkit`, also `v0.2`). The new pipeline is
     python3 tools/pcb5/floors.py; pcbkit krt-reroute --keep LCD_SCK ENC_SW LCD_BL LCD_RST "Net-(R210-Pad1)" PEDAL_TIP   # ADR 0003 width floors
     tools/pcb5/build.sh finish   # gndpour, DRC, prune, silk, connlabels, refill
     tools/pcb5/build.sh check    # DRC + check.py (ADR 0005 acceptance) + renders
-    tools/pcb5/build.sh fab      # jlcfab -> fab/
+    tools/pcb5/build.sh fab      # jlcfab -> fab/, then cplcheck.py against EasyEDA
 
 The committed .kicad_pcb is the artifact; the router is not deterministic,
 so do not regenerate unless placement changes. joins.py holds explicit
@@ -31,9 +31,9 @@ PEDAL_TIP, a GND island); after a re-route they may no longer apply.
 Lessons: KRT cannot escape the QFN48 or attach to the USB-C pads by itself
 (hence handroute.py), `krt-reroute` without `--keep` rips neighbours, and
 every pcbnew save goes to scratch with only the .kicad_pcb copied back.
-Open for order day: the CPL rotation table in pcbkit.toml is package
-convention, confirm it in JLC's placement preview, and confirm the 4-layer
-price. Width floors are ADR 0003's (0.5 / 0.3 mm), with 0.2 mm only at the
+Open for order day: confirm the 4-layer price with the quote. The CPL
+rotations are verified against the EasyEDA footprints (tools/pcb5/cplcheck.py,
+27 of 27 parts agree); JLC's placement preview is the last look, not a check. Width floors are ADR 0003's (0.5 / 0.3 mm), with 0.2 mm only at the
 0.5 mm pitch pads as ADR 0003 says (ADR 0005 "As built").
 
 

@@ -49,6 +49,7 @@ check)
     ;;
 fab)
     step jlcfab; $PK jlcfab $N.kicad_pcb fab
+    step cplcheck; python3 tools/pcb5/cplcheck.py fab/$N-cpl.csv
     ;;
 *) sed -n 2,14p "$0"; exit 1 ;;
 esac

@@ -63,25 +63,27 @@ out = "fab"
 lcsc_field = "LCSC"
 mpn_field = "MPN"
 # Rotation corrections KiCad -> JLC for the parts the built-in (granite) table
-# does not know. Values follow the package conventions of that table (SOT /
-# SOIC-type bodies: pin 1 moves from KiCad's top-left to EasyEDA's lower
-# right; diodes, LEDs, crystals: EasyEDA pad 1 = cathode/pin 1, no change).
-# They are package conventions, not per-LCSC checks: confirm every one in
-# JLC's placement preview on order day (ADR 0003 step 8, CPL rotation review).
+# does not know, verified per LCSC number against the EasyEDA footprint JLC
+# places with (tools/pcb5/cplcheck.py fits the KiCad pads onto it). JLC's
+# footprints differ per part even within one package: the two SOT-23-5s
+# here need 270 and 180.
 corrections = [
   ["^SOT-23$",                    "", 180, 0, 0],   # Q202 SI2309, Q203 BSS123, U401 PESD5V0S2BT
-  ["^SOT-23-5$",                  "", 180, 0, 0],   # U102 AP2112K, U201 UCC27517
+  ["^SOT-23-5$",             "C51118", 270, 0, 0],   # U102 AP2112K: EasyEDA pin 1 lower left
+  ["^SOT-23-5$",                  "", 180, 0, 0],   # U201 UCC27517
   ["^SOT-223-3_TabPin2$",         "", 180, 0, 0],   # Q101 DMP6023LE
-  ["^TO-252-2$",                  "", 180, 0, 0],   # Q201 IRLR3410
+  ["^TO-252-2$",                  "",  90, 0, 0],   # Q201 IRLR3410: leads up, pin 1 right
   ["^HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.1mm$", "", 270, 0, 0],   # U101 LM5164, SOIC-8 body
   ["^QFN-48-1EP_7x7mm_P0.5mm_EP5.6x5.6mm$",       "", 270, 0, 0],   # U301 STM32F411, as LQFP-48
   ["^D_SOD-123$",                 "",   0, 0, 0],   # D101 D203 BZT52C12
   ["^D_SMB$",                     "",   0, 0, 0],   # D102 SMBJ36A, D202 SMBJ24A
-  ["^LED_0805_2012Metric$",       "",   0, 0, 0],   # D104
+  ["^LED_0805_2012Metric$",  "C2297", 180, 0, 0],   # D104: EasyEDA pad 1 is the anode here
+  ["^LED_0603_1608Metric$",  "C2286", 180, 0, 0],   # D301: same
   ["^Crystal_SMD_3225-4Pin_3.2x2.5mm$", "", 0, 0, 0],   # Y301
   ["^SW_Push_1P1T_XKB_TS-1187A$", "",   0, 0, 0],   # SW301 SW302: 0 or 180 both fit, 90 would not
   ["^CP_Radial_D12.5mm_P5.00mm$", "",   0, 0, 0],   # C101, THT: pad 1 = + in both libraries
-  ["^PinHeader_1x05_P2.54mm_Vertical$", "", 0, 0, 0],   # J302, THT
+  ["^PinHeader_1x05_P2.54mm_Vertical$", "", 270, 0, 0],   # J302, THT: EasyEDA row runs along x
+  ["^L_Changjiang_FXL0630$",      "", 180, 0, 0],   # L101: unpolarized, EasyEDA is KiCad + 180
 ]
 
 [krt]

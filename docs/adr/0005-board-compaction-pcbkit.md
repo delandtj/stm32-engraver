@@ -210,7 +210,7 @@ Measured on the committed board with kicad-cli 10.0.7 after a zone refill
 | track widths | 0.2 0.25 0.4 0.5 0.8 only |
 | inner layers | In1 GND and In2 +3V3 one zone each, 0 tracks, In1 one region under USB, crystal and analog front end |
 | placement (pad edge to pad edge) | crystal 4.88 mm, VDD decaps worst 1.81 mm, buck to analog/crystal 21.1 mm, gate driver 4.61 mm, op-amp to shunt 5.03 mm |
-| fab | `fab/`: Gerbers + drill zip, BOM 57 lines / 108 parts, CPL 108 placements, rotation table complete |
+| fab | `fab/`: Gerbers + drill zip, BOM 57 lines / 108 parts, CPL 108 placements, 16 rotation-corrected, all 27 orientation-sensitive parts verified against the EasyEDA footprints |
 
 Deviations from the text above, all deliberate:
 
@@ -219,7 +219,7 @@ Deviations from the text above, all deliberate:
   escape for every used QFN pin: the router cannot escape the 0.5 mm pitch on
   its own), krt-route, viaout, postroute.py, widen.py, floors.py, gndpour, joins.py (the
   five pairs KRT left open: NRST under the QFN, VDDA, the LDO input, PEDAL_TIP
-  and a GND island), prune, silk, connlabels, check.py, render.sh, jlcfab.
+  and a GND island), prune, silk, connlabels, check.py, render.sh, jlcfab, cplcheck.py.
 - J302 (SWD) stands inside the board between the power block and the MCU, not on
   the rear edge: the rear edge is full with J101, SW301/SW302, J301, J201 and J402
   between the two hole keepouts. SW301/SW302 took its place on the rear edge.
@@ -245,8 +245,16 @@ Deviations from the text above, all deliberate:
   says 0.2 mm. The CLAMP gate-bias exception and the one-spoke rule for QFN
   pads stand.
 - ERC on the final schematic (unchanged by this ADR): 0 violations.
-- Rotation corrections for the CPL (`[jlcfab] corrections` in pcbkit.toml) are
-  package conventions, to be confirmed in JLC's placement preview on order day.
+- CPL rotations verified, not assumed: `tools/pcb5/cplcheck.py` downloads the
+  EasyEDA footprint behind each LCSC number (the one JLC places with), fits the
+  KiCad footprint's pads onto it and compares the implied KiCad -> JLC
+  correction with the CPL, calibrated on two parts granite_controller confirmed
+  in JLC's preview. All 27 polarized or asymmetric parts agree. The package
+  conventions first put in `[jlcfab] corrections` were wrong for six of them
+  (both LEDs reversed, the IRLR3410, the AP2112K, the SWD header, the
+  inductor); JLC's footprints differ per part even within a package. The JLC
+  placement preview on order day stays as the last look, as ADR 0003 step 8
+  says, but nothing is left to discover there.
 - pcbkit gained general fixes for this board (commits in ../pcbkit): krt-route
   keeps rule areas and the `[krt] keep_groups` groups and does not rip them,
   `[[krt.diff]]` takes `extra` flags, `[krt] clearance = 0` lets KRT use the net
