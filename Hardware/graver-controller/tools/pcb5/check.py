@@ -43,14 +43,24 @@ def fp(b, ref):
 def center(b, ref):
     p = fp(b, ref).GetPosition(); return (MM(p.x), MM(p.y))
 
-def pad_xy(b, ref, num):
+def pad(b, ref, num):
     for p in seq(fp(b, ref).Pads()):
         if p.GetNumber() == str(num):
-            q = p.GetPosition(); return (MM(q.x), MM(q.y))
+            return p
     raise KeyError((ref, num))
+
+def pad_xy(b, ref, num):
+    q = pad(b, ref, num).GetPosition(); return (MM(q.x), MM(q.y))
 
 def dist(a, c):
     return math.hypot(a[0] - c[0], a[1] - c[1])
+
+def pdist(b, r1, n1, r2, n2):
+    # pad edge to pad edge (bounding boxes), as the ADR distances are read
+    A, C = pad(b, r1, n1).GetBoundingBox(), pad(b, r2, n2).GetBoundingBox()
+    dx = max(0, MM(C.GetLeft()) - MM(A.GetRight()), MM(A.GetLeft()) - MM(C.GetRight()))
+    dy = max(0, MM(C.GetTop()) - MM(A.GetBottom()), MM(A.GetTop()) - MM(C.GetBottom()))
+    return math.hypot(dx, dy)
 
 def main():
     args = [a for a in sys.argv[1:]]
@@ -63,17 +73,17 @@ def main():
 
     # board size
     bb = b.GetBoardEdgesBoundingBox()
-    W, H = MM(bb.GetWidth()), MM(bb.GetHeight())
+    W, H = MM(bb.GetWidth()) - 0.1, MM(bb.GetHeight()) - 0.1   # minus the 0.1 edge line
     row('outline <= %.0f x %.0f' % CEILING, W <= CEILING[0] + 0.01 and H <= CEILING[1] + 0.01,
         '%.1f x %.1f mm' % (W, H))
 
     tracks = seq(b.Tracks())
-    vias = [t for t in tracks if t.Type() == pcbnew.PCB_VIA_T]
+    vias = [t.Cast() for t in tracks if t.Type() == pcbnew.PCB_VIA_T]
     segs = [t for t in tracks if t.Type() == pcbnew.PCB_TRACE_T]
     arcs = [t for t in tracks if t.Type() == pcbnew.PCB_ARC_T]
     row('no arcs', not arcs, '%d arcs' % len(arcs))
 
-    vs = {(round(MM(v.GetWidth()), 2), round(MM(v.GetDrillValue()), 2)) for v in vias}
+    vs = {(round(MM(v.GetWidth(pcbnew.F_Cu)), 2), round(MM(v.GetDrillValue()), 2)) for v in vias}
     row('via sizes in {0.5/0.2, 0.6/0.3}', vs <= VIA_SET, '%d vias, sizes %s' % (len(vias), sorted(vs)))
     ws = {round(MM(s.GetWidth()), 3) for s in segs}
     row('track widths in ADR set', ws <= WIDTH_SET, '%d segments, widths %s' % (len(segs), sorted(ws)))
@@ -140,20 +150,19 @@ def main():
         'B.Cu crossings (allowed): %s' % sorted(cross))
 
     # placement distances (ADR 0003 component breakdown)
-    d = min(dist(pad_xy(b, 'Y301', '1'), pad_xy(b, 'U301', '5')), dist(pad_xy(b, 'Y301', '3'), pad_xy(b, 'U301', '6')))
+    d = max(pdist(b, 'Y301', '1', 'U301', '5'), pdist(b, 'Y301', '3', 'U301', '6'))
     row('crystal <= 5 mm from OSC pins', d <= 5, '%.2f mm' % d)
     worst = 0
     for pin in ('1', '24', '36', '48'):
-        p = pad_xy(b, 'U301', pin)
-        dd = min(min(dist(p, pad_xy(b, c, n)) for n in ('1', '2')) for c in ('C301', 'C302', 'C303', 'C304'))
+        dd = min(min(pdist(b, 'U301', pin, c, n) for n in ('1', '2')) for c in ('C301', 'C302', 'C303', 'C304'))
         worst = max(worst, dd)
     row('100n within 2 mm of each VDD pin', worst <= 2, 'worst %.2f mm' % worst)
     analog = ('U202', 'R204', 'R210', 'R211', 'R212', 'C205')
     dmin = min(dist(center(b, u), center(b, a)) for u in ('U101', 'L101') for a in analog + ('Y301',))
     row('buck >= 15 mm from analog + crystal', dmin >= 15, '%.1f mm' % dmin)
-    d = dist(pad_xy(b, 'U201', '5'), pad_xy(b, 'Q201', '1'))
+    d = pdist(b, 'U201', '5', 'Q201', '1')
     row('gate driver <= 5 mm from FET gate', d <= 5, '%.2f mm' % d)
-    d = dist(center(b, 'U202'), center(b, 'R204'))
+    d = min(pdist(b, 'U202', n, 'R204', m) for n in ('2', '3') for m in ('1', '2'))
     row('op-amp <= 10 mm from shunt', d <= 10, '%.2f mm' % d)
 
     # vias in SMD pads other than the QFN EP
@@ -172,7 +181,7 @@ def main():
         from collections import Counter
         c = Counter(kinds)
         unc = re.search(r'Found (\d+) unconnected', txt)
-        par = re.search(r'Found (\d+) schematic parity', txt)
+        par = re.search(r'Found (\d+) (?:schematic parity|Footprint)', txt)
         errs = len(re.findall(r'; error$', txt, re.M))
         row('DRC 0 errors', errs == 0, '%d errors' % errs)
         row('DRC 0 unconnected', unc and unc.group(1) == '0', unc.group(0) if unc else '?')

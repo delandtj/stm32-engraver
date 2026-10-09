@@ -34,7 +34,7 @@ GND         = [0.4,  0.2,  0.6, 0.3]
 PWR_3V3     = [0.4,  0.2,  0.6, 0.3]
 PWR_5V      = [0.5,  0.2,  0.6, 0.3]
 HighCurrent = [0.8,  0.2,  0.6, 0.3]
-USB         = [0.25, 0.2,  0.5, 0.2, 0.25, 0.15]
+USB         = [0.25, 0.15, 0.5, 0.2, 0.25, 0.15]
 
 [gndpour]
 short_edge_inset = 1.0
@@ -67,11 +67,12 @@ dir = "~/.cache/graver-pcb/routetest/KiCadRoutingTools"
 python = "~/.cache/graver-pcb/routetest/venv/bin/python"
 work = "~/.cache/graver-pcb/pcbkit/route"
 rework = "~/.cache/graver-pcb/pcbkit/reroute"
-clearance = 0.2
+clearance = 0.15
 via = [0.5, 0.2]
 track_width = 0.2
 same_net_pad_clearance = 0.15     # no vias in SMD pads
 signal_layers = ["F.Cu", "B.Cu"]  # In1/In2 stay solid planes
+keep_groups = ["hand"]            # tools/pcb5/handroute.py copper survives krt-route
 route_extra = ["--ordering", "mps"]
 power_nets   = ["GND", "+3V3", "*VDDA", "+5V", "VBUS", "*D105-A*", "VIN", "*COIL_NEG", "*CLAMP", "*SHUNT_HI", "*U101-SW*", "*J101-Pin_2*", "*Q101-D*"]
 power_widths = [0.4,   0.4,    0.4,     0.5,   0.5,    0.5,        0.8,   0.8,        0.8,      0.8,         0.8,          0.8,             0.8]

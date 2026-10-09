@@ -219,7 +219,10 @@ BOOST_POLY = [(BOOST[0], BOOST[1]), (BOOST[2], BOOST[1]), (BOOST[2], BOOST[3]), 
 rule_area('ADR0004 boost reserve', BOOST_POLY, CU4, footprints=True)
 xb = [cbox(FP[r]) for r in ('Y301', 'C310', 'C311')]
 XT = (min(q[0] for q in xb) - 1, min(q[1] for q in xb) - 1, max(q[2] for q in xb) + 1, max(q[3] for q in xb) + 1)
-rule_area('xtal keepout', rect(*XT), (pcbnew.F_Cu, pcbnew.B_Cu))
+# B.Cu only, tracks only: the crystal's own F.Cu tracks are hand-routed by
+# tools/pcb5/handroute.py and its GND pads need vias to the In1 plane.
+z = rule_area('xtal keepout', rect(*XT), (pcbnew.B_Cu,))
+z.SetDoNotAllowVias(False); z.SetDoNotAllowZoneFills(False)
 
 def plane(layer, net):
     z = pcbnew.ZONE(b)
