@@ -412,6 +412,8 @@ free once the firmware configures SWD-only debug.
 - **Bets on**: the coil being the 12 V variant. The measurement says it is not.
 
 ### On-board boost rail (e.g. 48-60 V overdrive from a 24 V brick)
+- **Taken up in [ADR 0004](0004-boost-coil-rail.md)** (2026-10-09): settable VCOIL up to
+  40 V (44 V ceiling) from the 24 V brick; the 36 V brick is documented there as fallback.
 - **The idea**: a boost converter charges a high-voltage reservoir; strikes fire from it
   for a fast current rise and a hard hit.
 - **Optimizes for**: maximum punch (steel engraving, bezel work) from a standard brick.
