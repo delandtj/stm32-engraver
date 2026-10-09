@@ -7,11 +7,7 @@ PK=${PCBKIT:-$HOME/Electronics/pcbkit}/bin/pcbkit
 B=${1:-graver-controller.kicad_pcb}
 RPT=output/pcb/drc.rpt
 mkdir -p output/pcb
-python3 - "$B" <<'PY' | while read -r name x0 y0 x1 y1 nets; do
-    echo "render $name ($x0 $y0 $x1 $y1) $nets"
-    # shellcheck disable=SC2086
-    $PK render "$B" "output/pcb/$name.png" "$x0" "$y0" "$x1" "$y1" ${RPT:+--rpt $RPT} $nets 2>&1 | grep -v property.h || true
-done
+REGIONS=$(python3 - "$B" <<'PY' 2>/dev/null
 import sys, pcbnew
 b = pcbnew.LoadBoard(sys.argv[1]); mm = pcbnew.ToMM
 bb = b.GetBoardEdgesBoundingBox()
@@ -24,6 +20,13 @@ def region(refs, m=3.0):
     return (max(X0, min(xs) - m), max(Y0, min(ys) - m), min(X1, max(xs) + m), min(Y1, max(ys) + m))
 print('board', X0, Y0, X1, Y1, '')
 print('usb', *region(['J301', 'U302', 'U301']), '/MCU/USB_DP /MCU/USB_DM')
+print('mcu', *region(['U301', 'Y301', 'C301', 'C302', 'C303', 'C304', 'J302'], 2.0), '+3V3 GND')
 print('power', *region(['J101', 'F101', 'Q101', 'C101', 'U101', 'L101', 'U102']), 'VIN +5V Net-(U101-SW)')
 print('driver', *region(['J201', 'Q201', 'D201', 'D202', 'U201', 'U202', 'R204']), 'VIN /Driver/COIL_NEG /Driver/CLAMP /Driver/SHUNT_HI')
 PY
+)
+echo "$REGIONS" | while read -r name x0 y0 x1 y1 nets; do
+    echo "render $name ($x0 $y0 $x1 $y1) $nets"
+    # shellcheck disable=SC2086
+    $PK render "$B" "output/pcb/$name.png" "$x0" "$y0" "$x1" "$y1" ${RPT:+--rpt $RPT} $nets 2>&1 | grep -v property.h || true
+done

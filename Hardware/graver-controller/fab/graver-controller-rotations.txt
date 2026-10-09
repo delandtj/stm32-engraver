@@ -1,0 +1,15 @@
+Rotation/centroid corrections applied (KiCad -> JLC), derived from
+the EasyEDA footprints. Still check them in the JLC placement preview.
+
+J301 USB_C_Receptacle_HRO_TYPE-C-31-M-12 C165948: rot 180 -> 180, offset (0, -1.424)
+Q101 SOT-223-3_TabPin2 C154901: rot 0 -> 180, offset (0, 0)
+Q201 TO-252-2 C3017: rot 90 -> 270, offset (0, 0)
+Q202 SOT-23 C10493: rot 0 -> 180, offset (0, 0)
+Q203 SOT-23 C427379: rot 0 -> 180, offset (0, 0)
+U101 HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.1mm C477928: rot 0 -> 270, offset (0, 0)
+U102 SOT-23-5 C51118: rot 0 -> 180, offset (0, 0)
+U201 SOT-23-5 C99395: rot 0 -> 180, offset (0, 0)
+U202 SOIC-8_3.9x4.9mm_P1.27mm C398355: rot 0 -> 270, offset (0, 0)
+U301 QFN-48-1EP_7x7mm_P0.5mm_EP5.6x5.6mm C60420: rot 90 -> 0, offset (0, 0)
+U302 SOT-23-6 C7519: rot 270 -> 180, offset (0, 0)
+U401 SOT-23 C49338: rot 0 -> 180, offset (0, 0)

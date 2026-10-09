@@ -10,6 +10,7 @@ Draws, on F.Cu, straight 45-degree segments only:
   joined by stubs just past the pad ends;
 - the crystal: OSC_IN / OSC_OUT from U301 pins 5/6 through the load caps
   C310/C311 to Y301.
+Also a staggered stub-and-via escape for every used MCU pin (qfn_fan).
 Existing copper of these nets is deleted first; krt-route keeps the group
 ([krt] keep_groups). Saves to scratch, copies only the .kicad_pcb back.
 """
@@ -24,10 +25,164 @@ S = os.path.join(os.environ.get('SCRATCH', os.path.join(os.environ.get('XDG_RUNT
 def seq(c):
     return [c[i] for i in range(len(c))]
 
+
+FAN_SKIP = {'+3V3', '/MCU/VDDA', '/MCU/USB_DP', '/MCU/USB_DM', '/MCU/OSC_IN', '/MCU/OSC_OUT'}
+
+def fan_targets(b):
+    """Nets of U301 pins that get a stub + via escape (not the hand-routed and
+    not the same-net-neighbour ones: VDD to its decap, VDDA, VCAP1)."""
+    out = []
+    for p in seq(b.FindFootprintByReference('U301').Pads()):
+        n = p.GetNetname()
+        if n and not n.startswith('unconnected') and n not in FAN_SKIP and p.GetNumber() != '49':
+            out.append((p.GetNumber(), n))
+    return out
+
+def qfn_fan(b, nets):
+    """Staggered QFN48 escape: from each used pin a straight 0.2 stub outward
+    and a via on one of two rows (about 1.0 / 1.8 mm out), each via placed at
+    the first clear spot along the pad's outward ray. GND pins get 0.6/0.3
+    vias where they fit, 0.5/0.2 otherwise. Returns the nets touched."""
+    import math
+    u = b.FindFootprintByReference('U301')
+    cx, cy = T.mm(u.GetPosition().x), T.mm(u.GetPosition().y)
+    CLR = 0.15
+    PWR = {'GND', '+3V3', '/MCU/VDDA', '+5V', 'VBUS', 'VIN'}      # classes with 0.2 clearance
+    def clr(a, c):
+        return 0.2 if (a in PWR or c in PWR) else CLR
+    DEBUG = os.environ.get('FAN_DEBUG')
+    # obstacles: every pad bbox (except the pin itself), existing tracks and vias
+    pads = []
+    for f in seq(b.Footprints()):
+        for p in seq(f.Pads()):
+            bb = p.GetBoundingBox()
+            pads.append((f.GetReference(), p.GetNumber(), p.GetNetname(),
+                         (T.mm(bb.GetLeft()), T.mm(bb.GetTop()), T.mm(bb.GetRight()), T.mm(bb.GetBottom()))))
+    segs, vias = [], []
+    for t in seq(b.Tracks()):
+        if t.Type() == pcbnew.PCB_VIA_T:
+            v = t.Cast(); vias.append((T.mm(v.GetPosition().x), T.mm(v.GetPosition().y), T.mm(v.GetWidth(pcbnew.F_Cu)) / 2, v.GetNetname()))
+        elif t.Type() == pcbnew.PCB_TRACE_T:
+            a, c = t.GetStart(), t.GetEnd()
+            segs.append(((T.mm(a.x), T.mm(a.y)), (T.mm(c.x), T.mm(c.y)), T.mm(t.GetWidth()) / 2, t.GetNetname()))
+    def box_dist(x, y, bx):
+        dx = max(bx[0] - x, 0, x - bx[2]); dy = max(bx[1] - y, 0, y - bx[3]); return math.hypot(dx, dy)
+    def seg_dist(x, y, a, c):
+        ax, ay = a; cx_, cy_ = c; vx, vy = cx_ - ax, cy_ - ay; L = vx * vx + vy * vy
+        t = 0 if L == 0 else max(0, min(1, ((x - ax) * vx + (y - ay) * vy) / L))
+        return math.hypot(x - ax - t * vx, y - ay - t * vy)
+    def why(x, y, r, net, ref, num):
+        # the first obstacle a via of radius r at (x, y) would violate, or None
+        for rf, pn, pnet, bx in pads:
+            if rf == ref and pn == num:
+                continue
+            need = r + clr(net, pnet) if pnet != net else r      # no via in a same-net pad either
+            if box_dist(x, y, bx) < need - 0.001:
+                return 'pad %s.%s %s' % (rf, pn, pnet)
+        for vx, vy, vr, vnet in vias:
+            if math.hypot(x - vx, y - vy) < r + vr + (clr(net, vnet) if vnet != net else 0) - 0.001:
+                return 'via %s (%.2f, %.2f)' % (vnet, vx, vy)
+        for a, c, hw, snet in segs:
+            if snet != net and seg_dist(x, y, a, c) < r + hw + clr(net, snet) - 0.001:
+                return 'track %s %s-%s' % (snet, a, c)
+        return None
+    def clear(x, y, r, net, ref, num):
+        return why(x, y, r, net, ref, num) is None
+    def stub_why(p0, p1, net, ref, num):
+        # the stub (half width 0.1) against foreign pads and vias
+        for rf, pn, pnet, bx in pads:
+            if (rf == ref and pn == num) or pnet == net:
+                continue
+            for k in range(11):
+                x = p0[0] + (p1[0] - p0[0]) * k / 10; y = p0[1] + (p1[1] - p0[1]) * k / 10
+                if box_dist(x, y, bx) < 0.1 + clr(net, pnet) - 0.001:
+                    return 'stub vs pad %s.%s %s' % (rf, pn, pnet)
+        for vx, vy, vr, vnet in vias:
+            if vnet != net and seg_dist(vx, vy, p0, p1) < vr + 0.1 + clr(net, vnet) - 0.001:
+                return 'stub vs via %s (%.2f, %.2f)' % (vnet, vx, vy)
+        return None
+    def stub_clear(p0, p1, net, ref, num):
+        return stub_why(p0, p1, net, ref, num) is None
+    touched = []
+    placed = {}
+    want = {n for n, _ in fan_targets(b)}
+    pins = sorted([p for p in seq(u.Pads()) if p.GetNumber() in want], key=lambda p: int(p.GetNumber()))
+    # pins 1-12 bottom, 13-24 right, 25-36 top, 37-48 left: alternate the two
+    # rows (0.9 / 1.7 mm out) along each side so neighbours never share a lane
+    for p in pins:
+        px, py = T.mm(p.GetPosition().x), T.mm(p.GetPosition().y); net = p.GetNetname(); num = p.GetNumber()
+        # outward unit vector: the pad's side of the package
+        dx, dy = px - cx, py - cy
+        if abs(dx) > abs(dy):
+            ux, uy = (1 if dx > 0 else -1), 0
+        else:
+            ux, uy = 0, (1 if dy > 0 else -1)
+        # a same-net pad straight out within 3.5 mm (C311.2 under VSSA, C308 at VCAP1): plain stub
+        hit = None
+        for rf, pn, pnet, bx in pads:
+            if pnet != net or rf == 'U301':
+                continue
+            if ux and bx[1] <= py <= bx[3] and 0 < (bx[0] if ux > 0 else px - bx[2]) * 1 and ((ux > 0 and 0 < bx[0] - px < 3.5) or (ux < 0 and 0 < px - bx[2] < 3.5)):
+                hit = ((bx[0] + bx[2]) / 2, py)
+            if uy and bx[0] <= px <= bx[2] and ((uy > 0 and 0 < bx[1] - py < 3.5) or (uy < 0 and 0 < py - bx[3] < 3.5)):
+                hit = (px, (bx[1] + bx[3]) / 2)
+        if hit and DEBUG:
+            print('  pin %s %s straight to %s: %s' % (num, net, hit, stub_why((px, py), hit, net, 'U301', num) or 'ok'))
+        if hit and stub_clear((px, py), hit, net, 'U301', num):
+            T.add_track(b, net, 'F.Cu', [(px, py), hit], 0.2)
+            segs.append(((px, py), hit, 0.1, net)); placed[num] = (net, 0, 0, 0); touched.append(net)
+            continue
+        sizes = [(0.3, 0.15), (0.25, 0.1)] if net == 'GND' else [(0.25, 0.1)]
+        rows = (0.9, 1.7) if int(num) % 2 == 1 else (1.7, 0.9)
+        cands = [r0 + 0.1 * k for r0 in rows for k in (0, 1, 2, 3, 4)] + [2.4 + 0.1 * k for k in range(8)]
+        done = False
+        for r, dr in sizes:
+            for d in cands:
+                for lat in (0, 0.1, -0.1, 0.2, -0.2, 0.3, -0.3):
+                    vx = px + ux * d + (-uy) * lat; vy = py + uy * d + ux * lat
+                    # stub: straight out to d - |lat|, then 45 degrees to the via
+                    jx = px + ux * (d - abs(lat)); jy = py + uy * (d - abs(lat))
+                    if not clear(vx, vy, r, net, 'U301', num):
+                        continue
+                    if not (stub_clear((px, py), (jx, jy), net, 'U301', num) and stub_clear((jx, jy), (vx, vy), net, 'U301', num)):
+                        continue
+                    pts = [(px, py), (jx, jy)] + ([(vx, vy)] if lat else [])
+                    T.add_track(b, net, 'F.Cu', pts, 0.2)
+                    T.add_via(b, net, vx, vy, 2 * r, 2 * dr)
+                    vias.append((vx, vy, r, net))
+                    segs.append(((px, py), (jx, jy), 0.1, net)); segs.append(((jx, jy), (vx, vy), 0.1, net))
+                    placed[num] = (net, round(d, 2), lat, 2 * r); touched.append(net); done = True
+                    break
+                if done: break
+            if done: break
+        if not done:
+            print('FAN: no clear via for pin %s %s' % (num, net))
+            if DEBUG:
+                for d in rows:
+                    vx, vy = px + ux * d, py + uy * d
+                    print('    row %.1f at (%.2f, %.2f): %s / %s' % (d, vx, vy, why(vx, vy, 0.25, net, 'U301', num), stub_why((px, py), (vx, vy), net, 'U301', num)))
+    print('QFN fan: %d pins escaped: %s' % (len(placed), ' '.join('%s@%.1f%s' % (k, v[1], '' if v[2] == 0 else '%+.1f' % v[2]) for k, v in sorted(placed.items(), key=lambda kv: int(kv[0])))))
+    return touched
+
+
 def main():
     path = sys.argv[1] if len(sys.argv) > 1 else 'graver-controller.kicad_pcb'
     b = pcbnew.LoadBoard(path)
     T.drop_group(b, GROUP)
+    # start from bare placement: every track and via goes, and the outer-layer
+    # pours (gndpour re-makes them); rule areas and the inner planes stay
+    for t in seq(b.Tracks()):
+        b.Delete(t)
+    inner = {b.GetLayerID('In1.Cu'), b.GetLayerID('In2.Cu')}
+    for z in seq(b.Zones()):
+        if not z.GetIsRuleArea() and z.GetLayer() not in inner:
+            b.Delete(z)
+    # the four EP thermal vias of U301 belong to place.py: put them back
+    ep = [p for p in seq(b.FindFootprintByReference('U301').Pads()) if p.GetNumber() == '49'][0]
+    ex, ey = T.mm(ep.GetPosition().x), T.mm(ep.GetPosition().y)
+    for ddx in (-1.2, 1.2):
+        for ddy in (-1.2, 1.2):
+            T.add_via(b, 'GND', ex + ddx, ey + ddy, 0.6, 0.3)
     nets = {'DP': '/MCU/USB_DP', 'DM': '/MCU/USB_DM', 'XI': '/MCU/OSC_IN', 'XO': '/MCU/OSC_OUT'}
     T.delete_net_copper(b, list(nets.values()))
     P = lambda r, n: T.pad_xy(b, r, n)
@@ -80,10 +235,11 @@ def main():
               (c310[0], p5[1] + 1.6), c310], 0.2)
     tr('XI', [c310, (c310[0] - 0.45, c310[1] + 0.45), (c310[0] - 0.45, y1[1] - 0.45), (c310[0], y1[1]), y1], 0.2)
     # OSC_OUT: pin 6 down, 45 right into C311.1, then down and right into Y301.3
-    tr('XO', [p6, (p6[0], p6[1] + 0.7), (c311[0], p6[1] + 0.7 + (c311[0] - p6[0])), c311], 0.2)
+    tr('XO', [p6, (p6[0], c311[1]), c311], 0.2)     # C311.1 (0402) spans pin 6's x: straight down
     tr('XO', [c311, (c311[0], y3[1]), y3], 0.2)
 
-    items = [t for t in seq(b.Tracks()) if t.GetNetname() in nets.values()]   # all copper of these nets is ours
+    fan_nets = qfn_fan(b, nets)
+    items = [t for t in seq(b.Tracks()) if t.GetNetname() in list(nets.values()) + fan_nets]
     g = pcbnew.PCB_GROUP(b); g.SetName(GROUP); b.Add(g)
     for it in items:
         g.AddItem(it)

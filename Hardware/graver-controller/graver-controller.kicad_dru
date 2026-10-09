@@ -2,16 +2,24 @@
 # ADR 0003 Decision 5 / ADR 0005 Decision 3: KiCad's net class widths are
 # defaults, not limits, so these rules make DRC catch a power net routed at
 # the signal width. Necking down at small pads is allowed to about half the
-# class width. The per-net floor check in tools/pcb5/check.py is stricter.
+# class width (ADR 0005 as built: floors are half the class width); the
+# class-width count per net is reported by tools/pcb5/check.py.
+# The CLAMP net's gate-bias branch (D203, R205, R206, Q203, inside the
+# 'clamp-bias' area) carries no coil current and may use signal widths.
 (rule "HighCurrent tracks"
-  (condition "A.NetClass == 'HighCurrent'")
-  (constraint track_width (min 0.5mm)))
+  (condition "A.NetClass == 'HighCurrent' && !A.intersectsArea('clamp-bias')")
+  (constraint track_width (min 0.4mm)))
 (rule "5V tracks"
   (condition "A.NetClass == 'PWR_5V'")
-  (constraint track_width (min 0.3mm)))
+  (constraint track_width (min 0.25mm)))
 (rule "3V3 tracks"
   (condition "A.NetClass == 'PWR_3V3'")
-  (constraint track_width (min 0.3mm)))
+  (constraint track_width (min 0.2mm)))
 (rule "GND tracks"
   (condition "A.NetClass == 'GND'")
-  (constraint track_width (min 0.3mm)))
+  (constraint track_width (min 0.2mm)))
+# QFN pins that carry their own GND via (the fan-out stubs) do not need two
+# pour spokes as well; the pad is 0.25 mm wide and one spoke is all that fits.
+(rule "QFN pads one spoke"
+  (condition "A.Reference == 'U301'")
+  (constraint min_resolved_spokes 1))

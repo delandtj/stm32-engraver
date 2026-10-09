@@ -30,14 +30,22 @@ def main():
     outer = {b.GetLayerID('F.Cu'), b.GetLayerID('B.Cu')}
     segs = [t for t in seq(b.Tracks()) if t.Type() == pcbnew.PCB_TRACE_T]
     pads = seq(b.GetPads())
+    # (orphan-via deletion removed: it ate vias that KRT's tracks reach within
+    # clearance but not at their centre; `pcbkit prune` on a 0-unconnected
+    # board is the right tool for dangling vias)
     nv = 0
+    # vias the router dropped into SMD pads (viaout could not move): delete, the
+    # net is then re-routed with krt-reroute --keep
+    bad = []
     for v in [t for t in seq(b.Tracks()) if t.Type() == pcbnew.PCB_VIA_T]:
-        p = v.GetPosition(); n = v.GetNetCode()
-        touch = any(s.GetNetCode() == n and s.GetLayer() in outer and s.HitTest(p) for s in segs) or \
-                any(q.GetNetCode() == n and q.HitTest(p) for q in pads)
-        if not touch and v.GetNetname() not in ('GND', '+3V3'):
-            b.Delete(v); nv += 1
-    print('orphan vias deleted:', nv)
+        pos = v.GetPosition(); hit = None
+        for f in seq(b.Footprints()):
+            for q in seq(f.Pads()):
+                if q.GetAttribute() == pcbnew.PAD_ATTRIB_SMD and q.HitTest(pos) and not (f.GetReference() == 'U301' and q.GetNumber() == '49'):
+                    hit = (f.GetReference(), q.GetNumber(), v.GetNetname())
+        if hit:
+            bad.append(hit); b.Delete(v)
+    print('vias in SMD pads deleted:', bad or 0)
     os.makedirs(S, exist_ok=True)
     out = os.path.join(S, os.path.basename(path))
     b.Save(out); shutil.copy(out, path)

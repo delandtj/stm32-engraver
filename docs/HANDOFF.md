@@ -5,6 +5,36 @@ exists, what is decided, how to work on it and what comes next.
 
 ## Start here
 
+**2026-10-09, ADR 0005 (Accepted): the board is now 4-layer, 85 x 60 mm,
+built with pcbkit** on branch `adr-0005-compact-4layer`. kicad-cli DRC
+after a zone refill: 0 errors, 0 unconnected, 0 parity, 11 warnings; USB
+pair 0.25/0.15 with 0.000 mm skew and no vias; In1 solid GND, In2 solid
++3V3; a 25 x 20 mm reserve for the ADR 0004 boost stage at the front left.
+Fab set in `Hardware/graver-controller/fab/`. Everything below this
+paragraph that mentions `tools/pcb/`, 95 x 70 or 2 layers describes the
+previous board (tag `pcb-pre-pcbkit`, also `v0.2`). The new pipeline is
+`Hardware/graver-controller/tools/pcb5/` on `../pcbkit`:
+
+    tools/pcb5/build.sh board    # netlist -> mkboard -> outline -> setrules -> place.py
+    python3 tools/pcb5/handroute.py   # USB pair, crystal, QFN fan-out (group 'hand')
+    tools/pcb5/build.sh route    # krt-route (about a minute), viaout, postroute.py
+    python3 tools/pcb5/widen.py; python3 tools/pcb5/joins.py   # widths, the last opens
+    tools/pcb5/build.sh finish   # gndpour, DRC, prune, silk, connlabels, refill
+    tools/pcb5/build.sh check    # DRC + check.py (ADR 0005 acceptance) + renders
+    tools/pcb5/build.sh fab      # jlcfab -> fab/
+
+The committed .kicad_pcb is the artifact; the router is not deterministic,
+so do not regenerate unless placement changes. joins.py holds explicit
+coordinates for the five pairs KRT left open (NRST, VDDA, U102 input,
+PEDAL_TIP, a GND island); after a re-route they may no longer apply.
+Lessons: KRT cannot escape the QFN48 or attach to the USB-C pads by itself
+(hence handroute.py), `krt-reroute` without `--keep` rips neighbours, and
+every pcbnew save goes to scratch with only the .kicad_pcb copied back.
+Open for order day: the CPL rotation table in pcbkit.toml is package
+convention, confirm it in JLC's placement preview; 4-layer cost (ADR 0005
+open question 2).
+
+
 **The board is finished and tagged `v0.2`** (commit 9645970, signed).
 95 x 70 mm, 2-layer: 0 DRC errors, 0 schematic parity, 0 unconnected, all
 eight per-net width floors PASS. Nothing more is needed on the copper.

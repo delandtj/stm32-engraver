@@ -187,19 +187,47 @@ Acceptance criteria, all checked by tool output, not by eye:
 
 ## As built (2026-10-09)
 
+Measured on the committed board with kicad-cli 10.0.7 after a zone refill
+(`tools/pcb5/build.sh check`, report in `output/pcb/drc.rpt`):
+
+| item | value |
+|---|---|
+| DRC errors / unconnected / schematic parity | 0 / 0 / 0 |
+| DRC warnings | 11: 10 silk_overlap (footprint silk under refs on 0402/0603 parts), 1 track_dangling (a KRT stub end) |
+| outline | 85.0 x 60.0 mm (the ceiling; the boost reserve costs the 75 x 55 target) |
+| USB pair | 0.25 / 0.15 mm, D+ 14.81 mm, D- 14.81 mm, skew 0.000 mm, 0 vias, F.Cu only |
+| vias | 256, sizes 0.5/0.2 and 0.6/0.3 only |
+| track widths | 0.2 0.25 0.4 0.5 0.8 only |
+| inner layers | In1 GND and In2 +3V3 one zone each, 0 tracks, In1 one region under USB, crystal and analog front end |
+| placement (pad edge to pad edge) | crystal 4.88 mm, VDD decaps worst 1.81 mm, buck to analog/crystal 21.1 mm, gate driver 4.61 mm, op-amp to shunt 5.03 mm |
+| fab | `fab/`: Gerbers + drill zip, BOM 57 lines / 108 parts, CPL 108 placements, rotation table complete |
+
 Deviations from the text above, all deliberate:
 
+- The pipeline is `tools/pcb5/` on pcbkit: place.py (placement, keepouts,
+  inner planes), handroute.py (USB pair, crystal, a staggered stub-and-via
+  escape for every used QFN pin: the router cannot escape the 0.5 mm pitch on
+  its own), krt-route, viaout, postroute.py, widen.py, gndpour, joins.py (the
+  five pairs KRT left open: NRST under the QFN, VDDA, the LDO input, PEDAL_TIP
+  and a GND island), prune, silk, connlabels, check.py, render.sh, jlcfab.
 - J302 (SWD) stands inside the board between the power block and the MCU, not on
   the rear edge: the rear edge is full with J101, SW301/SW302, J301, J201 and J402
   between the two hole keepouts. SW301/SW302 took its place on the rear edge.
-- The crystal keepout blocks tracks on B.Cu only. Its own F.Cu tracks and the GND
-  vias of its pads are scripted by `tools/pcb5/handroute.py`.
+- The crystal keepout blocks tracks on B.Cu only and has no margin on the MCU
+  side (the bottom fan-via row sits there); its own F.Cu tracks are scripted.
 - The USB pair is scripted, not routed by KRT (route_diff.py cannot attach to the
-  0.5 mm pitch USB-C pads): D+ pads joined above the pad row, D- pads below, an
-  orthogonal detour on the D+ connector leg sized from the two leg lengths. Skew
-  0.000 mm, 0 vias, F.Cu only.
-- Width floors in `.kicad_dru` are half the class width (necking at pads), the
-  per-net class-width count is reported by `tools/pcb5/check.py`.
-- pcbkit gained three general fixes for this board (commits in ../pcbkit):
-  krt-route keeps rule areas and the `[krt] keep_groups` groups, `[[krt.diff]]`
-  takes `extra` flags.
+  0.5 mm pitch USB-C pads and re-laid a connected pair at 0.2 mm): D+ pads joined
+  above the pad row, D- pads below, an orthogonal detour on the D+ connector leg
+  sized from the two leg lengths. Clearances: signal classes 0.15, power classes
+  0.2, USB class 0.15 (the pair gap).
+- Width floors in `.kicad_dru` are half the class width (necking at pads);
+  check.py reports the class-width count per net. The CLAMP net's gate-bias
+  branch (D203, R205, R206, Q203, rule area 'clamp-bias') is exempt: it carries
+  no coil current. QFN pads need one pour spoke, not two (they carry their own
+  via).
+- Rotation corrections for the CPL (`[jlcfab] corrections` in pcbkit.toml) are
+  package conventions, to be confirmed in JLC's placement preview on order day.
+- pcbkit gained general fixes for this board (commits in ../pcbkit): krt-route
+  keeps rule areas and the `[krt] keep_groups` groups and does not rip them,
+  `[[krt.diff]]` takes `extra` flags, `[krt] clearance = 0` lets KRT use the net
+  class clearances, gndpour stays out of via keepouts.

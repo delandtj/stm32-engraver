@@ -6,7 +6,12 @@ fp-info-cache
 output/*
 !output/pcb/
 output/pcb/*
-!output/pcb/*.png
+!output/pcb/board.png
+!output/pcb/usb.png
+!output/pcb/mcu.png
+!output/pcb/power.png
+!output/pcb/driver.png
+!output/pcb/placement.png
 !output/pcb/drc.rpt
 .kicad-mcp/
 .history/

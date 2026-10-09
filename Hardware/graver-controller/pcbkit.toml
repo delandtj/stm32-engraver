@@ -61,13 +61,34 @@ keep = [["U301", "49"]]      # QFN48 EP thermal vias stay in the pad
 out = "fab"
 lcsc_field = "LCSC"
 mpn_field = "MPN"
+# Rotation corrections KiCad -> JLC for the parts the built-in (granite) table
+# does not know. Values follow the package conventions of that table (SOT /
+# SOIC-type bodies: pin 1 moves from KiCad's top-left to EasyEDA's lower
+# right; diodes, LEDs, crystals: EasyEDA pad 1 = cathode/pin 1, no change).
+# They are package conventions, not per-LCSC checks: confirm every one in
+# JLC's placement preview on order day (ADR 0003 step 8, CPL rotation review).
+corrections = [
+  ["^SOT-23$",                    "", 180, 0, 0],   # Q202 SI2309, Q203 BSS123, U401 PESD5V0S2BT
+  ["^SOT-23-5$",                  "", 180, 0, 0],   # U102 AP2112K, U201 UCC27517
+  ["^SOT-223-3_TabPin2$",         "", 180, 0, 0],   # Q101 DMP6023LE
+  ["^TO-252-2$",                  "", 180, 0, 0],   # Q201 IRLR3410
+  ["^HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.1mm$", "", 270, 0, 0],   # U101 LM5164, SOIC-8 body
+  ["^QFN-48-1EP_7x7mm_P0.5mm_EP5.6x5.6mm$",       "", 270, 0, 0],   # U301 STM32F411, as LQFP-48
+  ["^D_SOD-123$",                 "",   0, 0, 0],   # D101 D203 BZT52C12
+  ["^D_SMB$",                     "",   0, 0, 0],   # D102 SMBJ36A, D202 SMBJ24A
+  ["^LED_0805_2012Metric$",       "",   0, 0, 0],   # D104
+  ["^Crystal_SMD_3225-4Pin_3.2x2.5mm$", "", 0, 0, 0],   # Y301
+  ["^SW_Push_1P1T_XKB_TS-1187A$", "",   0, 0, 0],   # SW301 SW302: 0 or 180 both fit, 90 would not
+  ["^CP_Radial_D12.5mm_P5.00mm$", "",   0, 0, 0],   # C101, THT: pad 1 = + in both libraries
+  ["^PinHeader_1x05_P2.54mm_Vertical$", "", 0, 0, 0],   # J302, THT
+]
 
 [krt]
 dir = "~/.cache/graver-pcb/routetest/KiCadRoutingTools"
 python = "~/.cache/graver-pcb/routetest/venv/bin/python"
 work = "~/.cache/graver-pcb/pcbkit/route"
 rework = "~/.cache/graver-pcb/pcbkit/reroute"
-clearance = 0.15
+clearance = 0                     # KRT uses the net class clearances (0.15 signal, 0.2 power)
 via = [0.5, 0.2]
 track_width = 0.2
 same_net_pad_clearance = 0.15     # no vias in SMD pads
@@ -79,10 +100,5 @@ power_widths = [0.4,   0.4,    0.4,     0.5,   0.5,    0.5,        0.8,   0.8,  
 planes = { nets = ["GND", "+3V3"], layers = ["In1.Cu", "In2.Cu"], via = [0.6, 0.3] }
 ground = { net = "GND", width = 0.4 }
 
-[[krt.diff]]
-desc = "USB 0.25/0.15 (90 ohm over In1)"
-nets = ["*USB_DP", "*USB_DM"]
-width = 0.25
-gap = 0.15
-# skew <= 0.15 mm by meanders on the shorter leg (ADR 0005 Decision 4)
-extra = ["--diff-pair-intra-match", "--length-match-tolerance", "0.15", "--meander-amplitude", "0.6"]
+# No [[krt.diff]]: the USB pair is scripted in tools/pcb5/handroute.py; KRT's
+# route_diff.py re-laid it at 0.2 mm even when it was already connected.

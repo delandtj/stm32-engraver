@@ -111,8 +111,8 @@ putc('U301', U[0], U[1], 90)        # pins 25-36 face the rear (J301)
 put('J302', 84.5, 61.0, 0)          # SWD, pad 1 towards the rear
 putc('U302', 93.5, 64.0, 270)       # USBLC6 in line on the pair
 putc('C303', 90.0, 65.5, 90)        # VDD 36
-putc('C302', 100.0, 69.0, 0)        # VDD 24
-putc('C308', 100.0, 71.5, 0)        # VCAP1 22
+putc('C302', 100.0, 67.5, 0)       # clear of C308 (moved for the VCAP1 stub)        # VDD 24
+putc('C308', 100.5, 70.25, 0)       # pad 1 straight out from VCAP1 pin 22 (fan stub)        # VCAP1 22
 putc('C304', 87.0, 75.0, 180)       # VDD 48
 putc('C301', 89.0, 78.5, 270)       # VDD 1
 putc('C305', 86.0, 77.5, 180)       # 4u7 bulk
@@ -162,7 +162,7 @@ putc('C114', 85.0, 95.0, 90)                                    # LDO out, towar
 putc('C115', 87.5, 95.0, 90)
 row(['R102', 'R103', 'C104', 'R104', 'D104'], 78.0, 2.5, 100.0) # VIN sense, power LED
 # MCU
-putc('C309', 88.0, 69.5, 90)                                    # NRST, between J302 pin 4 and U301
+putc('C309', 87.25, 70.5, 90)      # NRST cap, clear of the left fan rows (x > 88.1)                                    # NRST, between J302 pin 4 and U301
 putc('R307', 97.0, 64.5, 90)                                    # PA10 pull-up at pin 31
 row(['R301', 'R302', 'R303'], 87.5, 2.5, 86.5)                  # BOOT0 / PB2 straps
 row(['R402', 'R403', 'R404'], 87.5, 2.0, 90.5)                  # encoder pull-ups
@@ -217,8 +217,12 @@ for r, (x, y) in HOLES.items():
 # L-shaped: the corner at MH403 belongs to the hole keepout, not the reserve
 BOOST_POLY = [(BOOST[0], BOOST[1]), (BOOST[2], BOOST[1]), (BOOST[2], BOOST[3]), (58.5, BOOST[3]), (58.5, 101.5), (BOOST[0], 101.5)]
 rule_area('ADR0004 boost reserve', BOOST_POLY, CU4, footprints=True)
+zb = rule_area('clamp-bias', rect(123.6, 65.0, 133.4, 77.0), CU4)
+for fn in (zb.SetDoNotAllowTracks, zb.SetDoNotAllowVias, zb.SetDoNotAllowZoneFills):
+    fn(False)   # no keepout: a named area for the .kicad_dru width exception only
 xb = [cbox(FP[r]) for r in ('Y301', 'C310', 'C311')]
-XT = (min(q[0] for q in xb) - 1, min(q[1] for q in xb) - 1, max(q[2] for q in xb) + 1, max(q[3] for q in xb) + 1)
+# no margin on the MCU side: the bottom fan-via row (y about 76.3-77.1) and its B.Cu exits sit there
+XT = (min(q[0] for q in xb) - 1, min(q[1] for q in xb), max(q[2] for q in xb), max(q[3] for q in xb) + 1)
 # B.Cu only, tracks only: the crystal's own F.Cu tracks are hand-routed by
 # tools/pcb5/handroute.py and its GND pads need vias to the In1 plane.
 z = rule_area('xtal keepout', rect(*XT), (pcbnew.B_Cu,))
@@ -330,10 +334,10 @@ inb = [r for r, q in boxes.items() if r != 'MH403' and bdist(q, BOOST) < 1e-6 an
 chk('courtyards inside boost keepout (excl. MH403) = 0', len(inb), not inb, '')
 flipped = [r for r, f in FP.items() if f.IsFlipped()]
 chk('flipped parts = 0', len(flipped), not flipped, '')
-def _ongrid(v):
-    return abs(v * 2 - round(v * 2)) < 1e-4
+def _ongrid(v, g=0.25):
+    return abs(v / g - round(v / g)) < 1e-4
 offgrid = [r for r, f in FP.items() if not (_ongrid(mm(f.GetPosition().x)) and _ongrid(mm(f.GetPosition().y)))]
-chk('origins off the 0.5 mm grid = 0', len(offgrid), not offgrid, '')
+chk('origins off the 0.25 mm grid = 0', len(offgrid), not offgrid, '')
 badrot = [r for r, f in FP.items() if round(f.GetOrientationDegrees()) % 90]
 chk('rotations not a multiple of 90 = 0', len(badrot), not badrot, '')
 

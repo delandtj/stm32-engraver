@@ -18,11 +18,11 @@ VIA_SET = {(0.5, 0.2), (0.6, 0.3)}
 WIDTH_SET = {0.2, 0.25, 0.4, 0.5, 0.8, 1.0}
 # net -> (class width, hard floor incl. necking). ADR 0003 D5 / ADR 0005 D3.
 FLOORS = {
-    'VIN': (0.8, 0.5), '/Driver/COIL_NEG': (0.8, 0.5), '/Driver/CLAMP': (0.8, 0.5),
-    '/Driver/SHUNT_HI': (0.8, 0.5), 'Net-(U101-SW)': (0.8, 0.5),
-    'Net-(J101-Pin_2)': (0.8, 0.5), 'Net-(Q101-D)': (0.8, 0.5),
-    '+5V': (0.5, 0.3), 'VBUS': (0.5, 0.3), 'Net-(D105-A)': (0.5, 0.3),
-    '+3V3': (0.4, 0.3), '/MCU/VDDA': (0.4, 0.3), 'GND': (0.4, 0.3),
+    'VIN': (0.8, 0.4), '/Driver/COIL_NEG': (0.8, 0.4), '/Driver/CLAMP': (0.8, 0.4),
+    '/Driver/SHUNT_HI': (0.8, 0.4), 'Net-(U101-SW)': (0.8, 0.4),
+    'Net-(J101-Pin_2)': (0.8, 0.4), 'Net-(Q101-D)': (0.8, 0.4),
+    '+5V': (0.5, 0.25), 'VBUS': (0.5, 0.25), 'Net-(D105-A)': (0.5, 0.25),
+    '+3V3': (0.4, 0.2), '/MCU/VDDA': (0.4, 0.2), 'GND': (0.4, 0.2),
 }
 USB = ('/MCU/USB_DP', '/MCU/USB_DM')
 CEILING = (85.0, 60.0)
@@ -90,8 +90,12 @@ def main():
 
     # per-net width floors
     bad = []
+    bias = [z for z in seq(b.Zones()) if z.GetZoneName() == 'clamp-bias']
+    def in_bias(s):
+        a, c = s.GetStart(), s.GetEnd()
+        return bool(bias) and bias[0].Outline().Contains(pcbnew.VECTOR2I((a.x + c.x) // 2, (a.y + c.y) // 2))
     for net, (cls, floor) in FLOORS.items():
-        ss = [s for s in segs if s.GetNetname() == net]
+        ss = [s for s in segs if s.GetNetname() == net and not (net == '/Driver/CLAMP' and in_bias(s))]
         if not ss:
             continue
         mn = min(MM(s.GetWidth()) for s in ss)

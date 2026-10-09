@@ -14,6 +14,7 @@ import pcbnew
 
 S = os.path.join(os.environ.get('SCRATCH', os.path.join(os.environ.get('XDG_RUNTIME_DIR', '/tmp'), 'graver-pcb5')), 'widen')
 MM = pcbnew.ToMM
+ALLOWED = (0.2, 0.25, 0.4, 0.5, 0.8, 1.0)   # ADR 0005 Decision 3 widths
 
 def seq(c):
     return [c[i] for i in range(len(c))]
@@ -44,16 +45,21 @@ def main():
     work = os.path.join(S, os.path.basename(path))
     b = pcbnew.LoadBoard(path)
     old = {}
+    snapped = 0
     for t in seq(b.Tracks()):
         if t.Type() != pcbnew.PCB_TRACE_T:
             continue
+        # KRT escalations leave odd widths (0.24, 0.32): snap down to the ADR set first
+        w0 = round(MM(t.GetWidth()), 3)
+        if w0 not in ALLOWED:
+            t.SetWidth(pcbnew.FromMM(max([a for a in ALLOWED if a <= w0 + 1e-6] or [0.2]))); snapped += 1
         w = cw.get(t.GetNetname())
         if w and MM(t.GetWidth()) + 1e-6 < w:
             old[t.m_Uuid.AsString()] = (t, MM(t.GetWidth()))
             t.SetWidth(pcbnew.FromMM(w))
-    print('candidates widened:', len(old))
+    print('odd widths snapped:', snapped, ' candidates widened:', len(old))
     reverted = 0
-    for rnd in range(6):
+    for rnd in range(12):
         b.Save(work)
         pts = drc(work, os.path.join(S, 'drc.rpt'))
         hit = []
@@ -68,7 +74,9 @@ def main():
             print('round %d: DRC clean of width-induced errors' % rnd)
             break
         for t in hit:
-            t.SetWidth(pcbnew.FromMM(old[t.m_Uuid.AsString()][1]))
+            w0 = old[t.m_Uuid.AsString()][1]; w = MM(t.GetWidth())
+            lower = [a for a in ALLOWED if w0 + 1e-6 < a < w - 1e-6]   # next width down in the ADR set
+            t.SetWidth(pcbnew.FromMM(max(lower) if lower else w0))
         reverted += len(hit)
         print('round %d: %d reverted' % (rnd, len(hit)))
     b.Save(work); shutil.copy(work, path)
