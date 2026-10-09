@@ -157,6 +157,43 @@ def main():
                 cross.add((s.GetNetname(), b.GetLayerName(s.GetLayer())))
     row('USB crossings on F.Cu/In1 = 0', not any(l != 'B.Cu' for _, l in cross),
         'B.Cu crossings (allowed): %s' % sorted(cross))
+    # corridor: no foreign copper on F.Cu within 0.5 mm of the pair (CC1/CC2/VBUS
+    # stay outside it), no copper at all on In1 (plane only), and the B.Cu
+    # crossings listed with the length that lies under the pair
+    # Inside the 'fine-pitch' areas (USB-C, USBLC6, QFN) the pad neighbours sit
+    # at 0.5 mm pitch by construction, so there only DRC clearance applies; the
+    # 0.5 mm corridor is demanded on open board.
+    fine = [z for z in seq(b.Zones()) if z.GetZoneName() == 'fine-pitch']
+    def in_fine_pt(p):
+        return any(z.Outline().Contains(p) for z in fine)
+    near, under, closest = set(), {}, []
+    fcu, bcu = b.GetLayerID('F.Cu'), b.GetLayerID('B.Cu')
+    for u in usb_segs:
+        for s in segs:
+            if s.GetNetname() in USB:
+                continue
+            if s.GetLayer() == fcu:
+                gap = seg_seg_dist(s, u) - 0.125 - MM(s.GetWidth()) / 2
+                if gap < 0.5:
+                    closest.append((round(gap, 2), s.GetNetname()))
+                    if not (in_fine_pt(s.GetStart()) or in_fine_pt(s.GetEnd())):
+                        near.add(s.GetNetname())
+            if s.GetLayer() == bcu and seg_cross(s, u):
+                under[s.GetNetname()] = round(under.get(s.GetNetname(), 0) + min(MM(s.GetLength()), 1.0), 2)
+    for v in vias:
+        if v.GetNetname() in USB:
+            continue
+        for u in usb_segs:
+            gap = pt_seg_dist(v.GetPosition(), u) - 0.125 - MM(v.GetWidth(pcbnew.F_Cu)) / 2
+            if gap < 0.5:
+                closest.append((round(gap, 2), 'via ' + v.GetNetname()))
+                if not in_fine_pt(v.GetPosition()):
+                    near.add('via ' + v.GetNetname())
+    row('USB corridor: foreign F.Cu copper within 0.5 mm on open board = 0', not near, str(sorted(near)))
+    rows.append(('USB nearest foreign F.Cu items at the fine-pitch parts (gap mm)', 'INFO', sorted(set(closest))[:6]))
+    in1 = [s for s in segs if b.GetLayerName(s.GetLayer()) == 'In1.Cu']
+    row('USB corridor: In1 copper = plane only', not in1, '%d In1 segments' % len(in1))
+    rows.append(('USB B.Cu crossers (net: mm under the pair)', 'INFO', under))
 
     # placement distances (ADR 0003 component breakdown)
     d = max(pdist(b, 'Y301', '1', 'U301', '5'), pdist(b, 'Y301', '3', 'U301', '6'))
@@ -204,6 +241,18 @@ def main():
         print('%-*s  %s  %s' % (w, name, st, val))
     print('%d FAIL' % fails)
     sys.exit(1 if fails else 0)
+
+def pt_seg_dist(p, u):
+    a, c = u.GetStart(), u.GetEnd()
+    ax, ay, cx, cy, px, py = MM(a.x), MM(a.y), MM(c.x), MM(c.y), MM(p.x), MM(p.y)
+    vx, vy = cx - ax, cy - ay; L = vx * vx + vy * vy
+    t = 0 if L == 0 else max(0, min(1, ((px - ax) * vx + (py - ay) * vy) / L))
+    return math.hypot(px - ax - t * vx, py - ay - t * vy)
+
+def seg_seg_dist(s, u):
+    if seg_cross(s, u):
+        return 0.0
+    return min(pt_seg_dist(s.GetStart(), u), pt_seg_dist(s.GetEnd(), u), pt_seg_dist(u.GetStart(), s), pt_seg_dist(u.GetEnd(), s))
 
 def seg_cross(s, u):
     def o(p, q, r):
