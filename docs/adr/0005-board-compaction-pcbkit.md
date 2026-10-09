@@ -1,6 +1,6 @@
 # 0005 - Compact 4-layer board, laid out with pcbkit in the granite_controller style
 
-**Status**: Proposed
+**Status**: Accepted (2026-10-09, laid out on branch adr-0005-compact-4layer)
 **Date**: 2026-10-09
 **Amends**: ADR 0003 Decisions 3 (outline), 4 (layer use), 5 (design rules), 8 (layout method)
 
@@ -100,9 +100,15 @@ ADR 0004 (boost coil rail, Proposed) adds a power stage that is not in the schem
    labels by `silk` + `connlabels` (e.g. "J101 24V IN", "J201 HANDPIECE", "J402 PEDAL",
    pin legends + - / VI CN NT G and so on), values on F.Fab.
 
-7. **ADR 0004 boost stage: (OPEN, see Open Questions)** either drawn into the schematic
-   before placement starts, or a reserved, empty area marked by a keepout sized for
-   it.
+7. **ADR 0004 boost stage: reserved area.** Decided 2026-10-09 (Jan): the boost stage
+   is not drawn yet (ADR 0004 is Proposed, controller unpicked, 24 V brick stays), so
+   the board carries an empty rule area "ADR0004 boost reserve" of 25 x 20 mm at the
+   front left (x 51.5-76.5, y 88.5-108.5 on the sheet, L-shaped around the MH403
+   hole keepout), keepout for footprints, tracks, vias and pours on all four layers.
+   It is sized from ADR 0004's part list (controller, FET, diode, inductor, 100 uF
+   100 V caps, dividers). This is why the board sits at the 85 x 60 ceiling rather
+   than the 75 x 55 target: without the reserve the same placement fits in about
+   77 x 60.
 
 ---
 
@@ -171,7 +177,29 @@ Acceptance criteria, all checked by tool output, not by eye:
 
 ## Open Questions
 
-1. ADR 0004 boost stage: schematic first (recommended, one layout pass) or a reserved
-   keepout area?
-2. Is a 4-layer cost increase accepted for the 17-board order?
-3. May the display and encoder pad rows move off the front edge?
+1. ~~ADR 0004 boost stage: schematic first or a reserved keepout area?~~ Decided
+   2026-10-09: reserved keepout (Decision 7).
+2. Is a 4-layer cost increase accepted for the 17-board order? Confirm on order day
+   with JLC's quote; the layout does not depend on it.
+3. ~~May the display and encoder pad rows move off the front edge?~~ Decided
+   2026-10-09: yes, if it buys area. The placement kept them on the front edge
+   (J401 centre, J403 right) because the width is set by the rear edge row.
+
+## As built (2026-10-09)
+
+Deviations from the text above, all deliberate:
+
+- J302 (SWD) stands inside the board between the power block and the MCU, not on
+  the rear edge: the rear edge is full with J101, SW301/SW302, J301, J201 and J402
+  between the two hole keepouts. SW301/SW302 took its place on the rear edge.
+- The crystal keepout blocks tracks on B.Cu only. Its own F.Cu tracks and the GND
+  vias of its pads are scripted by `tools/pcb5/handroute.py`.
+- The USB pair is scripted, not routed by KRT (route_diff.py cannot attach to the
+  0.5 mm pitch USB-C pads): D+ pads joined above the pad row, D- pads below, an
+  orthogonal detour on the D+ connector leg sized from the two leg lengths. Skew
+  0.000 mm, 0 vias, F.Cu only.
+- Width floors in `.kicad_dru` are half the class width (necking at pads), the
+  per-net class-width count is reported by `tools/pcb5/check.py`.
+- pcbkit gained three general fixes for this board (commits in ../pcbkit):
+  krt-route keeps rule areas and the `[krt] keep_groups` groups, `[[krt.diff]]`
+  takes `extra` flags.
