@@ -23,8 +23,10 @@ pub const T_ON_MIN_US: u32 = 500;
 pub const T_ON_MAX_US: u32 = 15_000;
 /// On-time resolution.
 pub const T_ON_STEP_US: u32 = 10;
-/// Hard ceiling on t_on * f.
-pub const DUTY_CAP_LIMIT_PCT: u32 = 35;
+/// Upper end of the menu's duty cap (t_on * f). The menu default stays 35 %;
+/// above that, heat is the operator's call and the NTC limit is the guard.
+/// T_ON_MAX_US still bounds a single pulse, so 100 % is never a stuck gate.
+pub const DUTY_CAP_LIMIT_PCT: u32 = 100;
 /// Supply compensation keeps t_on * VIN constant at this reference.
 pub const V_NOMINAL_MV: u32 = 24_000;
 /// Below this the firmware refuses to fire ("no brick").

@@ -143,11 +143,11 @@ needs no board change and covers most of the range if the boost slips.
 7. **Firmware: power budget and overdrive** (`control.rs`)
    - Compensation, duty and budget all use measured VCOIL instead of VIN.
    - **Normal mode** (default): average coil power `VCOIL^2 / R_coil * duty` <= 4 W
-     (the coil's 24 V continuous rating). The fixed 35% duty cap stays as an upper
-     bound. Raising VCOIL then buys a faster current rise and a harder hit per stroke at
+     (the coil's 24 V continuous rating). The menu duty cap (default 35%, settable
+     5-100%) applies on top. Raising VCOIL then buys a faster current rise and a harder hit per stroke at
      the same heat, with the duty limit tightening automatically.
    - **Overdrive mode** (menu, off by default, resets to off at power-up): the power
-     budget is lifted; only the 35% duty cap and the NTC limit remain. Shown on the
+     budget is lifted; only the menu duty cap (up to 100%) and the NTC limit remain. Shown on the
      display as a permanent "OVERDRIVE" badge and the live coil temperature.
    - **NTC is mandatory for overdrive**: NTC open/shorted = overdrive refused, budget
      back to 4 W. NTC and R-estimate disagreeing by > 20 degC = treated as no NTC.

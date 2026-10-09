@@ -182,7 +182,7 @@ impl Settings {
         self.strength_pct = self.strength_pct.min(100);
         self.knob_f_hz = self.knob_f_hz.clamp(1, 60);
         self.f_max_hz = self.f_max_hz.clamp(5, 60);
-        self.duty_cap_pct = self.duty_cap_pct.clamp(5, 35);
+        self.duty_cap_pct = self.duty_cap_pct.clamp(5, crate::control::DUTY_CAP_LIMIT_PCT as u8);
         self.brightness_pct = self.brightness_pct.clamp(10, 100);
         if self.pedal_max <= self.pedal_min + 100 {
             self.pedal_min = 200;

@@ -88,7 +88,7 @@ built for a hardware trigger pin, not for software arming.
 and, on a trip, disables the output and publishes the fault. It never reads
 the pedal or the settings: those decisions belong to `control_task`.
 
-Ranges: f 1-60 Hz, t_on 500-15000 us in 10 us steps, duty cap t_on * f <= 35 %
+Ranges: f 1-60 Hz, t_on 500-15000 us in 10 us steps, duty cap t_on * f settable 5-100 % (default 35 %)
 (adjustable down to 5 %), supply compensation t_on * 24 V / VIN when enabled.
 The display always shows the value actually used after clipping.
 
