@@ -6,6 +6,16 @@ the power stage.
 
 ## Power
 
+> WARNING - 24 V KILLS MOST HOBBY FET MODULES.
+> The OPEN-SMART module (4.5-13.5 V) and the EG27324 + M3004D module
+> (30 V FET, driver gate swing) are 12 V parts. Two were destroyed on
+> 2026-10-08 by putting the 24 V coil supply on them: the FET either never
+> turns on again or sits half on (5 V across a connected coil at idle).
+> Many of these boards pull the gate up from VIN, so 24 V in means ~24 V
+> on a +-20 V gate. Before raising the PSU above 12 V, read the module's
+> rated input range. Only the D4184 module (5-36 V) and a bare logic-level
+> FET driven from PA8 are safe at 24 V.
+
 Two independent supplies, ONE common ground.
 
 | Rail | Source | Setting | Notes |
@@ -37,7 +47,7 @@ Module choice:
 
 | Module | Load supply | Use for |
 |---|---|---|
-| OPEN-SMART single MOSFET (3.3 V logic OK) | 13.5 V max | timing, UI, scope of the pulse; hits are ~1/4 force |
+| OPEN-SMART single MOSFET (3.3 V logic OK) | 13.5 V max, NEVER 24 V (dies) | timing, UI, scope of the pulse; hits are ~1/4 force |
 | D4184 dual-MOSFET trigger module | 5-36 V | the real 24 V punch test |
 | Bare logic-level N-FET (IRLZ44N, IRL540, IRLB8721) | any | best: gate <- PA8 through 100 R, 100k gate to GND, source to GND, drain to coil |
 
