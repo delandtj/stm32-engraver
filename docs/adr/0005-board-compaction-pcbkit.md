@@ -72,6 +72,14 @@ ADR 0004 (boost coil rail, Proposed) adds a power stage that is not in the schem
    Two via sizes on the whole board: 0.5/0.2 and 0.6/0.3. No vias in SMD pads except
    the QFN48 EP thermal vias (`--same-net-pad-clearance 0.15` for the router).
 
+   Width floors (amends ADR 0003 Decision 5, decided 2026-10-09): the class width
+   is the routing target; the `.kicad_dru` floor that DRC enforces is half the
+   class width (0.4 HighCurrent, 0.25 5 V/VBUS, 0.2 3V3/GND), for necking at
+   0402/0603 pads and plane-tap vias. The CLAMP net's gate-bias branch (rule area
+   'clamp-bias') carries no coil current and may use signal widths. `check.py`
+   reports, per net, the minimum width against the floor and how many segments sit
+   below the class width.
+
 4. **USB D+/D- as a 90 ohm differential pair.**
    - Surface microstrip on F.Cu over unbroken In1 GND, start from granite's 0.25 mm
      track / 0.15 mm gap and confirm with JLC's impedance calculator for
@@ -124,8 +132,8 @@ Acceptance criteria, all checked by tool output, not by eye:
 - In1 and In2 have no tracks; In1 is one connected GND region under the USB pair,
   the crystal and the analog front end (render check plus a scripted zone query).
 - USB pair: net class geometry as computed, skew <= 0.15 mm, 0 vias, 0 crossings.
-- Per-net width floors of ADR 0003 Decision 5 hold (re-use the floor check, as a
-  pcbkit-side or project-script check).
+- Per-net width floors of Decision 3 (half the class width, `.kicad_dru`) hold,
+  checked by `tools/pcb5/check.py` and by DRC itself.
 - ADR 0003 placement rules still hold: crystal within 5 mm of OSC pins with its
   keepout, decoupling within 2 mm of VDD pins, buck >= 15 mm from ADC front end and
   crystal, gate driver within 5 mm of the FET gate, op-amp within 10 mm of the shunt.
