@@ -98,10 +98,11 @@ SCRIPTED_GROUP = "scripted-copper"
 SCRATCH = os.environ.get(
     "PCB_SCRATCH",
     os.path.join(os.path.expanduser("~"), ".cache", "graver-pcb"))
+# KRT itself is not scratch: it lives in ~/Electronics/krt, pcbkit's default too.
 KRT_DIR = os.environ.get("KRT_DIR",
-                         os.path.join(SCRATCH, "routetest", "KiCadRoutingTools"))
+                         os.path.expanduser("~/Electronics/krt/KiCadRoutingTools"))
 KRT_PY = os.environ.get("KRT_PY",
-                        os.path.join(SCRATCH, "routetest", "venv", "bin", "python"))
+                        os.path.expanduser("~/Electronics/krt/venv/bin/python"))
 
 # ------------------------------------------------------------- router ------
 # ADR 0003 decision 5, the amended numbers: 0.2 mm track, 0.15 mm clearance,

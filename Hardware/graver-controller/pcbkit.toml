@@ -87,8 +87,6 @@ corrections = [
 ]
 
 [krt]
-dir = "~/.cache/graver-pcb/routetest/KiCadRoutingTools"
-python = "~/.cache/graver-pcb/routetest/venv/bin/python"
 work = "~/.cache/graver-pcb/pcbkit/route"
 rework = "~/.cache/graver-pcb/pcbkit/reroute"
 clearance = 0                     # KRT uses the net class clearances (0.15 signal, 0.2 power)
