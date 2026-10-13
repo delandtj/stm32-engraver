@@ -59,16 +59,17 @@ the long side under JLC's 100 x 100 price band.
 drill, BOM, CPL, STEP, assembly PDF, test sheet. None of it exists; nothing in
 `tools/` produces it. Everything else below is a decision rather than a task.
 
-**Three decisions are blocking**, all in "Open items": the pedal socket (blocks
-the loose-parts order and the box wall cutout), whether JLC's THT service still
-earns its fee, and a manufacturer STEP for J301 (without it the enclosure
+**Two decisions are blocking**, both in "Open items": whether JLC's THT service
+still earns its fee, and a manufacturer STEP for J301 (without it the enclosure
 cannot be drawn around the USB opening, because that part is invisible in 3D).
+The pedal is settled (2026-10-13): a 5-pin TIG welding foot pedal, see
+"Pedal" under Open items; one sample must be measured before ordering the batch.
 
 ## What this is
 
 A new controller for the ITS-LZ-1335 solenoid graver in this repo. Batch of
 8-10 boxes for a class (adults), each box = 24 V brick + this PCB + 1.3"
-ST7789 display + one handpiece + expression pedal. PCB fully assembled by
+ST7789 display + one handpiece + TIG foot pedal. PCB fully assembled by
 JLCPCB, no soldering by the builders, under EUR 150 per box, enclosure to be
 3D printed (Creality K2 Max). Since 2026-10-01 Jan solders five wire looms
 per box when he assembles them; the class still receives finished boxes.
@@ -285,9 +286,9 @@ Key facts (details in the ADR):
 - Pedal: no jack on the board. J402 is a 4-pad row - 1 TIP, 2 RN, 3 RING,
   4 SLV - and the socket lives in the box. The circuit is unchanged: ring =
   3V3 through 1k, tip = wiper to PA1, ring sense on PA2, PESD5V0S2BT on tip
-  and ring. Detection still depends on a socket whose ring-normal contact
-  grounds the ring when nothing is plugged, which is exactly why there are
-  four pads and not three. Which socket is an OPEN QUESTION, below.
+  and ring. RN (pad 2) is GND and only matters for a TRS socket with a
+  ring-normal contact. The chosen 5-pin TIG pedal does not use it - see
+  "Pedal" under Open items for the wiring.
 - Handpiece: 4-pin GX12 aviation socket on the box (pre-wired pigtail), its
   four wires soldered into the J201 pad row: 1 VIN, 2 COIL_NEG, 3 NTC
   (optional), 4 GND, pad 1 leftmost. The 5.08 mm terminal and screw plug are
@@ -472,15 +473,31 @@ Hardware verification before layout is frozen:
 
 Decisions still open (ADR "Open Questions"):
 
-- **Pedal socket (new, 2026-10-01, blocks the loose-parts order).** Jan has
-  not decided whether the boxes ship with a bought expression pedal or one he
-  builds. A bought one has a moulded 6.35 mm TRS plug, so the box needs a TRS
-  socket, and the plug detection of ADR 0001 section 8 keeps working as
-  drawn - wire all four J402 pads. A GX12-3 instead means building or
-  re-leading the pedals AND redesigning the detection (a pulldown on the
-  wiper so an unplugged pedal reads heel-down and cannot fire: fail-safe, but
-  it can no longer tell "unplugged" from "pedal at rest"). The board commits
-  to neither; four pads serve both.
+- **Pedal (decided 2026-10-13, one sample to measure before the batch).** A
+  bought 5-pin TIG welding foot pedal (e.g. "Vector Welding remote control
+  pedal, 1.5 m cable, 5 pin"): a pot plus a microswitch that closes early
+  in the travel, spring return, steel housing. Spring return is the reason
+  over an expression pedal, which stays where it was left. The 2+3 pin
+  variant has the same five wires on two plugs; avoid it. No board change -
+  the ordered board serves it as is. The box carries the matching aviation
+  socket (likely GX16-5, confirm on the sample), wired to J402:
+
+  | Pedal wire | J402 pad |
+  |---|---|
+  | pot wiper | 1 TIP |
+  | pot top, through the pedal's microswitch | 3 RING (3V3 via 1k) |
+  | pot bottom | 4 SLV (GND) |
+  | - | 2 RN: leave unwired (GND, TRS normal contact only) |
+
+  Plus ~100k from TIP to SLV at the box socket. The switch in series with
+  the pot top is a hardware interlock: foot off, the pot is unpowered and
+  the wiper reads 0 V whatever the pot does. Unplugged, the 100k pulls TIP
+  to 0 V, so the box reads heel-down and cannot fire. Cost: ring sense always
+  reads "pedal present", so the display cannot tell unplugged from foot-off
+  (the ADR 0001 section 8 detection is given up; fail-safe either way).
+  Measure on the first sample before buying the rest: pot value (5k-50k is
+  fine; 10k is typical), pinout (not standardised between brands), smooth
+  sweep, and that the switch closes near the start of the travel.
 - **A manufacturer STEP for J301 (new, 2026-10-01, blocks the enclosure).**
   KiCad 10 ships no 3D model anywhere for the HRO TYPE-C-31-M-12 and nothing
   in the library is the right shape to stand in, so the part is invisible in
@@ -514,9 +531,10 @@ step 3 is the only real build work left before an order.
    actually want to leave the box, and whether the silkscreen legend is
    readable enough to solder from, since with the keyed connectors gone that
    legend is the only thing preventing a reversed loom.
-2. **Answer the three open questions** - pedal socket, JLC's THT service, and
-   a manufacturer STEP for J301. The first blocks the loose-parts order and
-   the box wall cutout; the third blocks the enclosure.
+2. **Answer the two open questions** - JLC's THT service and a manufacturer
+   STEP for J301; the second blocks the enclosure. Measure one TIG pedal
+   sample (see "Pedal") before ordering the rest; its socket size sets the
+   box wall cutout.
 3. **Export set**, ADR 0003 step 8: Gerber, drill, BOM with the LCSC column,
    CPL with rotation review, STEP, assembly PDF, per-board test sheet. Not
    scripted yet; `kicad-cli pcb export gerbers / drill / pos` plus a BOM from
@@ -524,9 +542,9 @@ step 3 is the only real build work left before an order.
    and orientation check as its first line.
 4. **JLC order**: 12 assembled, 5 bare. Loose parts are a much shorter list
    than before - display modules, encoders and knobs, GX12 pigtails and
-   plugs, hook-up wire, and whatever the pedal question settles on. The XH
-   housings, crimp contacts, ribbon leads, screw plugs and the XH crimp tool
-   are all out of the project.
+   plugs, hook-up wire, TIG pedals with matching 5-pin box sockets and a
+   100k per box. The XH housings, crimp contacts, ribbon leads, screw plugs
+   and the XH crimp tool are all out of the project.
 5. **Firmware bring-up** on the Blackpill bench rig (docs/bench-rig.md):
    flash, display, buttons/encoder, VIN divider + pot, then the coil at 12 V
    and 24 V from the lab PSU. Fix what the hardware disagrees with.
