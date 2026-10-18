@@ -11,7 +11,8 @@ KiCad lib_ids were checked against the installed KiCad 10.0.6 libraries
 
 | # | Function | Pick (MPN) | LCSC | Class | Stock | $/pc | Package | Symbol lib_id | Footprint lib_id |
 |---|----------|------------|------|-------|-------|------|---------|---------------|------------------|
-| 1 | Fuse 1 A slow-blow | Littelfuse 0437001.WR (437 series, Slo-Blo, 63 V) | C99537 | E | 1,968 | 0.134 | 1206 | Device:Fuse | Fuse:Fuse_1206_3216Metric |
+| 1 | Resettable PTC, 0.35 A hold / 0.75 A trip, 30 V, Imax 100 A | Littelfuse 1206L035/30WR | C2153989 | E | - | - | 1206 | Device:Fuse | Fuse:Fuse_1206_3216Metric |
+| 1x | WAS: Fuse 1 A (built on the first 12 boards) | Littelfuse 0437001.WR - 437 series is FAST-acting, not Slo-Blo; I2t 0.100 A2s, 0.42 ohm cold | C99537 | E | - | - | 1206 | Device:Fuse | Fuse:Fuse_1206_3216Metric |
 | 1b | Fuse fallback (1206) | JFC1206-1100TS (TS = time-lag, check datasheet) | C43323031 | E | 2,960 | 0.074 | 1206 | Device:Fuse | Fuse:Fuse_1206_3216Metric |
 | 1c | Fuse fallback (2410, deep stock) | Littelfuse 0452001.MRL (Nano2 452, Slo-Blo, 125 V) | C44669 | E | 10,297 | 0.271 | 2410 | Device:Fuse | Fuse:Fuse_Littelfuse-NANO2-451_453 |
 | 2 | Reverse-polarity P-FET | Diodes DMP6023LE-13 (-60 V, 35 mohm at -4.5 V, Vgs +-20 V) | C154901 | E | 28,081 | 0.553 | SOT-223 | Transistor_FET:Q_PMOS_GDS | Package_TO_SOT_SMD:SOT-223-3_TabPin2 |
@@ -155,6 +156,16 @@ and its 2x3 mm HotRod QFN is harder to lay out.
 
 ## Things I could not find / caveats
 
+- 2026-10-17: board 1's F101 (0437001.WR) blew on the first 24 V connect. The 437
+  series is fast-acting (datasheet title "437 Series - 1206 Fast-Acting Fuse", 1 A
+  melting I2t 0.100 A2s); hot-plugging 24 V into C101 470 uF puts roughly
+  C*V^2/(2*R_loop) = 0.27-0.45 A2s through it. Replaced by the 1206L035/30WR PTC: it
+  trips on heat, so a ~50 us inrush pulse does not trip it, Imax 100 A covers the
+  inrush peak, and it resets after a fault. Hold derates to about 0.28 A at 50 C;
+  the load is ~0.1 A average, 0.29 A worst-case peak for at most 15 ms. Second
+  source: R+O SMD1206-050-30 (C46641016, 0.5 A hold) but its Imax is only 40 A. A
+  2 A slow-blow 1206 (I2t ~0.6-0.8 A2s) would also survive but ages with every
+  hot-plug. Rows 1b/1c below predate this and assume a time-lag fuse.
 - There's no Basic or Preferred SMD slow-blow 1 A fuse. The best 1206 option (Littelfuse
   0437001.WR) has only 1,968 in stock. The JFC 1206 "TS" part has 2,960. The 2410 Littelfuse
   Nano2 0452001.MRL has 10k in stock and a KiCad footprint (Fuse_Littelfuse-NANO2-451_453);

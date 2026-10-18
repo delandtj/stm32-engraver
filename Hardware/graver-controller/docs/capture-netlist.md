@@ -6,7 +6,7 @@ Reference ranges per sheet: Power 1xx, Driver 2xx, MCU 3xx, IO 4xx.
 ## Power sheet (power.kicad_sch)
 
 - J101 DC jack: TIP -> VIN_RAW, SLEEVE -> GND, switch pin NC.
-- F101 fuse 1 A slow: VIN_RAW -> VIN_F.
+- F101 PTC 0.35 A hold (was a 1 A fuse): VIN_RAW -> VIN_F.
 - Q101 P-FET reverse polarity: D -> VIN_F, S -> VIN, G -> Q101_G.
 - R101 100k: Q101_G -> GND.
 - D101 zener 12 V: K -> VIN, A -> Q101_G.

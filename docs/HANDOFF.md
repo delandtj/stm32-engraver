@@ -314,7 +314,12 @@ for sag, not for amps.
 | average at the 35 % duty cap | ~95 mA |
 
 About 7 W worst case, and the coil only draws its 170 mA during the pulse.
-The on-board 1 A slow fuse is the board's own ceiling.
+The on-board fuse is the board's own ceiling: since 2026-10-17 a 1206 PTC
+(Littelfuse 1206L035/30WR, 0.35 A hold, 0.75 A trip). The first 12 boards
+were built with 0437001.WR, which is a FAST 1 A fuse despite the old "1A
+slow" label, and it blows when 24 V is hot-plugged into the 470 uF (board 1
+did). Swap F101 for the PTC on those boards; until then ramp the PSU up
+from 0 V instead of connecting a live supply.
 
 1 A (24 W) would genuinely do it with 3x margin. 2 A costs about the same and
 buys three things:

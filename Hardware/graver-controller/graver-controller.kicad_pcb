@@ -516,7 +516,7 @@
 				)
 			)
 		)
-		(property "Value" "1A slow"
+		(property "Value" "PTC 0.35A 30V"
 			(at 0 1.83 270)
 			(layer "F.Fab")
 			(uuid "f92de686-9fa0-4f2f-a243-7b14323a31ac")
@@ -538,7 +538,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resettable PTC, 0.35 A hold / 0.75 A trip, 30 V, Imax 100 A; survives hot-plug inrush into C101"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -561,7 +561,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C99537"
+		(property "LCSC" "C2153989"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -573,7 +573,7 @@
 				)
 			)
 		)
-		(property "MPN" "0437001.WR"
+		(property "MPN" "1206L035/30WR"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)

@@ -3869,7 +3869,7 @@
 				)
 			)
 		)
-		(property "Value" "1A slow"
+		(property "Value" "PTC 0.35A 30V"
 			(at 81.28 106.302 270)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3901,7 +3901,7 @@
 				)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resettable PTC, 0.35 A hold / 0.75 A trip, 30 V, Imax 100 A; survives hot-plug inrush into C101"
 			(at 81.28 104.14 0)
 			(hide yes)
 			(show_name no)
@@ -3912,7 +3912,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C99537"
+		(property "LCSC" "C2153989"
 			(at 81.28 104.14 0)
 			(hide yes)
 			(show_name no)
@@ -3923,7 +3923,7 @@
 				)
 			)
 		)
-		(property "MPN" "0437001.WR"
+		(property "MPN" "1206L035/30WR"
 			(at 81.28 104.14 0)
 			(hide yes)
 			(show_name no)
