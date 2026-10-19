@@ -1,9 +1,44 @@
 # Handoff: graver controller board
 
-Last updated 2026-10-01. Read this first in a new session; it says what
+Last updated 2026-10-19. Read this first in a new session; it says what
 exists, what is decided, how to work on it and what comes next.
 
 ## Start here
+
+**Session 2026-10-16 .. 2026-10-19: first boards on the bench, rev 2, box.**
+
+- Bring-up, board 1 (F101 bridged with a wire after it blew - no fuse, so
+  bench PSU with a current limit only, never the brick):
+  - Flashed over SWD (`probe-rs run --chip STM32F411CEUx`; with an ESP32
+    also plugged in add `--probe 0483:3748`; `cargo run` needs
+    `--bin graver-controller`).
+  - Verified: display (offset 0, inverted), encoder (4 counts per detent),
+    encoder push, settings journal, heartbeat LED D301 (~5 Hz).
+  - The picture is now rotated 180 deg for the box mount (header end down).
+  - Not yet done on any board: 24 V on VIN, VIN reading, pedal, NTC,
+    firing, bootloader jump. See docs/bringup-checklist.md.
+- F101 lesson: the rev 1 fuse (0437001.WR) is fast-acting, despite the old
+  "1A slow" label. Hot-plugging 24 V into C101 blows it. Rev 1 rework: a
+  1206 PTC, Littelfuse 1206L035/30WR (C2153989). Until then, ramp the PSU
+  up from 0 V.
+- Rev 1 hand soldering: the THT GND pads are solid to the In1 plane (no
+  thermal relief) and hard to solder. Use a big chisel tip at 380-400 C
+  lead-free, and preheat the board.
+- Rev 1 as ordered is tag `rev1-ordered` (e8bf91c). `master` is rev 2:
+  thermal relief on both inner planes (pcbkit now passes KRT
+  `--thermal-relief` by default) and the TPS26602 input eFuse (ADR 0007).
+  Fab set regenerated, DRC/parity 0.
+- Enclosure: ADR 0006, `Box/`. A FreeCAD wedge (tray plus cover), the
+  display sliding into rails with a snap latch, the encoder on two nuts,
+  GX12-4 handpiece at the front, GX12-3 pedal at the rear, M3 heat-set
+  inserts, support-free at 60 deg. Rebuild with `Box/build_enclosure.py`
+  from the Params sheet. Still to measure: the real GX12 hole, nut and
+  depth.
+- Pedal socket: GX12-3 (never 4-pin), the pedal's own plug replaced.
+- PC USB: if the ST-LINK vanishes, the xhci controller 0000:7b:00.0 may be
+  wedged. Unbind and bind it via /sys/bus/pci/drivers/xhci_hcd.
+
+Older notes follow.
 
 **2026-10-09, ADR 0005 (Accepted): the board is now 4-layer, 85 x 60 mm,
 built with pcbkit** on branch `adr-0005-compact-4layer`. kicad-cli DRC
@@ -537,35 +572,36 @@ Decisions still open (ADR "Open Questions"):
 
 ## Next steps, in order
 
-The copper is done (v0.2). Steps 1 and 2 are a review and three decisions;
-step 3 is the only real build work left before an order.
+Updated 2026-10-19. The previous list (review, export set, JLC order,
+bench-rig bring-up, enclosure) is done or superseded; see git history.
 
-1. **Jan reviews the board in pcbnew.** The old "decide on the empty right
-   third" question is answered - the shrink to 95 x 70 took that space back.
-   What is worth his eye now: whether the pad rows sit where the looms
-   actually want to leave the box, and whether the silkscreen legend is
-   readable enough to solder from, since with the keyed connectors gone that
-   legend is the only thing preventing a reversed loom.
-2. **Answer the two open questions** - JLC's THT service and a manufacturer
-   STEP for J301; the second blocks the enclosure. Measure one TIG pedal
-   sample (see "Pedal") before ordering the rest; its socket size sets the
-   box wall cutout.
-3. **Export set**, ADR 0003 step 8: Gerber, drill, BOM with the LCSC column,
-   CPL with rotation review, STEP, assembly PDF, per-board test sheet. Not
-   scripted yet; `kicad-cli pcb export gerbers / drill / pos` plus a BOM from
-   the netlist is the shape of it. The test sheet now needs a loom continuity
-   and orientation check as its first line.
-4. **JLC order**: 12 assembled, 5 bare. Loose parts are a much shorter list
-   than before - display modules, encoders and knobs, GX12 pigtails and
-   plugs, hook-up wire, TIG pedals with matching 5-pin box sockets and a
-   100k per box. The XH housings, crimp contacts, ribbon leads, screw plugs
-   and the XH crimp tool are all out of the project.
-5. **Firmware bring-up** on the Blackpill bench rig (docs/bench-rig.md):
-   flash, display, buttons/encoder, VIN divider + pot, then the coil at 12 V
-   and 24 V from the lab PSU. Fix what the hardware disagrees with.
-6. **Enclosure** in FreeCAD from a STEP export of the board. It now carries
-   more than before: the encoder and its shaft, the display, the box sockets,
-   and a loom exit for each pad row. In exchange all but one of the
-   board-to-wall tolerances are gone - the exception is USB-C, still soldered
-   to the board and still needing to line up with a hole in the printed rear
-   wall. Its mouth direction against the real part is unverified.
+1. **Bring-up, continued** (docs/bringup-checklist.md): 24 V on VIN from the
+   bench PSU (board 1 has no fuse - current limit 200 mA, max ~500 mA when
+   firing), VIN reading against the PSU, pedal, NTC, then firing into the
+   handpiece. Decide the open R407 pedal safety finding (remove R407 per
+   board, or ~4.7k TIP-SLV at the socket) before trusting the pedal.
+2. **Power input: DC-005 jack.** J101 is two wire holes (pad 1 GND, pad 2
+   +24V). Prepare for a DC-005 female 5.5 x 2.1 mm barrel jack instead. Decide
+   between a panel-mount jack in the box rear wall wired into J101 (no board
+   change; the Box cable entry and tie post become a jack hole) and a
+   PCB-mount jack on the rear edge (rev 2 board change). Mind the history:
+   ADR 0003 Decision 9 dropped the DC-005 and with it a 30 V ceiling. The
+   brick is 24 V, so 30 V is fine, but check the jack's current rating
+   (>= 2 A) and which pin is centre-positive.
+3. **Firmware, Frequency mode: strength drops as frequency rises - discuss
+   before changing.** In Frequency mode the pedal sets the frequency and the
+   knob sets the strength (t_on). `limit_t_on` in src/control.rs clamps
+   t_on to `duty_cap_pct / f` (35 % by default). At 20 Hz the cap is 17.5 ms
+   (above T_ON_MAX 15 ms), but at 60 Hz it is 5.8 ms, so pressing the pedal
+   further cuts the energy per hit. Jan's expectation is the other way
+   round. The options to discuss: keep the energy per hit and limit the
+   frequency instead, raise or scale the duty cap, or show on screen when the
+   cap is active. The cap protects the coil thermally (ADR 0001/0002), so
+   any change has to keep that.
+4. **Box**: measure the real GX12 socket (hole, nut AF, depth) and update
+   the Params sheet. Print the tray first, then the cover; check the display
+   latch and the encoder two-nut fit on the print.
+5. **Rev 1 rework for the class boxes**: the PTC in F101 on every built
+   board, before any of them sees a brick.
+6. **Rev 2 order** when the above settles: the fab set on `master` is
+   current (TPS26602 is a JLC extended part, about USD 2.3).
