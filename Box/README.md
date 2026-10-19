@@ -40,7 +40,7 @@ relieved over them), FPC_RELIEF at the far end. DISP_T is a formula
 (DISP_PCB_T + LCD_T); LCD_T = 1.9 measured 2026-10-19 (module 3.1 total).
 
 Cells most likely to change after measuring: DISP_ACTIVE, ENC_BUSH,
-ENC_PANEL, ENC_TAB_*, USB_Z, CABLE_D, GX12_D, GX16_D, GX12_NUT, GX16_NUT.
+ENC_NUT_AF, ENC_NUT_T, USB_Z, CABLE_D, GX12_D, GX16_D, GX12_NUT, GX16_NUT.
 Display latch: LATCH_T, LATCH_L, LATCH_W, LATCH_HOOK, LATCH_DX, LATCH_SLIT
 (the macro prints the tongue bending strain; keep it under about 2 % for PLA,
 3 % for PETG). Cable entry: CABLE_Z, TIE_LEN, TIE_SLOT_W/H, COL_RL_DY.
@@ -91,13 +91,15 @@ Layout cells: DISP_KX, ENC_KX, GX12_KX, GX12_Z, GX16_KX, GX16_Z, CABLE_KX
   inside the rear-left cable hole.
 - 4 x rubber feet, 10 mm dia, up to 1 mm recessed, 15 mm in from the edges
   (clear of the screw counterbores).
-- GX12-4 panel socket (front), GX16-5 panel socket (rear right), EC11 encoder
-  with nut and washer, knob up to 20 mm dia.
+- GX12-4 panel socket (front), GX16-5 panel socket (rear right), encoder
+  (7.8 mm bushing, 6 mm long) with two nuts, knob up to 20 mm dia.
 
 ## Assembly order
 
 Inserts into the tray and the cover screw bosses, board onto the PCB bosses.
-Encoder into the cover. Slide the display into the rails from the lower (front)
+Encoder into the cover with one nut under the 2.0 mm panel and one on top
+(no anti-rotation slot; the two nuts clamp it). The panel is thinned from
+the inside over a 14.7 mm circle so the inner nut can be turned. Slide the display into the rails from the lower (front)
 end, glass first, header last: the two hooks ride up over the glass, the
 tongues lift out of the top by about 2.8 mm, and they click down behind the
 module's PCB edge when it reaches the end stop. To remove it, lift both

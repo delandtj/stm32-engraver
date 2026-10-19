@@ -66,8 +66,11 @@ DEFAULTS = [
     ("DISP_HOLE_PY", 34.0, "module mounting hole pitch along (2.5 from each short edge)"),
     ("DISP_HOLE_D", 2.2, "module mounting hole dia (assumed)"),
     ("FPC_RELIEF", 1.0, "relief for the FPC fold strip past the BL far edge / in the end stop"),
-    ("ENC_BUSH", 7.0, "TBD measure: EC11 bushing dia (hole = +0.3)"),
-    ("ENC_PANEL", 2.0, "TBD: local top thickness at encoder"),
+    ("ENC_BUSH", 7.8, "ADR: encoder bushing dia, measured 2026-10-19 (hole = +0.3)"),
+    ("ENC_BUSH_L", 6.0, "encoder bushing length, measured 2026-10-19"),
+    ("ENC_NUT_AF", 11.0, "TBD measure: encoder nut across flats"),
+    ("ENC_NUT_T", 2.0, "TBD measure: encoder nut thickness (one nut under, one on top)"),
+    ("ENC_PANEL", 2.0, "ADR: local top thickness at encoder (2 nuts + panel = bushing)"),
     # --- extra, not in the ADR table ---
     ("SIDE_GAP", 9.5, "board edge to side wall inner face (room for screw columns)"),
     ("LIP_T", 1.6, "tray lip wall thickness"),
@@ -105,9 +108,6 @@ DEFAULTS = [
     ("LATCH_DX", 11.5, "tongue offset from module centre (outside the 7-pin header)"),
     ("LATCH_SLIT", 0.6, "slit around the tongue, through the top"),
     ("ENC_KX", 108.0, "KiCad x of encoder axis (J403 at 101.5, moved for knob)"),
-    ("ENC_TAB_R", 7.8, "TBD EC11 anti-rotation tab distance from axis"),
-    ("ENC_TAB_W", 1.2, "TBD EC11 tab width"),
-    ("ENC_TAB_L", 2.0, "TBD EC11 tab length"),
     ("ENC_BODY", 12.0, "EC11 body square"),
     ("ENC_BODY_H", 7.0, "EC11 body height below panel"),
     ("ENC_LUGS", 10.0, "room for loom solder on EC11 lugs"),
@@ -487,13 +487,12 @@ def build(p):
     # encoder
     ecx = kx(p["ENC_KX"])
     rc_cuts.append(cyl_z(ecx, vc, p["ENC_BUSH"] + 0.3, -1, WALL + 1))
-    tw, tl = p["ENC_TAB_W"] + 0.4, p["ENC_TAB_L"] + 0.4
-    ty0 = vc - p["ENC_TAB_R"]
-    rc_cuts.append(box(ecx - tw / 2, ecx + tw / 2, ty0 - tl / 2, ty0 + tl / 2, -1, WALL + 1))
-    pk = p["ENC_BODY"] + 2.0
+    # no anti-rotation slot: the inner nut holds the body off the panel.
+    # Round pocket thins the top to ENC_PANEL over the nut clearance circle.
+    nut_clr = p["ENC_NUT_AF"] / math.cos(math.radians(30)) + 2.0
     pz = WALL - p["ENC_PANEL"]
     if pz > 0.01:
-        rc_cuts.append(box(ecx - pk / 2, ecx + pk / 2, vc - pk / 2, vc + pk / 2, -1, pz))
+        rc_cuts.append(cyl_z(ecx, vc, nut_clr, -1, pz))
     cc.append(roof(fuse_all(rc_cuts)))
     cover = cover.cut(fuse_all(cc))
     g["Cover"] = fuse_all([cover, roof(fuse_all(latch_add))])
@@ -516,8 +515,12 @@ def build(p):
     g["LatchHooks"] = roof(fuse_all(latch_add))
     g["DispPCB"] = roof(pcb)
     eb = p["ENC_BODY"] / 2.0
+    zb = pz - p["ENC_NUT_T"]   # body sits under the inner nut
     g["EncoderKeepout"] = roof(box(ecx - eb, ecx + eb, vc - eb, vc + eb,
-                                   pz - p["ENC_BODY_H"] - p["ENC_LUGS"], pz))
+                                   zb - p["ENC_BODY_H"] - p["ENC_LUGS"], zb))
+    g["EncNutClear"] = roof(cyl_z(ecx, vc, nut_clr, pz - p["ENC_NUT_T"] - 1.0, pz))
+    # flat seat on the outside: nothing may stand above the top face there
+    g["EncSeat"] = roof(cyl_z(ecx, vc, nut_clr, WALL, WALL + 5.0))
     n12 = p["GX12_NUT"] / math.cos(math.radians(30))
     g["GX12Keepout"] = fuse_all([cyl_y(g12x, g12z, p["GX12_D"], WALL, WALL + p["GX12_DEPTH"]),
                                  cyl_y(g12x, g12z, n12, WALL, WALL + 2.5)])
@@ -569,7 +572,8 @@ def report(g):
              ("GX12Keepout", "Tray"), ("GX16Keepout", "Tray"), ("EncoderKeepout", "Cover"),
              ("DisplayModule", "Cover"), ("TiePost", "PCB"), ("TiePost", "C101"),
              ("HdrTails", "Cover"), ("HdrTails", "LatchHooks"), ("HdrBack", "Cover"),
-             ("HdrBack", "PCB"), ("HdrBack", "PartsEnvelope"), ("LatchHooks", "DispPCB")]
+             ("HdrBack", "PCB"), ("HdrBack", "PartsEnvelope"), ("LatchHooks", "DispPCB"),
+             ("EncNutClear", "Cover"), ("EncSeat", "Cover")]
     for a, b in pairs:
         d, v = clearance(g[a], g[b])
         print("  %-15s vs %-14s dist %6.2f mm  common %8.2f mm3" % (a, b, d, v))

@@ -107,9 +107,12 @@ model is driven from a spreadsheet with exactly these names.
 
 ### 4. Encoder mount
 
-- EC11 through the sloped top: round hole `ENC_BUSH` + 0.3 mm, plus a slot for the
-  anti-rotation tab. Local top thickness `ENC_PANEL` so the bushing still takes the
-  nut and washer.
+- EC11 through the sloped top: round hole `ENC_BUSH` + 0.3 mm. The bushing
+  (7.8 mm, 6 mm long, measured) is clamped with two nuts, one under the panel and
+  one on top, which also sets the knob height; local top thickness `ENC_PANEL`
+  2.0 mm. No anti-rotation slot: the inner nut holds the body off the panel.
+- Under the panel a clear 14.7 mm circle, 3 mm deep, so the inner nut can be
+  turned.
 - Knob clears the display window by at least 3 mm.
 
 ### 5. Status LED
@@ -142,8 +145,8 @@ model is driven from a spreadsheet with exactly these names.
 | DISP_T | 3.1 mm (1.2 PCB + 1.9 LCD_T) | measured 2026-10-19 |
 | DISP_ACTIVE | 23.4 x 23.4 mm, 6.22 mm from header edge | vendor drawing |
 | DISP_LIP | 1.7 mm from the PCB long edge | active area starts at 2.05 |
-| ENC_BUSH | TBD (M7 or M9) | measure |
-| ENC_PANEL | TBD | bushing length minus nut and washer |
+| ENC_BUSH | 7.8 mm, 6 mm long | measured 2026-10-19 |
+| ENC_PANEL | 2.0 mm | bushing length minus two 2 mm nuts |
 
 ## Consequences
 
@@ -169,8 +172,7 @@ model is driven from a spreadsheet with exactly these names.
 
 ## Open items
 
-- Measure: ENC_BUSH and its
-  length, USB_Z, CABLE_D, GX12 and GX16 real hole and nut sizes.
+- Measure: encoder nut size, USB_Z, CABLE_D, GX12 and GX16 real hole and nut sizes.
 - J301 has no STEP model; the USB-C opening is placed from the real board until one
   is added.
 - ADR 0004 (boost rail, Proposed) reserves 25 x 20 mm at the board's front left; if
