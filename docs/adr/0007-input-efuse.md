@@ -59,7 +59,8 @@ and shorting them destroys the part on a reversed supply.
 
 ### Values
 
-- Current limit: I_OL = 12 / R_ILIM(kohm). R_ILIM = 12.1k 1 % -> 0.99 A.
+- Current limit: I_OL = 12 / R_ILIM(kohm). R_ILIM = 12k 1 % (JLC basic; 12.1k
+  is extended only) -> 1.00 A.
   Worst-case peak load is 0.29 A (coil 170 mA + logic), so this is 3.4x
   headroom and still well under the 2 A brick.
 - Inrush: t_ramp = 8e3 x V_IN x C_dVdT. C_dVdT = 220 nF X7R gives 42 ms at 24 V,
