@@ -666,10 +666,6 @@
         "pattern": "Net-(J101-Pin_2)"
       },
       {
-        "netclass": "HighCurrent",
-        "pattern": "Net-(Q101-D)"
-      },
-      {
         "netclass": "USB",
         "pattern": "/MCU/USB_DP"
       },

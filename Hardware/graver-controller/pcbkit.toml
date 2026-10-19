@@ -94,10 +94,11 @@ via = [0.5, 0.2]
 track_width = 0.2
 same_net_pad_clearance = 0.15     # no vias in SMD pads
 signal_layers = ["F.Cu", "B.Cu"]  # In1/In2 stay solid planes
-keep_groups = ["hand"]            # tools/pcb5/handroute.py copper survives krt-route
+keep_groups = ["hand", "efuse"]   # tools/pcb5/handroute.py and efuse.py copper survives krt-route
 route_extra = ["--ordering", "mps"]
-power_nets   = ["GND", "+3V3", "*VDDA", "+5V", "VBUS", "*D105-A*", "VIN", "*COIL_NEG", "*CLAMP", "*SHUNT_HI", "*U101-SW*", "*J101-Pin_2*", "*Q101-D*"]
-power_widths = [0.4,   0.4,    0.4,     0.5,   0.5,    0.5,        0.8,   0.8,        0.8,      0.8,         0.8,          0.8,             0.8]
+# *J101-Pin_2* is the U103 IN net (ADR 0007), VIN is U103 OUT
+power_nets   = ["GND", "+3V3", "*VDDA", "+5V", "VBUS", "*D105-A*", "VIN", "*COIL_NEG", "*CLAMP", "*SHUNT_HI", "*U101-SW*", "*J101-Pin_2*"]
+power_widths = [0.4,   0.4,    0.4,     0.5,   0.5,    0.5,        0.8,   0.8,        0.8,      0.8,         0.8,          0.8]
 planes = { nets = ["GND", "+3V3"], layers = ["In1.Cu", "In2.Cu"], via = [0.6, 0.3] }
 ground = { net = "GND", width = 0.4 }
 

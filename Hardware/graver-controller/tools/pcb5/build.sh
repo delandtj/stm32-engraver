@@ -3,7 +3,7 @@
 # Hardware/graver-controller. Each stage is a separate command so a step can
 # be repeated on its own; the committed .kicad_pcb is the artifact.
 #
-#   tools/pcb5/build.sh board     # netlist -> mkboard -> outline -> setrules -> place
+#   tools/pcb5/build.sh board     # netlist -> mkboard -> outline -> setrules -> place -> efuse
 #   tools/pcb5/build.sh route     # krt-route (slow), then viaout, inner-layer cleanup
 #   tools/pcb5/build.sh finish    # gndpour -> DRC -> prune -> silk -> connlabels -> refill
 #   tools/pcb5/build.sh check     # DRC + tools/pcb5/check.py + renders
@@ -28,6 +28,7 @@ board)
     cp "$SCRATCH/ol.kicad_pcb" $N.kicad_pcb
     step setrules; $PK setrules $N.kicad_pcb $N.kicad_pro
     step place; python3 tools/pcb5/place.py
+    step efuse; python3 tools/pcb5/efuse.py      # ADR 0007 U103 block + RTN island
     ;;
 route)
     step krt-route; $PK krt-route
