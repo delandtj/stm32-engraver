@@ -76,10 +76,13 @@ DEFAULTS = [
     ("INSERT_L", 5.5, "M3 heat-set insert hole depth"),
     ("BOSS_D", 8.0, "insert boss OD"),
     ("CBOSS_H", 6.0, "tray corner boss height above floor"),
-    ("COL_D", 9.0, "cover screw column OD"),
+    ("COL_D", 9.0, "cover screw boss OD (also tray corner boss OD)"),
+    ("COL_H", 10.0, "cover screw boss length from its bottom face (sits on the tray boss)"),
+    ("GUSSET_ANGLE", 65.0, "boss gusset angle from horizontal in the cover print orientation, deg"),
     ("SCREW_CLR", 3.4, "M3 clearance hole in tray corner bosses"),
     ("CBORE_D", 6.0, "counterbore for M3 socket head, from below the tray"),
     ("CBORE_H", 3.4, "counterbore depth (head 3.0 sits 0.4 below the floor)"),
+    ("SAC_LAYER", 0.3, "sacrificial bridge over the screw hole at the counterbore top; pierce it"),
     ("FOOT_D", 10.0, "rubber foot recess dia"),
     ("FOOT_H", 1.0, "rubber foot recess depth"),
     ("FOOT_INSET", 15.0, "foot centre from outer edges (clear of the screw counterbores)"),
@@ -88,7 +91,10 @@ DEFAULTS = [
     ("DISP_KX", 80.0, "KiCad x of display module centre (J401)"),
     ("DISP_Y0", 0.0, "module lower end, mm behind board front edge (plan)"),
     ("RAIL_W", 2.0, "rail leg width"),
-    ("RAIL_LIP_T", 1.2, "rail lip thickness"),
+    ("RAIL_LIP_T", 1.2, "rail lip thickness at its tip"),
+    ("LIP_ANGLE", 60.0, "rail lip underside slope from horizontal in print orientation, deg"),
+    ("WIN_CHAMF_ANGLE", 60.0, "window chamfer angle from horizontal in print orientation, deg"),
+    ("TEARDROP_ANGLE", 60.0, "GX hole teardrop sides, min angle from horizontal in print, deg"),
     ("RAIL_CLR", 0.2, "module side/end clearance in rails"),
     ("WIN_MARGIN", 0.5, "ADR: window = active + 0.5 per side"),
     ("WIN_CHAMF", 1.5, "45 deg chamfer depth on window outside"),
@@ -276,7 +282,7 @@ def build(p):
         cuts.append(cyl_z(x, y, p["INSERT_D"], z_pcb_bot - p["INSERT_L"], z_pcb_bot + 1))
     for x, y in cols:
         # M3 from below: counterbore flush with the floor, clearance hole up
-        cuts.append(cyl_z(x, y, p["SCREW_CLR"], -1, zc0 + 1))
+        cuts.append(cyl_z(x, y, p["SCREW_CLR"], p["CBORE_H"] + p["SAC_LAYER"], zc0 + 1))
         cuts.append(cyl_z(x, y, p["CBORE_D"], -1, p["CBORE_H"]))
     fi = p["FOOT_INSET"]
     for x, y in [(fi, fi), (W - fi, fi), (fi, D - fi), (W - fi, D - fi)]:
@@ -291,7 +297,63 @@ def build(p):
     outer = prism(0, D, z_cov0, ztop(0), ztop(D), 0, W)
     inner = prism(WALL, D - WALL, z_cov0 - 1, zund(WALL), zund(D - WALL), WALL, W - WALL)
     shell = outer.cut(inner)
-    colsolid = fuse_all([cyl_z(x, y, p["COL_D"], zc0, ztop(D) + 10) for x, y in cols]).common(outer)
+    # short screw bosses at the rim, fused into the adjacent wall(s), with a
+    # 45 deg gusset above them back into the wall(s) so they print top-down
+    # without supports
+    r = p["COL_D"] / 2.0
+    zb1 = zc0 + p["COL_H"]
+    big = max(W, D) + 20
+    # gusset slope k = horizontal extent per mm of height (assembly frame), chosen
+    # so the side-wall gusset face is GUSSET_ANGLE from horizontal once the cover
+    # is rotated 180 - TILT about X for printing
+    cb_ = math.cos(math.radians(p["GUSSET_ANGLE"]))
+    ct_ = math.cos(t)
+    k = cb_ / math.sqrt(max(ct_ * ct_ - cb_ * cb_, 1e-6))
+
+    def wedge_x(wx, sgn, h):
+        # region |x - wx| <= zb1 + h - z (sgn: side of the wall the box is on)
+        pts = [V(wx - sgn, -10, zb1 - 1), V(wx + sgn * (h + 1), -10, zb1 - 1),
+               V(wx + sgn * h, -10, zb1), V(wx, -10, zb1 + h / k), V(wx - sgn, -10, zb1 + h / k + 1),
+               V(wx - sgn, -10, zb1 - 1)]
+        return Part.Face(Part.makePolygon(pts)).extrude(V(0, big, 0))
+
+    def wedge_y(wy, sgn, h):
+        pts = [V(-10, wy - sgn, zb1 - 1), V(-10, wy + sgn * (h + 1), zb1 - 1),
+               V(-10, wy + sgn * h, zb1), V(-10, wy, zb1 + h / k), V(-10, wy - sgn, zb1 + h / k + 1),
+               V(-10, wy - sgn, zb1 - 1)]
+        return Part.Face(Part.makePolygon(pts)).extrude(V(big, 0, 0))
+
+    bosses = []
+    for i, (x, y) in enumerate(cols):
+        sx = -1 if x < W / 2 else 1           # which side wall
+        wx = WALL if sx < 0 else W - WALL
+        walls_y = i != 2                       # rear-left boss sits on the left wall only
+        sy = -1 if y < D / 2 else 1
+        wy = WALL if sy < 0 else D - WALL
+        ox, oy = wx + sx * 0.5, wy + sy * 0.5   # 0.5 into the wall
+        fp = [Part.makeCylinder(r, 1.0, V(x, y, 0)),
+              box(min(ox, x), max(ox, x), y - r, y + r, 0, 1.0)]
+        if walls_y:
+            fp.append(box(x - r, x + r, min(oy, y), max(oy, y), 0, 1.0))
+            fp.append(box(min(ox, x), max(ox, x), min(oy, y), max(oy, y), 0, 1.0))
+        foot = fuse_all(fp)
+        h = abs(x - wx) + r
+        if walls_y:
+            h = max(h, abs(y - wy) + r)
+        m = App.Matrix()
+        m.scale(1, 1, zb1 + h / k - zc0)
+        solid = foot.transformGeometry(m)
+        solid.translate(V(0, 0, zc0))
+        # the side-wall gusset alone supports the whole footprint (h covers it).
+        # A front-wall gusset is added too; a rear-wall one would be a 60 deg
+        # overhang once the cover is tilted TILT for printing, so it is left out.
+        gus = wedge_x(wx, -sx, h)
+        if walls_y and sy < 0:
+            gus = gus.fuse(wedge_y(wy, -sy, h))
+        keep = box(-1, W + 1, -1, D + 1, zc0 - 1, zb1).fuse(gus)
+        bosses.append(solid.common(keep))
+    colsolid = fuse_all(bosses).common(outer)
+    g["boss_top"] = zb1
 
     # roof frame: x = world x, y = up the slope from the module lower end,
     # z = outward normal (0 = roof underside, WALL = roof outer face)
@@ -306,16 +368,25 @@ def build(p):
     dcx = kx(p["DISP_KX"])
     hw = p["DISP_W"] / 2.0
     slot_h = p["DISP_T"] + 0.3
-    rail_z0 = -(slot_h + p["RAIL_LIP_T"])
+    # lip underside (the PCB back rests on its edge line) rises at LIP_ANGLE
+    # from the PCB edge inward, so it prints roof-down without supports
+    lip_rise = (p["DISP_LIP"]) * math.tan(math.radians(p["LIP_ANGLE"]))
+    rail_z0 = -(slot_h + lip_rise + p["RAIL_LIP_T"])
     rc = p["RAIL_CLR"]
     holder = []
     for s in (-1, 1):
         a = dcx + s * (hw + rc)
         b = dcx + s * (hw + rc + p["RAIL_W"])
         holder.append(box(min(a, b), max(a, b), 0, p["DISP_L"] + rc, rail_z0, 0.5))
-        a = dcx + s * (hw - p["DISP_LIP"])
-        b = dcx + s * (hw + rc)
-        holder.append(box(min(a, b), max(a, b), 0, p["DISP_L"] + rc, rail_z0, -slot_h))
+        # one straight slope through the PCB edge point (xe, -slot_h); outside
+        # the module it continues up into the leg, so no flat strip is left
+        xl = dcx + s * (hw + rc + 0.5)     # inside the leg
+        xt = dcx + s * (hw - p["DISP_LIP"])  # lip tip
+        tl = math.tan(math.radians(p["LIP_ANGLE"]))
+        zl = -slot_h + (rc + 0.5) * tl
+        prof = Part.makePolygon([V(xl, 0, zl), V(xt, 0, -slot_h - lip_rise),
+                                 V(xt, 0, rail_z0), V(xl, 0, rail_z0), V(xl, 0, zl)])
+        holder.append(Part.Face(prof).extrude(V(0, p["DISP_L"] + rc, 0)))
     ow = hw + rc + p["RAIL_W"]
     estop = box(dcx - ow, dcx + ow, p["DISP_L"] + rc, p["DISP_L"] + rc + 2.0, rail_z0, 0.5)
     fr = p["FPC_RELIEF"]
@@ -358,11 +429,38 @@ def build(p):
     yedges = [e for e in ub.Edges if abs(e.tangentAt(e.FirstParameter).y) > 0.99]
     cc.append(ub.makeFillet(1.0, yedges))
     g16x, g16z = kx(p["GX16_KX"]), z_pcb_top + p["GX16_Z"]
-    cc.append(cyl_y(g16x, g16z, p["GX16_D"], ry0, ry1))
+    # GX holes: teardrop pointing down in assembly (= up when the cover prints
+    # top-down), truncated inside the nut's across-flats circle
+    ct = math.cos(math.radians(p["TEARDROP_ANGLE"])) / math.cos(t)
+    td_half = math.radians(90.0) - math.acos(min(1.0, ct))   # side half-angle from vertical
+
+    def teardrop_y(x, z, dia, y0, y1, flat_r):
+        rr = dia / 2.0
+        tip = rr / math.sin(td_half)
+        tz = min(tip, flat_r)
+        hw_ = (tip - tz) * math.tan(td_half)
+        tx = rr * math.cos(td_half)
+        tzz = rr * math.sin(td_half)
+        pts = [V(x - tx, y0, z - tzz), V(x - hw_, y0, z - tz), V(x + hw_, y0, z - tz), V(x + tx, y0, z - tzz)]
+        if hw_ < 1e-3:
+            pts = [pts[0], V(x, y0, z - tip), pts[3]]
+        pts.append(V(x, y0, z))
+        pts.append(pts[0])
+        wedge = Part.Face(Part.makePolygon(pts)).extrude(V(0, y1 - y0, 0))
+        return cyl_y(x, z, dia, y0, y1).fuse(wedge)
+
+    g["td"] = {}
+    for nm, (hx, hz, hd, nut, y0_, y1_) in {
+            "GX16": (g16x, g16z, p["GX16_D"], p["GX16_NUT"], ry0, ry1),
+            "GX12": (kx(p["GX12_KX"]), p["GX12_Z"], p["GX12_D"], p["GX12_NUT"], -1, WALL + 1)}.items():
+        fr_ = nut / 2.0 - 0.5
+        cc.append(teardrop_y(hx, hz, hd, y0_, y1_, fr_))
+        tip_ = hd / 2.0 / math.sin(td_half)
+        g["td"][nm] = (min(tip_, fr_), 2 * (tip_ - min(tip_, fr_)) * math.tan(td_half), nut / 2.0)
     cc.append(cyl_y(cab_x, cab_z, cab_d, ry0, ry1))
     # front wall
     g12x, g12z = kx(p["GX12_KX"]), p["GX12_Z"]
-    cc.append(cyl_y(g12x, g12z, p["GX12_D"], -1, WALL + 1))
+    # (GX12 hole is cut above, with the teardrop)
     # roof: display window with outside chamfer, M2 pilots
     vc = p["AA_Y0"] + p["DISP_ACTIVE"] / 2.0       # AA centre from the header edge
     win = p["DISP_ACTIVE"] + 2 * p["WIN_MARGIN"]
@@ -374,7 +472,8 @@ def build(p):
                                  V(cx - h, cy + h, z), V(cx - h, cy - h, z)])
 
     ch = p["WIN_CHAMF"]
-    rc_cuts.append(Part.makeLoft([sq(dcx, vc, win, WALL - ch), sq(dcx, vc, win + 2 * (ch + 1), WALL + 1)], True))
+    wc = 1.0 / math.tan(math.radians(p["WIN_CHAMF_ANGLE"]))  # widening per mm of depth
+    rc_cuts.append(Part.makeLoft([sq(dcx, vc, win, WALL - ch), sq(dcx, vc, win + 2 * (ch + 1) * wc, WALL + 1)], True))
     rc_cuts.extend(latch_cut)
     # top skin relief over the front pin tails of the header (+0.5 mm)
     hspan = (p["HDR_N"] - 1) * p["HDR_PITCH"] / 2.0 + 1.0
@@ -457,6 +556,9 @@ def report(g):
           % (g["W"], g["D"], g["H_front"], g["H_rear"]))
     print("Knob edge to window edge: %.1f mm" % g["knob_gap"])
     print("Window centre: %.2f mm up the slope from the module header edge" % g["win_v"])
+    for nm, (d_, w_, nr) in g["td"].items():
+        print("%s teardrop: flat %.1f mm below axis, flat width %.1f mm, nut inscribed radius %.1f"
+              % (nm, d_, w_, nr))
     print("Latch tongue bending strain at full deflection: %.2f %%" % (100 * g["latch_strain"]))
     pairs = [("Cover", "PCB"), ("Cover", "PartsEnvelope"), ("DisplayModule", "PCB"),
              ("DisplayModule", "PartsEnvelope"), ("EncoderKeepout", "PCB"),

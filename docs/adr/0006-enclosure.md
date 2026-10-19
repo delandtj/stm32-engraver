@@ -149,8 +149,13 @@ model is driven from a spreadsheet with exactly these names.
 
 - One print per part, no supports. The tray prints floor down. The cover prints
   with its sloped top flat on the bed (rotated 165 deg about X); printed on its wall
-  rim instead, the 15 deg roof would need full supports. Remaining overhangs over
-  45 deg are short bridges (rail lips, hole tops, counterbores).
+  rim instead, the 15 deg roof would need full supports. Design rule: nothing
+  flatter than 60 deg from horizontal except bridges. Rail lip undersides, window
+  chamfer, GX12/GX16 teardrops (flat hidden under the nut) and the cover boss
+  gussets (65 deg) follow it; the tray counterbores get a 0.3 mm sacrificial
+  layer that the screw pushes through.
+- Cover screw bosses are short (COL_H 10 mm) at the cover rim, fused into the
+  walls, not full-height columns.
 - Model: `Box/enclosure.FCStd` with a `Params` sheet; `Box/build_enclosure.py`
   rebuilds geometry and exports from the sheet (a cell change needs a rerun).
   Cells beyond the table above (SIDE_GAP, ENC_KX, LATCH_*, TIE_*, COL_RL_DY,

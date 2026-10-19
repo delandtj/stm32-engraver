@@ -54,21 +54,33 @@ Layout cells: DISP_KX, ENC_KX, GX12_KX, GX12_Z, GX16_KX, GX16_Z, CABLE_KX
 
 - Material: PETG preferred (insert heat, toughness); PLA works.
 - 0.2 mm layers, 4 walls (the 2.4 mm walls come out solid), 20 % gyroid infill.
-- Tray: as exported, floor on the bed. No supports. The foot recesses and
-  the steps of the screw counterbores are short bridges.
+- Tray: as exported, floor on the bed. No supports. The foot recesses
+  (10 mm discs) and the screw counterbores (6 mm discs) are flat bridges;
+  each counterbore is closed by a 0.3 mm sacrificial layer (SAC_LAYER) over
+  the screw hole - push the screw through it or open it with a 3.5 mm drill.
 - Cover: as exported, upside down with the sloped top flat on the bed (the
-  model is rotated 165 deg about X). No supports. The display rail lips are a
-  1.7 mm horizontal overhang and print fine. The window chamfer is 45 deg.
+  model is rotated 165 deg about X). No supports. The display rail lips
+  have a 60 deg underside (LIP_ANGLE): the module PCB rests on the slope
+  line at its edge. The window chamfer is 60 deg (WIN_CHAMF_ANGLE). The GX12
+  and GX16 holes are teardrops pointing to the rim (TEARDROP_ANGLE 60),
+  truncated flat 0.5 mm inside the nut's across-flats circle so the shape is
+  hidden under the nut.
   The two latch tongues are part of the top skin (cut free by 0.6 mm slits,
   thinned to 1.4 mm from the inside) and their hooks grow straight up from
   them with the ramp facing up, so they need no supports either.
+  The four cover screw bosses are short (COL_H = 10 mm) blocks at the rim,
+  merged into the walls, with a gusset above them back into the side wall at
+  GUSSET_ANGLE (65 deg from horizontal in print orientation).
+  Everything flatter than 60 deg left on the cover is a bridge: USB-C
+  opening top (13 mm), GX16 teardrop flat (8.0 mm), GX12 teardrop flat
+  (5.8 mm), the 5.5 mm cable hole top.
   Footprint about 109 x 103 mm, 57 mm high.
 
 ## Hardware (per box)
 
 - 8 x M3 heat-set inserts, hole 4.0 mm x 5.5 mm deep (e.g. M3 x 5.7 x 4.6
   short). 4 in the tray PCB bosses (from above), 4 in the bottom ends of the
-  cover's screw columns (pressed in from below, cover upside down).
+  cover's screw bosses (pressed in from below, cover upside down).
 - 4 x M3 x 6 screws: board to tray.
 - 4 x M3 x 10 socket head screws (ISO 4762): cover to tray, from below. The
   head sits in a 6.0 x 3.4 mm counterbore, 0.4 mm below the floor; 5.0 mm of
@@ -84,7 +96,7 @@ Layout cells: DISP_KX, ENC_KX, GX12_KX, GX12_Z, GX16_KX, GX16_Z, CABLE_KX
 
 ## Assembly order
 
-Inserts into the tray and the cover columns, board onto the PCB bosses.
+Inserts into the tray and the cover screw bosses, board onto the PCB bosses.
 Encoder into the cover. Slide the display into the rails from the lower (front)
 end, glass first, header last: the two hooks ride up over the glass, the
 tongues lift out of the top by about 2.8 mm, and they click down behind the
