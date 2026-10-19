@@ -88,11 +88,13 @@ put('J402', 117.0, 53.5, 90)        # pedal
 
 # ------------------------------------------------------------ power block
 put('C101', 56.0, 65.0, 0)          # 470 uF radial, rear-left (origin = pad 1)
-putc('F101', 67.0, 60.0, 270)       # fuse below J101 pad 2
-putc('Q101', 73.5, 62.0, 0)         # reverse-polarity PMOS, drain at F101
+# ADR 0007 input eFuse (rev 2): the spots are owned by tools/pcb5/efuse.py,
+# which also draws the block's copper and RTN island; run it after place.py
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from efuse import PLACE as EFUSE
+for r, (x, y, rot) in EFUSE.items():
+    put(r, x, y, rot)
 putc('D102', 71.0, 68.5, 0)         # VIN TVS
-putc('D101', 79.5, 67.5, 0)         # gate zener
-putc('R101', 79.5, 70.0, 0)         # gate pulldown
 putc('U101', 61.5, 79.5, 0)         # LM5164
 putc('C105', 54.5, 76.5, 180)      # CIN 2.2u, VIN pad right at pins 1/2
 putc('C107', 54.5, 79.5, 180)      # CIN 100n, at pins 1/2

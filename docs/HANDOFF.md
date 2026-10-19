@@ -298,6 +298,13 @@ Key facts (details in the ADR):
   longer applies, so the 18-36 V electronics rating is the only limit left.
   The pair wants a strain-relief anchor so the solder is not the mechanical
   joint.
+  Input protection differs per revision. Rev 1 (the 12 built boards): F101
+  fuse + Q101 reverse-polarity PMOS; F101 gets the 1206L035/30WR PTC as a
+  rework (see "Brick sizing"). Rev 2 (branch board-rev2, ADR 0007): U103
+  TPS26602 eFuse instead of F101/Q101/D101/R101 - reverse polarity, 1.0 A
+  limit with auto-retry, 42 ms soft start, UVLO 14.9 V, 38 V clamp. Its RTN
+  net is a separate copper island and must never be tied to GND. Layout:
+  tools/pcb5/efuse.py.
 - Pin map: in the ADR, verified against the datasheet.
 
 ### Brick sizing (worked out 2026-10-01)

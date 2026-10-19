@@ -71,11 +71,11 @@ corrections = [
   ["^SOT-23$",                    "", 180, 0, 0],   # Q202 SI2309, Q203 BSS123, U401 PESD5V0S2BT
   ["^SOT-23-5$",             "C51118", 270, 0, 0],   # U102 AP2112K: EasyEDA pin 1 lower left
   ["^SOT-23-5$",                  "", 180, 0, 0],   # U201 UCC27517
-  ["^SOT-223-3_TabPin2$",         "", 180, 0, 0],   # Q101 DMP6023LE
   ["^TO-252-2$",                  "",  90, 0, 0],   # Q201 IRLR3410: leads up, pin 1 right
   ["^HSOP-8-1EP_3.9x4.9mm_P1.27mm_EP2.41x3.1mm$", "", 270, 0, 0],   # U101 LM5164, SOIC-8 body
+  ["^HTSSOP-16-1EP_4.4x5mm_P0.65mm_EP3.4x5mm_Mask3x3mm_ThermalVias$", "", 270, 0, 0],   # U103 TPS26602PWPR (C2872872)
   ["^QFN-48-1EP_7x7mm_P0.5mm_EP5.6x5.6mm$",       "", 270, 0, 0],   # U301 STM32F411, as LQFP-48
-  ["^D_SOD-123$",                 "",   0, 0, 0],   # D101 D203 BZT52C12
+  ["^D_SOD-123$",                 "",   0, 0, 0],   # D203 BZT52C12
   ["^D_SMB$",                     "",   0, 0, 0],   # D102 SMBJ36A, D202 SMBJ24A
   ["^LED_0805_2012Metric$",  "C2297", 180, 0, 0],   # D104: EasyEDA pad 1 is the anode here
   ["^LED_0603_1608Metric$",  "C2286", 180, 0, 0],   # D301: same
@@ -94,10 +94,11 @@ via = [0.5, 0.2]
 track_width = 0.2
 same_net_pad_clearance = 0.15     # no vias in SMD pads
 signal_layers = ["F.Cu", "B.Cu"]  # In1/In2 stay solid planes
-keep_groups = ["hand"]            # tools/pcb5/handroute.py copper survives krt-route
+keep_groups = ["hand", "efuse"]   # tools/pcb5/handroute.py and efuse.py copper survives krt-route
 route_extra = ["--ordering", "mps"]
-power_nets   = ["GND", "+3V3", "*VDDA", "+5V", "VBUS", "*D105-A*", "VIN", "*COIL_NEG", "*CLAMP", "*SHUNT_HI", "*U101-SW*", "*J101-Pin_2*", "*Q101-D*"]
-power_widths = [0.4,   0.4,    0.4,     0.5,   0.5,    0.5,        0.8,   0.8,        0.8,      0.8,         0.8,          0.8,             0.8]
+# *J101-Pin_2* is the U103 IN net (ADR 0007), VIN is U103 OUT
+power_nets   = ["GND", "+3V3", "*VDDA", "+5V", "VBUS", "*D105-A*", "VIN", "*COIL_NEG", "*CLAMP", "*SHUNT_HI", "*U101-SW*", "*J101-Pin_2*"]
+power_widths = [0.4,   0.4,    0.4,     0.5,   0.5,    0.5,        0.8,   0.8,        0.8,      0.8,         0.8,          0.8]
 planes = { nets = ["GND", "+3V3"], layers = ["In1.Cu", "In2.Cu"], via = [0.6, 0.3] }
 ground = { net = "GND", width = 0.4 }
 

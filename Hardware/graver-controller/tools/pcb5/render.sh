@@ -21,7 +21,7 @@ def region(refs, m=3.0):
 print('board', X0, Y0, X1, Y1, '')
 print('usb', *region(['J301', 'U302', 'U301']), '/MCU/USB_DP /MCU/USB_DM')
 print('mcu', *region(['U301', 'Y301', 'C301', 'C302', 'C303', 'C304', 'J302'], 2.0), '+3V3 GND')
-print('power', *region(['J101', 'F101', 'Q101', 'C101', 'U101', 'L101', 'U102']), 'VIN +5V Net-(U101-SW)')
+print('power', *region(['J101', 'U103', 'C101', 'U101', 'L101', 'U102']), 'VIN +5V Net-(U101-SW)')
 print('driver', *region(['J201', 'Q201', 'D201', 'D202', 'U201', 'U202', 'R204']), 'VIN /Driver/COIL_NEG /Driver/CLAMP /Driver/SHUNT_HI')
 PY
 )
