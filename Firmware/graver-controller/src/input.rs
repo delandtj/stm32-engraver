@@ -34,12 +34,13 @@ pub static EVENTS: Channel<CriticalSectionRawMutex, InputEvent, 16> = Channel::n
 
 /// Quadrature counts per detent.
 ///
-/// The production encoder is an Alps EC11E15244G1: 30 detents, 15 pulses per
-/// revolution. In x4 decoding that is 60 counts per revolution, so 2 counts
-/// per detent. A 24-pulse / 24-detent part (Bourns PEC11R-4220F-S0024) or a
-/// generic 20/20 EC11 gives 4 counts per detent instead.
+/// The encoders bought for the class (generic EC11, 7.8 mm bushing) rest with
+/// A and B both open at every detent, so one detent is a full quadrature cycle:
+/// 4 counts in x4 decoding (measured on board 2, 2026-10-19). The same holds
+/// for 20/20 and 24/24 parts (Bourns PEC11R-4220F-S0024). An Alps
+/// EC11E15244G1 (30 detents, 15 pulses) gives 2 counts per detent instead.
 #[cfg_attr(feature = "buttons", allow(dead_code))]
-pub const COUNTS_PER_DETENT: i32 = 2;
+pub const COUNTS_PER_DETENT: i32 = 4;
 
 /// Poll period for both backends.
 const POLL: Duration = Duration::from_millis(5);
