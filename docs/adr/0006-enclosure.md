@@ -111,7 +111,7 @@ model is driven from a spreadsheet with exactly these names.
   (7.8 mm, 6 mm long, measured) is clamped with two nuts, one under the panel and
   one on top, which also sets the knob height; local top thickness `ENC_PANEL`
   2.0 mm. No anti-rotation slot: the inner nut holds the body off the panel.
-- Under the panel a clear 14.7 mm circle, 3 mm deep, so the inner nut can be
+- Under the panel a clear 13.5 mm circle, 3 mm deep (nut 10 mm AF x 2 mm, measured), so the inner nut can be
   turned.
 - Knob clears the display window by at least 3 mm.
 
@@ -172,7 +172,7 @@ model is driven from a spreadsheet with exactly these names.
 
 ## Open items
 
-- Measure: encoder nut size, USB_Z, CABLE_D, GX12 and GX16 real hole and nut sizes.
+- Measure: USB_Z, CABLE_D, GX12 and GX16 real hole and nut sizes.
 - J301 has no STEP model; the USB-C opening is placed from the real board until one
   is added.
 - ADR 0004 (boost rail, Proposed) reserves 25 x 20 mm at the board's front left; if

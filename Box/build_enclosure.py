@@ -68,8 +68,8 @@ DEFAULTS = [
     ("FPC_RELIEF", 1.0, "relief for the FPC fold strip past the BL far edge / in the end stop"),
     ("ENC_BUSH", 7.8, "ADR: encoder bushing dia, measured 2026-10-19 (hole = +0.3)"),
     ("ENC_BUSH_L", 6.0, "encoder bushing length, measured 2026-10-19"),
-    ("ENC_NUT_AF", 11.0, "TBD measure: encoder nut across flats"),
-    ("ENC_NUT_T", 2.0, "TBD measure: encoder nut thickness (one nut under, one on top)"),
+    ("ENC_NUT_AF", 10.0, "encoder nut across flats, measured 2026-10-19"),
+    ("ENC_NUT_T", 2.0, "encoder nut thickness, measured 2026-10-19 (one under, one on top)"),
     ("ENC_PANEL", 2.0, "ADR: local top thickness at encoder (2 nuts + panel = bushing)"),
     # --- extra, not in the ADR table ---
     ("SIDE_GAP", 9.5, "board edge to side wall inner face (room for screw columns)"),
