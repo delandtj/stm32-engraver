@@ -433,10 +433,11 @@ boot for scoping the strike path.
     cargo run --release            # probe-rs + defmt, needs an SWD probe
     tools/dfu.sh                   # USB DFU, no probe
 
-Unverified on hardware: ST7789 offset / colour inversion for the OT3499
-module, encoder detent divisor (2 counts per detent for the Alps 30/15),
-flash journal, bootloader jump. Jan has no encoder yet (2026-09-16): use
-the buttons feature, PB4 up, PB5 down, PB7 push.
+Verified on hardware (board 2, 2026-10-19): ST7789 with offset 0 and
+colours inverted, as in ui.rs; encoder at 4 counts per detent (the class
+encoders rest with A and B open at every click; firmware 9eb05f2); settings
+journal survives a power cycle. Still unverified: the bootloader jump (DFU
+by holding the encoder push at power-up).
 
 ## How to work on the schematic
 
