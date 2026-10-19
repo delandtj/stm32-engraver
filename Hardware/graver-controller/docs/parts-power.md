@@ -11,13 +11,14 @@ KiCad lib_ids were checked against the installed KiCad 10.0.6 libraries
 
 | # | Function | Pick (MPN) | LCSC | Class | Stock | $/pc | Package | Symbol lib_id | Footprint lib_id |
 |---|----------|------------|------|-------|-------|------|---------|---------------|------------------|
-| 1 | Resettable PTC, 0.35 A hold / 0.75 A trip, 30 V, Imax 100 A | Littelfuse 1206L035/30WR | C2153989 | E | - | - | 1206 | Device:Fuse | Fuse:Fuse_1206_3216Metric |
+| 0 | Input eFuse, rev 2 (ADR 0007): reverse polarity, 1.0 A limit with auto-retry, 42 ms soft start, 38 V clamp. Replaces items 1, 2 and 2z (F101, Q101, D101, R101) | TI TPS26602PWPR (U103) | C2872872 | E | 291 (2026-10-19) | ~2.3 | HTSSOP-16 PowerPAD (TI PWP0016A) | Power_Management:TPS26602PWP | Package_SO:HTSSOP-16-1EP_4.4x5mm_P0.65mm_EP3.4x5mm_Mask3x3mm_ThermalVias |
+| 1 | REV 1 ONLY (gone in rev 2, see item 0): resettable PTC, 0.35 A hold / 0.75 A trip, 30 V, Imax 100 A | Littelfuse 1206L035/30WR | C2153989 | E | - | - | 1206 | Device:Fuse | Fuse:Fuse_1206_3216Metric |
 | 1x | WAS: Fuse 1 A (built on the first 12 boards) | Littelfuse 0437001.WR - 437 series is FAST-acting, not Slo-Blo; I2t 0.100 A2s, 0.42 ohm cold | C99537 | E | - | - | 1206 | Device:Fuse | Fuse:Fuse_1206_3216Metric |
 | 1b | Fuse fallback (1206) | JFC1206-1100TS (TS = time-lag, check datasheet) | C43323031 | E | 2,960 | 0.074 | 1206 | Device:Fuse | Fuse:Fuse_1206_3216Metric |
 | 1c | Fuse fallback (2410, deep stock) | Littelfuse 0452001.MRL (Nano2 452, Slo-Blo, 125 V) | C44669 | E | 10,297 | 0.271 | 2410 | Device:Fuse | Fuse:Fuse_Littelfuse-NANO2-451_453 |
-| 2 | Reverse-polarity P-FET | Diodes DMP6023LE-13 (-60 V, 35 mohm at -4.5 V, Vgs +-20 V) | C154901 | E | 28,081 | 0.553 | SOT-223 | Transistor_FET:Q_PMOS_GDS | Package_TO_SOT_SMD:SOT-223-3_TabPin2 |
+| 2 | REV 1 ONLY (gone in rev 2, see item 0): reverse-polarity P-FET (Q101) | Diodes DMP6023LE-13 (-60 V, 35 mohm at -4.5 V, Vgs +-20 V) | C154901 | E | 28,081 | 0.553 | SOT-223 | Transistor_FET:Q_PMOS_GDS | Package_TO_SOT_SMD:SOT-223-3_TabPin2 |
 | 2b | P-FET fallback | JSCJ CJQ60P05 (-60 V, 58 mohm at -10 V) | C504137 | E | 10,280 | 0.257 | SOP-8 | (no generic SO-8 P-FET symbol; see notes) | Package_SO:SOIC-8_3.9x4.9mm_P1.27mm |
-| 2z | 12 V zener (Vgs clamp; reused in item 12) | BZT52C12 | C19077410 | EP | 589,587 | 0.015 | SOD-123 | Device:D_Zener | Diode_SMD:D_SOD-123 |
+| 2z | 12 V zener (Vgs clamp; reused in item 12). Rev 2 keeps it only as D203; D101 and its 100k pull-down R101 are gone | BZT52C12 | C19077410 | EP | 589,587 | 0.015 | SOD-123 | Device:D_Zener | Diode_SMD:D_SOD-123 |
 | 3 | Input TVS | SMBJ36A (unidirectional, 58.1 V clamp) | C19077588 | EP | 38,166 | 0.051 | SMB | Device:D_Zener (see notes) | Diode_SMD:D_SMB |
 | 3b | TVS fallback | SMBJ36A (listed as unidirectional) | C114001 | E | 20,815 | 0.056 | SMB | Device:D_Zener | Diode_SMD:D_SMB |
 | 4 | Bulk electrolytic | Rubycon 63ZLJ470M12.5X20 (470 uF 63 V, low-Z ZLJ) | C2940725 | E | 8,956 | 0.472 | THT radial 12.5x20, 5 mm | Device:C_Polarized | Capacitor_THT:CP_Radial_D12.5mm_P5.00mm |
@@ -53,6 +54,25 @@ at the output: 0.6% of a 0.26 A full scale and 6% at 26 mA. That's fine for stri
 monitoring and for an 0.8 A trip. I picked TLV9062 over TLV9002 because the comparator half
 drives TIM1_BKIN, and 6.5 V/us responds several times faster than 2 V/us. Add hysteresis
 (positive feedback) to the comparator half.
+
+## Item 0 detail: U103 TPS26602 eFuse (rev 2, ADR 0007)
+
+J101 +24V -> U103 IN (pins 1, 2), U103 OUT (15, 16) -> VIN. Datasheet TI SLVSDG2G.
+The footprint follows TI's PWP0016A land pattern: 3.4 x 5 mm copper, 3 x 3 mm mask
+opening (TI: 3.3 x 3.3), 15 vias of 0.3 mm on a 1.1 mm grid; the 3.4 x 5 mm B.Cu pad
+sits in the B.Cu RTN island. JLC places it with a 270 degree CPL correction (cplcheck.py).
+
+| Ref | Value | Connection / why | Part (LCSC) |
+|-----|-------|------------------|-------------|
+| C117 | 100 nF 100 V X7R 0805 | IN to GND at pins 1/2 (pin 9 has its own GND via) | CL21B104KCFNNNE C28233 (B) |
+| R111 | 100k 0603 | SHDN (pin 7) to IN: always on; SHDN is rated 62 V | 0603WAF1003T5E C25803 (B) |
+| R112 | 12k 1% 0603 | ILIM (11) to RTN: I_OL = 12 / R(kohm) = 1.00 A. The ADR's 12.1k (0.99 A) is Extended only (C22864); 12k is Basic and 1 % away | 0603WAF1202T5E C22790 (B) |
+| C116 | 220 nF 25 V X7R 0603 | dVdT (12) to RTN: t = 8e3 x 24 V x 220 nF = 42 ms, 0.27 A into C101 | CL10B224KA8NNNC C21120 (B) |
+| - | UVLO (3), OVP (5), MODE (6) | to RTN: internal UVLO 14.9 V, fixed 38 V clamp, current limit with auto-retry | - |
+| - | IMON (10), FLT (14), NC (4, 13) | unconnected (IMON/FLT may float) | - |
+
+RTN (pin 8 and the PowerPAD) is its own net and copper island and never touches GND:
+on a reversed supply the reverse-blocking circuit sits between them.
 
 ## Item 5 detail: LM5164 design for 5 V, 0.5 A, 18-36 V in (58 V transient)
 
