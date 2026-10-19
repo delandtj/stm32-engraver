@@ -29,7 +29,7 @@ use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use heapless::String;
 use mipidsi::interface::SpiInterface;
 use mipidsi::models::ST7789;
-use mipidsi::options::ColorInversion;
+use mipidsi::options::{ColorInversion, Orientation, Rotation};
 use mipidsi::{Builder, Display};
 
 use crate::control::{MENU_ROWS, MenuState, Status, UiState};
@@ -42,8 +42,13 @@ pub const HEIGHT: u16 = 240;
 /// Where the visible 240x240 window sits inside the ST7789's 240x320 frame
 /// buffer. The common 1.3" IPS module starts at the origin; 1.14" 240x135 and
 /// some 240x240 round modules do not, so this is a named constant to change.
+/// The offset is given for the unrotated panel; mipidsi mirrors it inside the
+/// frame buffer for a rotated one, so ROTATION needs no offset change.
 pub const OFFSET_X: u16 = 0;
 pub const OFFSET_Y: u16 = 0;
+/// The module slides into the box header end down (ADR 0006), which turns the
+/// panel's native picture (header at the top) upside down.
+pub const ROTATION: Rotation = Rotation::Deg180;
 
 /// Pixel buffer for the SPI interface. One full row of 16-bit pixels.
 pub const LCD_BUFFER_LEN: usize = 512;
@@ -92,6 +97,7 @@ pub fn init(
     let mut lcd = Builder::new(ST7789, interface)
         .display_size(WIDTH, HEIGHT)
         .display_offset(OFFSET_X, OFFSET_Y)
+        .orientation(Orientation::new().rotate(ROTATION))
         // These panels are wired for inverted colours; without this the screen
         // comes up as a photographic negative.
         .invert_colors(ColorInversion::Inverted)
