@@ -64,7 +64,9 @@ model is driven from a spreadsheet with exactly these names.
   - No BOOT0/RESET holes: SW301/SW302 (TS-1187A) are top-press, so a paperclip
     through the wall cannot reach them. DFU is entered by holding the encoder push
     at power-up; anything worse means opening the box.
-  - The pedal socket (GX16-5) on the right, above J402, its body and nut above the
+  - The pedal socket (GX12-3, decided 2026-10-19; same size as the handpiece
+    socket, only the pin count keys them apart, so never GX12-4 here) on the
+    right, above J402, its body and nut above the
     board's parts.
   - The brick cable entry in the left side gap (the board covers the floor under
     J101): a hole `CABLE_D` + 0.5 mm, and directly inside it a floor post with a
@@ -136,10 +138,9 @@ model is driven from a spreadsheet with exactly these names.
 | TILT | 15 deg | default |
 | H_FRONT | 35 mm | default, check against GX12 and display holder |
 | USB_W x USB_H | 13 x 8 mm | default for a moulded plug, check |
-| USB_Z | TBD | measure: receptacle centre above board top |
-| GX12 hole | 12.0 mm | nominal, measure |
-| GX16 hole | 16.0 mm | nominal, measure on the pedal sample |
-| CABLE_D | TBD | measure the brick cable |
+| USB_Z | 1.6 mm | confirmed 2026-10-19 |
+| GX12 hole | 12.2 mm, nut 15 AF, 20 mm deep | nominal, both sockets, measure |
+| CABLE_D | 5.0 mm | confirmed 2026-10-19 |
 | DISP_W x DISP_L | 27.5 x 39 mm | vendor drawing |
 | BL_W x BL_L | 26.16 x 29.22 mm | vendor drawing |
 | DISP_T | 3.1 mm (1.2 PCB + 1.9 LCD_T) | measured 2026-10-19 |
@@ -154,7 +155,7 @@ model is driven from a spreadsheet with exactly these names.
   with its sloped top flat on the bed (rotated 165 deg about X); printed on its wall
   rim instead, the 15 deg roof would need full supports. Design rule: nothing
   flatter than 60 deg from horizontal except bridges. Rail lip undersides, window
-  chamfer, GX12/GX16 teardrops (flat hidden under the nut) and the cover boss
+  chamfer, GX12 teardrops (flat hidden under the nut) and the cover boss
   gussets (65 deg) follow it; the tray counterbores get a 0.3 mm sacrificial
   layer that the screw pushes through.
 - Cover screw bosses are short (COL_H 10 mm) at the cover rim, fused into the
@@ -172,7 +173,8 @@ model is driven from a spreadsheet with exactly these names.
 
 ## Open items
 
-- Measure: USB_Z, CABLE_D, GX12 and GX16 real hole and nut sizes.
+- Measure: GX12 real hole, nut and body depth. USB_Z (1.6) and CABLE_D (5.0)
+  confirmed by Jan 2026-10-19.
 - J301 has no STEP model; the USB-C opening is placed from the real board until one
   is added.
 - ADR 0004 (boost rail, Proposed) reserves 25 x 20 mm at the board's front left; if

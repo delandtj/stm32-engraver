@@ -310,7 +310,7 @@ What still has to be bought loose, none of it from JLC:
 | EC11 encoders, 30 det / 15 pulse, 20 mm shaft | 12 | any seller now - off the board, so no footprint to match |
 | Encoder knobs for 6 mm shaft | 12 | printed or bought |
 | GX12 4-pin socket with pigtail, plus plug | 12 | handpiece, on the box shell |
-| Pedal socket | 12 | blocked on the open pedal question in ADR 0003 |
+| GX12 3-pin socket with pigtail, plus plug | 12 | pedal, box rear (ADR 0006); never 4-pin |
 | Hook-up wire, stranded, 22 AWG | - | display, encoder, pedal, handpiece looms |
 | Hook-up wire, stranded, 18 AWG | - | power feed into J101 |
 

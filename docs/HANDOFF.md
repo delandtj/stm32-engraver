@@ -484,8 +484,10 @@ Decisions still open (ADR "Open Questions"):
   in the travel, spring return, steel housing. Spring return is the reason
   over an expression pedal, which stays where it was left. The 2+3 pin
   variant has the same five wires on two plugs; avoid it. No board change -
-  the ordered board serves it as is. The box carries the matching aviation
-  socket (likely GX16-5, confirm on the sample), wired to J402:
+  the ordered board serves it as is. The box carries a GX12-3 socket at the
+  rear (decided 2026-10-19, ADR 0006): the pedal's own plug is cut off and a
+  GX12-3 plug fitted. Never GX12-4 - that would mate with the handpiece
+  socket and put 24 V on the pedal input. Wired to J402:
 
   | Pedal wire | J402 pad |
   |---|---|

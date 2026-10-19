@@ -42,10 +42,9 @@ DEFAULTS = [
     ("H_FRONT", 35.0, "ADR: cover front wall height (above tray floor)"),
     ("USB_W", 13.0, "ADR: USB-C opening width"),
     ("USB_H", 8.0, "ADR: USB-C opening height"),
-    ("USB_Z", 1.6, "TBD measure: receptacle centre above board top"),
-    ("GX12_D", 12.2, "TBD measure: GX12 panel hole (ADR 'GX12 hole')"),
-    ("GX16_D", 16.2, "TBD measure: GX16 panel hole (ADR 'GX16 hole')"),
-    ("CABLE_D", 5.0, "TBD measure: brick cable OD (hole = +0.5)"),
+    ("USB_Z", 1.6, "receptacle centre above board top, confirmed 2026-10-19"),
+    ("GX12_D", 12.2, "TBD measure: GX12 panel hole (ADR 'GX12 hole'), front and rear socket"),
+    ("CABLE_D", 5.0, "brick cable OD (hole = +0.5), confirmed 2026-10-19"),
     ("DISP_W", 27.5, "ADR: module PCB width (vendor drawing)"),
     ("DISP_L", 39.0, "ADR: module PCB length (vendor drawing)"),
     ("DISP_PCB_T", 1.2, "module PCB thickness (vendor drawing)"),
@@ -114,12 +113,10 @@ DEFAULTS = [
     ("KNOB_D", 20.0, "assumed knob dia (>= 3 mm from window)"),
     ("GX12_KX", 104.5, "KiCad x of GX12 axis (J201)"),
     ("GX12_Z", 18.0, "GX12 axis height above tray bottom"),
-    ("GX12_DEPTH", 20.0, "TBD GX12 depth behind panel"),
-    ("GX12_NUT", 15.0, "TBD GX12 nut across flats"),
-    ("GX16_KX", 117.0, "KiCad x of GX16 axis (J402)"),
-    ("GX16_Z", 20.0, "GX16 axis height above board top"),
-    ("GX16_DEPTH", 22.0, "TBD GX16 depth behind panel"),
-    ("GX16_NUT", 19.0, "TBD GX16 nut across flats"),
+    ("GX12_DEPTH", 20.0, "TBD GX12 depth behind panel (both sockets)"),
+    ("GX12_NUT", 15.0, "TBD GX12 nut across flats (both sockets)"),
+    ("PEDAL_KX", 117.0, "KiCad x of the rear pedal GX12 axis (J402)"),
+    ("PEDAL_Z", 20.0, "rear pedal GX12 axis height above board top"),
     ("CABLE_Z", 5.0, "cable hole centre above board top (hole x = middle of left side gap)"),
     ("TIE_LEN", 7.0, "cable-tie post length along the cable, starts 1 mm inside rear wall"),
     ("TIE_SLOT_W", 3.0, "tie slot width (for 2.5 mm ties)"),
@@ -428,7 +425,7 @@ def build(p):
     ub = box(ux - p["USB_W"] / 2, ux + p["USB_W"] / 2, ry0, ry1, uz - p["USB_H"] / 2, uz + p["USB_H"] / 2)
     yedges = [e for e in ub.Edges if abs(e.tangentAt(e.FirstParameter).y) > 0.99]
     cc.append(ub.makeFillet(1.0, yedges))
-    g16x, g16z = kx(p["GX16_KX"]), z_pcb_top + p["GX16_Z"]
+    g16x, g16z = kx(p["PEDAL_KX"]), z_pcb_top + p["PEDAL_Z"]
     # GX holes: teardrop pointing down in assembly (= up when the cover prints
     # top-down), truncated inside the nut's across-flats circle
     ct = math.cos(math.radians(p["TEARDROP_ANGLE"])) / math.cos(t)
@@ -451,7 +448,7 @@ def build(p):
 
     g["td"] = {}
     for nm, (hx, hz, hd, nut, y0_, y1_) in {
-            "GX16": (g16x, g16z, p["GX16_D"], p["GX16_NUT"], ry0, ry1),
+            "Pedal GX12": (g16x, g16z, p["GX12_D"], p["GX12_NUT"], ry0, ry1),
             "GX12": (kx(p["GX12_KX"]), p["GX12_Z"], p["GX12_D"], p["GX12_NUT"], -1, WALL + 1)}.items():
         fr_ = nut / 2.0 - 0.5
         cc.append(teardrop_y(hx, hz, hd, y0_, y1_, fr_))
@@ -524,9 +521,8 @@ def build(p):
     n12 = p["GX12_NUT"] / math.cos(math.radians(30))
     g["GX12Keepout"] = fuse_all([cyl_y(g12x, g12z, p["GX12_D"], WALL, WALL + p["GX12_DEPTH"]),
                                  cyl_y(g12x, g12z, n12, WALL, WALL + 2.5)])
-    n16 = p["GX16_NUT"] / math.cos(math.radians(30))
-    g["GX16Keepout"] = fuse_all([cyl_y(g16x, g16z, p["GX16_D"], D - WALL - p["GX16_DEPTH"], D - WALL),
-                                 cyl_y(g16x, g16z, n16, D - WALL - 3.0, D - WALL)])
+    g["PedalKeepout"] = fuse_all([cyl_y(g16x, g16z, p["GX12_D"], D - WALL - p["GX12_DEPTH"], D - WALL),
+                                  cyl_y(g16x, g16z, n12, D - WALL - 2.5, D - WALL)])
     g["knob_gap"] = (ecx - p["KNOB_D"] / 2) - (dcx + win / 2)
     g["print_rot"] = 180.0 - p["TILT"]
     return g
@@ -566,10 +562,10 @@ def report(g):
     pairs = [("Cover", "PCB"), ("Cover", "PartsEnvelope"), ("DisplayModule", "PCB"),
              ("DisplayModule", "PartsEnvelope"), ("EncoderKeepout", "PCB"),
              ("EncoderKeepout", "PartsEnvelope"), ("GX12Keepout", "PCB"),
-             ("GX12Keepout", "PartsEnvelope"), ("GX16Keepout", "PCB"),
-             ("GX16Keepout", "PartsEnvelope"), ("GX16Keepout", "C101"), ("Tray", "PCB"),
+             ("GX12Keepout", "PartsEnvelope"), ("PedalKeepout", "PCB"),
+             ("PedalKeepout", "PartsEnvelope"), ("PedalKeepout", "C101"), ("Tray", "PCB"),
              ("Tray", "Cover"), ("GX12Keepout", "DisplayModule"), ("GX12Keepout", "EncoderKeepout"),
-             ("GX12Keepout", "Tray"), ("GX16Keepout", "Tray"), ("EncoderKeepout", "Cover"),
+             ("GX12Keepout", "Tray"), ("PedalKeepout", "Tray"), ("EncoderKeepout", "Cover"),
              ("DisplayModule", "Cover"), ("TiePost", "PCB"), ("TiePost", "C101"),
              ("HdrTails", "Cover"), ("HdrTails", "LatchHooks"), ("HdrBack", "Cover"),
              ("HdrBack", "PCB"), ("HdrBack", "PartsEnvelope"), ("LatchHooks", "DispPCB"),
@@ -609,7 +605,9 @@ def main(do_export=EXPORT):
     put(doc, "DisplayModule", g["DisplayModule"], True, (0.1, 0.1, 0.1), 0, grp)
     put(doc, "EncoderKeepout", g["EncoderKeepout"], True, (0.8, 0.1, 0.1), 50, grp)
     put(doc, "GX12Keepout", g["GX12Keepout"], True, (0.6, 0.6, 0.6), 30, grp)
-    put(doc, "GX16Keepout", g["GX16Keepout"], True, (0.6, 0.6, 0.6), 30, grp)
+    put(doc, "PedalKeepout", g["PedalKeepout"], True, (0.6, 0.6, 0.6), 30, grp)
+    if doc.getObject("GX16Keepout"):
+        doc.removeObject("GX16Keepout")
     doc.recompute()
     report(g)
     if do_export:

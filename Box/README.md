@@ -11,7 +11,7 @@ is entered by holding the encoder push at power-up).
 
 - enclosure.FCStd - FreeCAD model: spreadsheet `Params`, solids `Tray`, `Cover`,
   `PCB` (reference board: slab, holes, C101, J301) and a `Checks` group
-  (display module, encoder, GX12/GX16 keep-out bodies, board parts envelope).
+  (display module, encoder, front and rear GX12 keep-out bodies, board parts envelope).
   `PCB` and `Checks` are reference only and never exported.
 - build_enclosure.py - regeneration macro. All geometry comes from `Params`.
 - tray.stl, cover.stl - print-ready, already in print orientation.
@@ -40,14 +40,14 @@ relieved over them), FPC_RELIEF at the far end. DISP_T is a formula
 (DISP_PCB_T + LCD_T); LCD_T = 1.9 measured 2026-10-19 (module 3.1 total).
 
 Cells most likely to change after measuring: DISP_ACTIVE, ENC_BUSH,
-USB_Z, CABLE_D, GX12_D, GX16_D, GX12_NUT, GX16_NUT.
+GX12_D, GX12_NUT, GX12_DEPTH (both sockets).
 Display latch: LATCH_T, LATCH_L, LATCH_W, LATCH_HOOK, LATCH_DX, LATCH_SLIT
 (the macro prints the tongue bending strain; keep it under about 2 % for PLA,
 3 % for PETG). Cable entry: CABLE_Z, TIE_LEN, TIE_SLOT_W/H, COL_RL_DY.
 
 The macro rewrites the sheet in its own order on every run and keeps the
 values already in it; a cell whose alias the macro no longer uses is dropped.
-Layout cells: DISP_KX, ENC_KX, GX12_KX, GX12_Z, GX16_KX, GX16_Z, CABLE_KX
+Layout cells: DISP_KX, ENC_KX, GX12_KX, GX12_Z, PEDAL_KX, PEDAL_Z
 (KiCad x coordinates or heights).
 
 ## Printing (Creality K2 Plus, 0.4 nozzle)
@@ -61,8 +61,8 @@ Layout cells: DISP_KX, ENC_KX, GX12_KX, GX12_Z, GX16_KX, GX16_Z, CABLE_KX
 - Cover: as exported, upside down with the sloped top flat on the bed (the
   model is rotated 165 deg about X). No supports. The display rail lips
   have a 60 deg underside (LIP_ANGLE): the module PCB rests on the slope
-  line at its edge. The window chamfer is 60 deg (WIN_CHAMF_ANGLE). The GX12
-  and GX16 holes are teardrops pointing to the rim (TEARDROP_ANGLE 60),
+  line at its edge. The window chamfer is 60 deg (WIN_CHAMF_ANGLE). Both GX12
+  holes are teardrops pointing to the rim (TEARDROP_ANGLE 60),
   truncated flat 0.5 mm inside the nut's across-flats circle so the shape is
   hidden under the nut.
   The two latch tongues are part of the top skin (cut free by 0.6 mm slits,
@@ -72,7 +72,7 @@ Layout cells: DISP_KX, ENC_KX, GX12_KX, GX12_Z, GX16_KX, GX16_Z, CABLE_KX
   merged into the walls, with a gusset above them back into the side wall at
   GUSSET_ANGLE (65 deg from horizontal in print orientation).
   Everything flatter than 60 deg left on the cover is a bridge: USB-C
-  opening top (13 mm), GX16 teardrop flat (8.0 mm), GX12 teardrop flat
+  opening top (13 mm), both GX12 teardrop flats
   (5.8 mm), the 5.5 mm cable hole top.
   Footprint about 109 x 103 mm, 57 mm high.
 
@@ -91,7 +91,8 @@ Layout cells: DISP_KX, ENC_KX, GX12_KX, GX12_Z, GX16_KX, GX16_Z, CABLE_KX
   inside the rear-left cable hole.
 - 4 x rubber feet, 10 mm dia, up to 1 mm recessed, 15 mm in from the edges
   (clear of the screw counterbores).
-- GX12-4 panel socket (front), GX16-5 panel socket (rear right), encoder
+- 2 x GX12 panel sockets: handpiece GX12-4 (front), pedal GX12-3 or -5
+  (rear right, above J402), encoder
   (7.8 mm bushing, 6 mm long) with two nuts, knob up to 20 mm dia.
 
 ## Assembly order
