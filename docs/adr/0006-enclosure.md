@@ -82,8 +82,12 @@ model is driven from a spreadsheet with exactly these names.
 
 ### 3. Display holder (part of the cover)
 
-- Module: 28 x 39 mm PCB, header on a short (28 mm) edge, glass 28 x 29 mm over the
-  end away from the header.
+- Module (vendor drawing, 2026-10-19): PCB 27.5 x 39.0 x 1.2 mm, header (7 pins,
+  2.54 mm, centred) 2.5 mm from one short edge with pin tails up to 1.5 mm on the
+  front. Glass/backlight 26.16 x 29.22 mm, centred, 4.89 mm from both short edges.
+  Active area 23.4 x 23.4 mm, 6.22 mm from the header edge (1.6 mm off the module
+  centre, toward the header). Four M2 holes, 22.5 x 34.0 mm, 2.5 mm from the short
+  edges. PCB + glass measured 3.1 mm, so the glass stack is 1.9 mm (LCD_T).
 - Two U-rails on the underside of the sloped top, running along the 39 mm edges,
   long axis running up the slope. Rail slot depth `DISP_T` + 0.3 mm, rail lip
   `DISP_LIP` over the glass edge (inside the black border, outside the active area).
@@ -133,11 +137,11 @@ model is driven from a spreadsheet with exactly these names.
 | GX12 hole | 12.0 mm | nominal, measure |
 | GX16 hole | 16.0 mm | nominal, measure on the pedal sample |
 | CABLE_D | TBD | measure the brick cable |
-| DISP_W x DISP_L | 28 x 39 mm | measured 2026-10-19 |
-| GLASS | 28 x 29 mm | measured 2026-10-19 |
-| DISP_T | TBD | measure PCB + glass |
-| DISP_ACTIVE | ~23.4 x 23.4 mm | 1.3 in 240x240 typical, measure |
-| DISP_LIP | 1.5 mm | default, must stay inside the black border |
+| DISP_W x DISP_L | 27.5 x 39 mm | vendor drawing |
+| BL_W x BL_L | 26.16 x 29.22 mm | vendor drawing |
+| DISP_T | 3.1 mm (1.2 PCB + 1.9 LCD_T) | measured 2026-10-19 |
+| DISP_ACTIVE | 23.4 x 23.4 mm, 6.22 mm from header edge | vendor drawing |
+| DISP_LIP | 1.7 mm from the PCB long edge | active area starts at 2.05 |
 | ENC_BUSH | TBD (M7 or M9) | measure |
 | ENC_PANEL | TBD | bushing length minus nut and washer |
 
@@ -160,7 +164,7 @@ model is driven from a spreadsheet with exactly these names.
 
 ## Open items
 
-- Measure: DISP_T, active area and border, header pin direction, ENC_BUSH and its
+- Measure: ENC_BUSH and its
   length, USB_Z, CABLE_D, GX12 and GX16 real hole and nut sizes.
 - J301 has no STEP model; the USB-C opening is placed from the real board until one
   is added.

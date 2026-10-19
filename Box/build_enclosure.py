@@ -46,13 +46,26 @@ DEFAULTS = [
     ("GX12_D", 12.2, "TBD measure: GX12 panel hole (ADR 'GX12 hole')"),
     ("GX16_D", 16.2, "TBD measure: GX16 panel hole (ADR 'GX16 hole')"),
     ("CABLE_D", 5.0, "TBD measure: brick cable OD (hole = +0.5)"),
-    ("DISP_W", 28.0, "ADR: module PCB width"),
-    ("DISP_L", 39.0, "ADR: module PCB length"),
-    ("GLASS_W", 28.0, "ADR GLASS width"),
-    ("GLASS_L", 29.0, "ADR GLASS length (at end away from header)"),
-    ("DISP_T", 3.6, "TBD measure: PCB + glass"),
-    ("DISP_ACTIVE", 23.4, "TBD measure: active area (square, centred in glass)"),
-    ("DISP_LIP", 1.5, "ADR: rail lip width under the module edge"),
+    ("DISP_W", 27.5, "ADR: module PCB width (vendor drawing)"),
+    ("DISP_L", 39.0, "ADR: module PCB length (vendor drawing)"),
+    ("DISP_PCB_T", 1.2, "module PCB thickness (vendor drawing)"),
+    ("LCD_T", 1.9, "glass/BL stack on the PCB front, measured 2026-10-19, total 3.1"),
+    ("DISP_T", "=DISP_PCB_T + LCD_T", "ADR: PCB + glass stack (formula)"),
+    ("BL_W", 26.16, "ADR GLASS: glass/backlight width, centred (vendor drawing)"),
+    ("BL_L", 29.22, "ADR GLASS: glass/backlight length (vendor drawing)"),
+    ("BL_Y0", 4.89, "BL edge from the PCB header edge"),
+    ("DISP_ACTIVE", 23.4, "ADR: active area AA, square, centred left-right (vendor drawing)"),
+    ("AA_Y0", 6.22, "AA edge from the PCB header edge (AA centre 17.92)"),
+    ("DISP_LIP", 1.7, "ADR: rail lip, inner edge this far in from the PCB long edge"),
+    ("HDR_N", 7.0, "header pins"),
+    ("HDR_PITCH", 2.54, "header pitch"),
+    ("HDR_Y", 2.5, "header row from the PCB header edge"),
+    ("HDR_FRONT", 1.5, "max pin tail height on the PCB front (top skin keeps +0.5)"),
+    ("HDR_BACK", 8.5, "header body + pins behind the PCB (check body only)"),
+    ("DISP_HOLE_PX", 22.5, "module mounting hole pitch across"),
+    ("DISP_HOLE_PY", 34.0, "module mounting hole pitch along (2.5 from each short edge)"),
+    ("DISP_HOLE_D", 2.2, "module mounting hole dia (assumed)"),
+    ("FPC_RELIEF", 1.0, "relief for the FPC fold strip past the BL far edge / in the end stop"),
     ("ENC_BUSH", 7.0, "TBD measure: EC11 bushing dia (hole = +0.3)"),
     ("ENC_PANEL", 2.0, "TBD: local top thickness at encoder"),
     # --- extra, not in the ADR table ---
@@ -145,7 +158,7 @@ def ensure_params(doc):
     for i, (alias, val, comment) in enumerate(DEFAULTS):
         row = i + 2
         sh.set("A%d" % row, alias)
-        sh.set("B%d" % row, keep.get(alias, str(val)))
+        sh.set("B%d" % row, keep.get(alias, val if isinstance(val, str) else str(val)))
         sh.setAlias("B%d" % row, alias)
         sh.set("C%d" % row, comment)
     doc.recompute()
@@ -154,7 +167,7 @@ def ensure_params(doc):
 
 def read_params(sh):
     p = {}
-    for alias, val, _ in DEFAULTS:
+    for alias, _, _ in DEFAULTS:
         v = sh.get(alias)
         p[alias] = float(getattr(v, "Value", v))
     return p
@@ -304,7 +317,11 @@ def build(p):
         b = dcx + s * (hw + rc)
         holder.append(box(min(a, b), max(a, b), 0, p["DISP_L"] + rc, rail_z0, -slot_h))
     ow = hw + rc + p["RAIL_W"]
-    holder.append(box(dcx - ow, dcx + ow, p["DISP_L"] + rc, p["DISP_L"] + rc + 2.0, rail_z0, 0.5))
+    estop = box(dcx - ow, dcx + ow, p["DISP_L"] + rc, p["DISP_L"] + rc + 2.0, rail_z0, 0.5)
+    fr = p["FPC_RELIEF"]
+    nw = p["DISP_ACTIVE"] / 2.0  # notch keeps the stop on the PCB corners only
+    estop = estop.cut(box(dcx - nw, dcx + nw, p["DISP_L"] + rc - 0.1, p["DISP_L"] + rc + fr, rail_z0 - 1, 0.4))
+    holder.append(estop)
     holder = roof(fuse_all(holder))
 
     # snap latch: two tongues cut from the top in front of the open rail end,
@@ -313,7 +330,7 @@ def build(p):
     # and the tongues spring back behind the PCB edge (header end).
     lt, ll, lw, sl = p["LATCH_T"], p["LATCH_L"], p["LATCH_W"], p["LATCH_SLIT"]
     v_f = -rc                                     # catch face, 0.2 in front of module
-    z_hb = -(p["DISP_T"] - p["PCB_T"]) - p["LATCH_HOOK"]  # hook bottom
+    z_hb = -p["LCD_T"] - p["LATCH_HOOK"]          # hook bottom, PCB front is at -LCD_T
     z_tu = WALL - lt                              # tongue underside
     ramp = (z_tu - z_hb) * 1.2
     latch_cut, latch_add = [], []
@@ -347,7 +364,7 @@ def build(p):
     g12x, g12z = kx(p["GX12_KX"]), p["GX12_Z"]
     cc.append(cyl_y(g12x, g12z, p["GX12_D"], -1, WALL + 1))
     # roof: display window with outside chamfer, M2 pilots
-    vc = p["DISP_L"] - p["GLASS_L"] / 2.0
+    vc = p["AA_Y0"] + p["DISP_ACTIVE"] / 2.0       # AA centre from the header edge
     win = p["DISP_ACTIVE"] + 2 * p["WIN_MARGIN"]
     rc_cuts = [box(dcx - win / 2, dcx + win / 2, vc - win / 2, vc + win / 2, -1, WALL + 1)]
 
@@ -359,6 +376,15 @@ def build(p):
     ch = p["WIN_CHAMF"]
     rc_cuts.append(Part.makeLoft([sq(dcx, vc, win, WALL - ch), sq(dcx, vc, win + 2 * (ch + 1), WALL + 1)], True))
     rc_cuts.extend(latch_cut)
+    # top skin relief over the front pin tails of the header (+0.5 mm)
+    hspan = (p["HDR_N"] - 1) * p["HDR_PITCH"] / 2.0 + 1.0
+    hd = p["HDR_FRONT"] + 0.5 - p["LCD_T"]
+    if hd > 0.01:
+        rc_cuts.append(box(dcx - hspan, dcx + hspan, p["HDR_Y"] - 1.0, p["HDR_Y"] + 1.0, -1, hd))
+    # relief over the FPC fold strip past the BL far edge
+    bl1 = p["BL_Y0"] + p["BL_L"]
+    rc_cuts.append(box(dcx - p["BL_W"] / 2, dcx + p["BL_W"] / 2, bl1, bl1 + 0.9 + fr, -1, fr))
+    g["win_v"] = vc
     # encoder
     ecx = kx(p["ENC_KX"])
     rc_cuts.append(cyl_z(ecx, vc, p["ENC_BUSH"] + 0.3, -1, WALL + 1))
@@ -374,7 +400,22 @@ def build(p):
     g["Cover"] = fuse_all([cover, roof(fuse_all(latch_add))])
 
     # ---------------- check bodies ----------------
-    g["DisplayModule"] = roof(box(dcx - hw, dcx + hw, 0, p["DISP_L"], -p["DISP_T"], 0))
+    pcb = box(dcx - hw, dcx + hw, 0, p["DISP_L"], -p["DISP_T"], -p["LCD_T"])
+    hx2, hy0 = p["DISP_HOLE_PX"] / 2.0, (p["DISP_L"] - p["DISP_HOLE_PY"]) / 2.0
+    for sx in (-1, 1):
+        for yy in (hy0, hy0 + p["DISP_HOLE_PY"]):
+            pcb = pcb.cut(cyl_z(dcx + sx * hx2, yy, p["DISP_HOLE_D"], -10, 10))
+    bl = box(dcx - p["BL_W"] / 2, dcx + p["BL_W"] / 2, p["BL_Y0"], p["BL_Y0"] + p["BL_L"], -p["LCD_T"], 0)
+    hsp = (p["HDR_N"] - 1) * p["HDR_PITCH"] / 2.0
+    tails = box(dcx - hsp - 0.5, dcx + hsp + 0.5, p["HDR_Y"] - 0.5, p["HDR_Y"] + 0.5,
+                -p["LCD_T"], -p["LCD_T"] + p["HDR_FRONT"])
+    back = box(dcx - hsp - 1.27, dcx + hsp + 1.27, p["HDR_Y"] - 1.27, p["HDR_Y"] + 1.27,
+               -p["DISP_T"] - p["HDR_BACK"], -p["DISP_T"])
+    g["DisplayModule"] = roof(fuse_all([pcb, bl, back]))
+    g["HdrTails"] = roof(tails)
+    g["HdrBack"] = roof(back)
+    g["LatchHooks"] = roof(fuse_all(latch_add))
+    g["DispPCB"] = roof(pcb)
     eb = p["ENC_BODY"] / 2.0
     g["EncoderKeepout"] = roof(box(ecx - eb, ecx + eb, vc - eb, vc + eb,
                                    pz - p["ENC_BODY_H"] - p["ENC_LUGS"], pz))
@@ -415,6 +456,7 @@ def report(g):
     print("Box outer: W %.1f x D %.1f, height front %.1f rear %.1f (from tray bottom)"
           % (g["W"], g["D"], g["H_front"], g["H_rear"]))
     print("Knob edge to window edge: %.1f mm" % g["knob_gap"])
+    print("Window centre: %.2f mm up the slope from the module header edge" % g["win_v"])
     print("Latch tongue bending strain at full deflection: %.2f %%" % (100 * g["latch_strain"]))
     pairs = [("Cover", "PCB"), ("Cover", "PartsEnvelope"), ("DisplayModule", "PCB"),
              ("DisplayModule", "PartsEnvelope"), ("EncoderKeepout", "PCB"),
@@ -423,7 +465,9 @@ def report(g):
              ("GX16Keepout", "PartsEnvelope"), ("GX16Keepout", "C101"), ("Tray", "PCB"),
              ("Tray", "Cover"), ("GX12Keepout", "DisplayModule"), ("GX12Keepout", "EncoderKeepout"),
              ("GX12Keepout", "Tray"), ("GX16Keepout", "Tray"), ("EncoderKeepout", "Cover"),
-             ("DisplayModule", "Cover"), ("TiePost", "PCB"), ("TiePost", "C101")]
+             ("DisplayModule", "Cover"), ("TiePost", "PCB"), ("TiePost", "C101"),
+             ("HdrTails", "Cover"), ("HdrTails", "LatchHooks"), ("HdrBack", "Cover"),
+             ("HdrBack", "PCB"), ("HdrBack", "PartsEnvelope"), ("LatchHooks", "DispPCB")]
     for a, b in pairs:
         d, v = clearance(g[a], g[b])
         print("  %-15s vs %-14s dist %6.2f mm  common %8.2f mm3" % (a, b, d, v))

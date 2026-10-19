@@ -32,7 +32,14 @@ is entered by holding the encoder push at power-up).
 4. Check the clearance table: every "common" volume must be 0, except
    Tray/PCB and Tray/Cover which touch by design.
 
-Cells most likely to change after measuring: DISP_T, DISP_ACTIVE, ENC_BUSH,
+Display holder follows the vendor drawing of the 1.3 in module: PCB DISP_W x
+DISP_L x DISP_PCB_T (27.5 x 39 x 1.2), backlight BL_W x BL_L at BL_Y0, active
+area DISP_ACTIVE at AA_Y0 (window centred on the AA, 17.92 mm from the header
+edge), header row HDR_Y with front pin tails HDR_FRONT (the top skin is
+relieved over them), FPC_RELIEF at the far end. DISP_T is a formula
+(DISP_PCB_T + LCD_T); LCD_T = 1.9 measured 2026-10-19 (module 3.1 total).
+
+Cells most likely to change after measuring: DISP_ACTIVE, ENC_BUSH,
 ENC_PANEL, ENC_TAB_*, USB_Z, CABLE_D, GX12_D, GX16_D, GX12_NUT, GX16_NUT.
 Display latch: LATCH_T, LATCH_L, LATCH_W, LATCH_HOOK, LATCH_DX, LATCH_SLIT
 (the macro prints the tongue bending strain; keep it under about 2 % for PLA,
@@ -80,7 +87,7 @@ Layout cells: DISP_KX, ENC_KX, GX12_KX, GX12_Z, GX16_KX, GX16_Z, CABLE_KX
 Inserts into the tray and the cover columns, board onto the PCB bosses.
 Encoder into the cover. Slide the display into the rails from the lower (front)
 end, glass first, header last: the two hooks ride up over the glass, the
-tongues lift out of the top by up to 3 mm, and they click down behind the
+tongues lift out of the top by about 2.8 mm, and they click down behind the
 module's PCB edge when it reaches the end stop. To remove it, lift both
 tongues from outside (thin screwdriver in the slits) and slide it out. Mount
 the GX sockets and solder the looms. Feed the brick cable through the
