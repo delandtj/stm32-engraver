@@ -433,7 +433,7 @@ boot for scoping the strike path.
     cargo run --release            # probe-rs + defmt, needs an SWD probe
     tools/dfu.sh                   # USB DFU, no probe
 
-Verified on hardware (board 2, 2026-10-19): ST7789 with offset 0 and
+Verified on hardware (board 1, F101 bridged, 2026-10-19): ST7789 with offset 0 and
 colours inverted, as in ui.rs; encoder at 4 counts per detent (the class
 encoders rest with A and B open at every click; firmware 9eb05f2); settings
 journal survives a power cycle. Still unverified: the bootloader jump (DFU
